@@ -31,4 +31,4 @@ sampSurf	(0.7-4)
 ## Installation Instructions
 Refer to the provided setup guide (https://github.com/brshipley/megaSDM/megaSDM_Setup.pdf) for detailed instructions on the setup and configuration of this program.
 ## Usage Example
-We have provided an example (____) using occurrence data from GBIF for 6 North American vertebrate species (3 reptiles, 3 mammals) and selected environmental data from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/version1). The configuration file used in this example may be found at (_____). Note that the specific file paths described in the configuration file may need to be modified once downloaded.
+We have provided an example (____) using occurrence data from GBIF for 6 North American vertebrate species (3 reptiles, 3 mammals). Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/version1), and data on dispersal rate (in km/year) were collected by _____. The configuration file used in this example may be found at (_____). Note that the specific file paths described in the configuration file may need to be modified once downloaded.
