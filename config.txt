@@ -1,0 +1,302 @@
+#Configuration File for ServalDENS: Serval Dispersal + Ensembled Niche Subsampling
+#Y=yes, N=no
+
+############# 1. Input Data Directory #######################------------------------------------
+
+DataDirectory = "F:/BetaTest/datadirectory"
+  #Directory where all environmental data folders necessary for the run should be placed (by user)
+  #All scripts in this package will also be placed here
+
+--------------Sub-Directories (within "DataDirectory")----------------------------------
+
+scripts = "/scripts"
+  #Folder (within "DataDirectory") containing all R Scripts of this package and this configuration file	
+
+############# 2. Trial Directory ###########################------------------------------------
+
+TrialDirectory =   "F:/BetaTest/Results"
+  #Overall directory for occurrence files, background files, buffers, and results used in the trial
+
+--------------Sub-Directories (within "TrialDirectory")--------------------------------
+
+spplist = "/spplist/specieslist.csv"	  
+  #File path of a CSV file with a list of target species (Taxon and Scientific Name columns)
+  
+test = 	"/Test"			                  
+  #Directory for storing intermediate data (will be deleted at the end of the program)
+
+result_dir = "/Results"			            
+  #Directory where all final outputs will be written to or copied to.
+
+############# 3. Environmental Data Management ##############------------------------------------
+
+##TRAINING ENVIRONMENTAL DATA
+  #The "training area" is the geographic region where the coefficients for the MaxEnt model are created (trained on).
+  #All occurrence points and background (pseudo-absence) points will be extracted and generated within this area
+  #The training area should be large enough to include the majority of species occurrences on a continent as well as a variety of climates
+
+trainingarea = "/trainingarea"			    	
+  #Directory containing environmental rasters for the training area
+  
+  
+##STUDY AREA ENVIRONMENTAL DATA
+  #The "study area" is the geographic region where analysis is desired. 
+  #The study area can be the same region as the "training area", but can differ from the "training area" if:
+    #Extrapolation outside of the training area is needed (Ex.: modelling potential habitats for a recent invasive species)
+    #The training area is larger than the area of focus (Ex.: modelling a widespread species for a small geographic region)
+    
+studyarea = "/studyarea"				    
+  #Directory containing environmental rasters for the study area
+  #If study area is the same as training area, copy the training area rasters into the study area
+
+rastertype = ".bil"
+  #The raster format (.tif, .bil, etc.) of the environmental raster layers (all rasters must be in the same format!)
+  #This will also be the file format of all output raster files
+
+############# 4. GIS Layer Projection #######################------------------------------------
+
+CoordinateProjectionStep = "Y"	    
+  #This step projects all of the data layers into a desired coordinate system	
+    #Set this to "Y" if the environmental, protection, and urbanized data are in different coordinate systems
+    #or if these data are not in the desired projection
+
+proj_trainingarea = "/proj_trainingarea"		
+  #if CoordinateProjectionStep = "Y", rasters are automatically moved from "trainingarea" to "proj_trainingarea"
+  #if "proj_trainingarea" and "trainingarea" are the same, rasters are overwritten
+  
+proj_studyarea = "/proj_studyarea"
+  #if CoordinateProjectionStep = "Y", rasters are automatically moved from "studyarea" to "proj_studyarea"
+  #if "proj_studyarea" and "studyarea" are the same location, rasters are overwritten
+
+############# 5. Coordinate Systems #########################------------------------------------
+
+#R uses PROJ4 to define and convert geographic coordinate systems. A review of some common coordinate systems may be found here:
+  #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/OverviewCoordinateReferenceSystems.pdf
+  #More in-depth documentation may be found here: https://proj4.org/
+
+desiredCRS = "+proj=cea +datum=WGS84 +ellps=WGS84 +units=m +no_defs"
+  #The coordinate system to project all spatial data into. If dispersal rate is being calculated or a buffer is generated, units must be m
+  #Because MaxEnt assumes each pixel is the same area (Elith et al. 2010), choosing an equal area projection may give more accurate results
+  #If the study area crosses the anti-meridian (180/-180), redefine the origin of your CRS (+lon_0=X, where X =/= 0).
+  #If the study area crosses one of the poles (90 or -90), redefine the origin of your CRS (+lat_0=X, where X =/= 0).
+  #Recommended CRS: "+proj=cea +datum=WGS84 +ellps=WGS84 +units=m +no_defs"
+  
+defaultCRS = "+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"
+  #The original coordinate system of the occurence data (usually +proj=longlat if occurence data are in decimal degrees)
+  #GBIF provides occurrences in ESPG:4326 form ("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+
+############# 6. Raster Clipping and Resampling #############------------------------------------
+
+ClipEnvDataStep = "Y"
+  #This step clips the environmental rasters, urbanized data, and protected area data to the desired geographic regions
+    #Set this to "Y" if these data do not have the same extent, or if the extent is different than desired
+    #The extent of the desired study area is given by the parameters "minlat", "maxlat", "minlong", and "maxlong" in this file
+
+TrainingAreaClip = "Y"
+  #Should the training environmental layers be clipped to a different desired extent? 
+  #Use if environmental rasters are much larger than the desired "training area"
+  #Set this to "Y" if the study area layers must be created, but are outside or larger than the training area extent 
+    #Provided layers to be clipped must envelop both training area and study area extents
+    #Put the layers to be clipped in the "trainingarea" directory
+  
+  #If "Y", provide "TrainClipLatitude" and "TrainClipLongitude" below
+
+TrainClipLatitude =  25,36.5
+TrainClipLongitude = -92,-75
+  #This is the extent to which the training area will be clipped if Training Area Clip = "Y"
+  #Should be in the same coordinate system as occurrence data (defaultCRS in section 4)
+  #Note: if the extent crosses the anti-meridian (180/-180), redefine the origin of your desired CRS (desiredCRS in Section 5).
+  
+minlat_sa = 25
+maxlat_sa = 36.5
+minlong_sa = -92
+maxlong_sa = -75
+  #The extent of the study area, where the models generated from the training area will be projected
+  #Should be in the same coordinate system as occurrence data (defaultCRS in section 5)
+  #Note: if the extent crosses the anti-meridian (180/-180), redefine the origin of your CRS (desiredCRS in Section 5).
+
+resolution = 5000
+  #resolution (or desired resolution) of raster files (in m).
+
+Categorical = "NA"
+  #A character string that will proceed any categorical environmental data
+    #Ex.: Categorical = "C", with soil type data being "C_soiltype.bil"
+  #Set to "NA" if no categorical data are used
+  #NOTE: PCA will not be run if categorical environmental variables are given. Instead, the original data are used for subsampling.
+  
+############# 7. Occurrence File Management #################------------------------------------
+
+occurrences = "/occurrences"			        
+  #Directory containing occurrence data (generated if gbifstep ="Y" (Section 8)).
+  #If occurrence data is already generated, put the occurrence data in this directory
+    #Must have 3 columns: "name" (scientific name with a space between generic and specific name), lat and long data
+  
+sppcountsloc = "/SppCount"			          
+  #Directory where species counts (created if gbifstep="Y" (Section 8)) are stored
+
+counts = "/SppCount.csv"			        
+  #The csv filename where the number of occurrences of each species is stored (will be created)
+
+############# 8. Downloading GBIF Occurrences ###############------------------------------------
+  
+gbifstep = "Y"
+  #This step gets occurrence data (lat/long) from the Global Biodiversity Information Facility (requires Internet connection).
+    #Set this to "Y" if occurrence data are needed. 
+    
+decimalLatitude = 25,36.5
+decimalLongitude = -92,-75
+  #The geographical extent in (minlat, maxlat) form, in which species occurence data will be collected from GBIF (gbifstep="Y")
+  #NOTE: if the extent crosses the anti-meridian (180/-180), redefine the origin of your CRS (desiredCRS in Section 4).
+
+############# 9. Generating Background Points ###############------------------------------------
+
+backgroundPointsStep = "Y"
+  #This step creates randomly distributed background points
+  #Set this to "Y" if background points are not already generated
+  
+speciesBufferStep = "Y"
+  #This step creates a buffer around all of the occurence points in order to sample for pseudo-absence points
+    #Set this to "Y" to weight background points close to occurrences more heavily (see Massin et al. 2012)
+    #If occurrence point buffers already exist, place them in the "buff_dir" location and set this to "N"
+
+buff_dir =  "/Masks"				              
+  #Location where (optional) buffer files are stored for each species (created if speciesBufferStep = "Y")
+
+nbg = 7500
+  #Total number of background points wanted (due to environmental subsampling, actual number may vary)
+    #if buffers around occurrences exist, 1/2 will be sampled from within buffers, 1/2 will be sampled throughout training area
+  #If a number (n) followed by "X" is given (e.g.: "10X"), the number of background points will be roughly n times the number of subsampled occurrences.
+  #More than 30000 background points may take a long time to generate
+  
+############# 10. Environmental Subsampling #################------------------------------------
+
+OccurEnvFeaturesStep = "Y"
+  #This step extracts the current climate values for each occurrence point and background points if already generated (Section 8)
+  #Set this to "N" if climate data have already been extracted for each occurrence point
+
+subsampleVarelaStep = "Y"
+  #The step environmentally subsamples the occurrence observations using a method developed by Varela et al. (2014)
+  #If set to "N", all of the occurrences will be used
+
+nsubsamp = 2
+  #Number of runs with different sets of subsampled points (subsampleVarelastep="Y") and/or background points (Section 8)
+
+nPCAxes = 4
+  #How many Principal Component (PC) axes will used to environmentally subsample the occurrence and background data (subsampleVarelaStep="Y")
+  #If "NA" is given, nPCAxes will be calculated as the number of axis required to explain 95% variance in the data
+  #At least 3 PC axes should be used, in order to keep enough variation in the subsample (Castellanos et al. 2018 suggests 4 PC axes)
+  #NOTE: PCA will not be run if categorical environmental variables are given. Instead, the original data are used for subsampling.
+    
+nclimatebins = 25
+  #Number of bins each climate combination will be placed in for Varela subsampling of occurrence points (subsampleVarelaStep="Y")
+  #See Varela et al. 2014 and Castellanos et al. 2018 for an in-depth discussion of this subsampling method
+
+randomseed = 474
+  #Random integer (1-1000) for consistent background point and subsample generation
+
+############# 11. MaxEnt ####################################------------------------------------
+
+ncores = 2
+  #Number of computer cores running in parallel (can be up to 1 fewer than the number of cores the computer has)
+
+nrep = 2
+	#Number of replications within MaxEnt, i.e. the number of times MaxEnt will model the same data.
+
+reptype = "Subsample"
+	#Type of replication Maxent uses. There are 3 options: "Subsample", "Crossvalidate", "Bootstrap"
+	#See the maxent.jar help file for more information on these three options.
+
+aucval = .7
+  #Minimum AUC value necessary for each run to be counted.. An AUC value 
+
+hinge = "TRUE"
+  #Whether or not to allow hinge features to be used during the MaxEnt projections ("true" or "false")
+
+threshold = "Maximum.test.sensitivity.plus.specificity"
+  #Which threshold should be used to convert the continuous habitat suitability rasters into binary presence/absence rasters?
+    #Above the threshold is presence (1), below is absence (0).
+    #Options (see MaxEnt help file and Phillips et al. 2006 for detailed discussion of thresholds):
+      #1:  "Maximum.test.sensitivity.plus.specificity" (RECOMMENDED by Liu et al. 2016)
+      #2:  "Fixed.cumulative.value.1"
+      #3:  "Fixed.cumulative.value.5"
+      #4:  "Fixed.cumulative.value.10"
+      #5:  "Minimum.training.presence"
+      #6:  "10.percentile.training.presence"
+      #7:  "Equal.training.sensitivity.and.specificity"
+      #8:  "Maximum.training.sensitivity.plus.specificity" 
+      #9:  "Equal.test.sensitivity.and.specificity"
+      #10: "Balance.training.omission,.predicted.area.and.threshold.value"
+      #11: "Equate.entropy.of.thresholded.and.original.distributions"
+
+AllOutputs = "Y"
+  #Should (Y/N) these secondary outputs from MaxEnt be generated? (see MaxEnt help file for more information)
+    #1: A raster showing the spatial distribution of clamping for each run
+    #2: A multidimensional environmental similarity surface (MESS) showing novel climates
+    #3: Files containing the parameters used to make the response curves
+    
+############# 12. Hindcasting/Forecasting ###################------------------------------------
+
+#The MaxEnt script can estimate species distributions in different times, given:
+    #the model generated by presence/absence points in the "training area" 
+    #rasters of the same climate variables used in the model for different time periods.   
+  
+predictenv = "/predictenv"	
+proj_predictenv = "/proj_predictenv"	    
+  #Directory within DataDirectory containing climate rasters from different time periods 
+    #must be formatted as folder-->scenario-->date(Year1, Year2, etc.)-->environmental files
+  #If CoordinateProjectionStep= "Y" (Section 4), data are automatically moved from "predictenv" to "proj_predictenv"
+  #If only one time period is needed, delete these entries (entire row)
+  
+#List of Time Periods Analysed: 
+  #Year1 is the year of the training environmental data	
+  #Any other time periods should be placed below Year1 as Year2, Year3, Year4, etc.
+  #The time periods should all be given as a number
+    #if no precise years are available, give a dummy year (ex. Late Pliocene: Year2=1, Early Pleistocene: Year3=2,etc.)
+      #The difference between the years will be used in the dispersal step, however.
+  
+Year1 = 2010
+Year2 = 2050
+Year3 = 2070
+
+#List of Climate Models Examined
+  #The first climate model (not current data) should be Scenario1, followed by Scenario2, Scenario3, etc.
+  #If projection to a different time period is not needed, leave this section empty (delete the entire row)
+
+Scenario1 = "RCP4.5"
+Scenario2 = "RCP8.5"
+
+############# 13. Dispersal Rate ############################------------------------------------
+
+dispersalStep = "N"        
+  #This step incorporates dispersal rate into the distribution modelling
+  #Set this to "Y" if dispersal rate analysis is desired
+  
+dispersalRate_dir = "/dispersalRateLoc" 		    
+  #Location of a single csv file with the dispersal rate (km/year) of each species being tested.
+
+############# 14. Species Richness ##########################------------------------------------
+
+RichnessStep =  "Y"      
+  #This step creates rasters and pdfs of species richness for all climate scenarios and higher taxonomic levels
+
+############# 15. Urban Analysis ############################------------------------------------
+
+UrbanAnalysis = "N"     
+  #This step incorporates urbanized data, analysing how much of a species' range passes through highly urbanized regions
+    #urbanized data must be a raster of %rastertype%
+
+urbanized_dir = "/urbanized_dir"
+proj_urbanized_dir = "/urbanized_dir/final"
+  #Directory containing urbanized area rasters
+  #if CoordinateProjectionStep = "Y" (Section 4), data are automatically moved from "urbanized_dir" to "proj_urbanized_dir"
+  
+############# 16. Protected Area Analysis ###################------------------------------------
+
+ProtectedAnalysis = "N"
+  #This step incorporates protected data, analysing how much of a species' range is be protected at different time periods
+    #protected areas must be an ESRI shapefile (".shp")
+
+protected_dir = "/protected_dir"    
+proj_protected_dir = "/protected_dir/final"
+  #Directory containing protected area shapefile 
+  #if CoordinateProjectionStep="Y" (Section 4), data are automatically moved from "protected_dir" to "proj_protected_dir"
