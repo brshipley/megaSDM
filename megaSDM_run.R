@@ -524,7 +524,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
 }
 
 #Runs MaxEnt, creates SDMs and calculates statistics
-for (speciesBatchIndex in 2:ncol(all_spp)) {
+for (speciesBatchIndex in 1:ncol(all_spp)) {
   print(Sys.time())
   spp_batch <- all_spp[, speciesBatchIndex]
   df[, "ncores"] <- nrow(all_spp)

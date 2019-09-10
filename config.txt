@@ -1,4 +1,4 @@
-#Configuration File for ServalDENS: Serval Dispersal + Ensembled Niche Subsampling
+#Configuration File for megaSDM
 #Y=yes, N=no
 
 ############# 1. Input Data Directory #######################------------------------------------
@@ -267,7 +267,7 @@ Scenario2 = "RCP8.5"
 
 ############# 13. Dispersal Rate ############################------------------------------------
 
-dispersalStep = "N"        
+dispersalStep = "Y"        
   #This step incorporates dispersal rate into the distribution modelling
   #Set this to "Y" if dispersal rate analysis is desired
   
