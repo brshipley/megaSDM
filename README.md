@@ -2,7 +2,8 @@
 ## Description
 This package can efficiently create and project species distribution models using the MaxEnt framework and parallel processing. It can find and download occurrence data for a list of species on GBIF (Global Biodiversity Information Facility), environmentally subsample the occurrences to mitigate spatial bias, generate background (pseudo-absence) points, train the model and project it to different times (incorporating dispersal rate of each species and intermediate range fluctuations), and create species richness maps for each time period and taxon. 
 
-##Contributors
+## Contributors
+
 
 ## Dependencies *(updated 9 Sept 2019)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
