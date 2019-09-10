@@ -32,4 +32,4 @@ sampSurf	(0.7-4)
 ## Installation Instructions
 Refer to the provided setup guide (https://github.com/brshipley/megaSDM/megaSDM_Setup.pdf) for detailed instructions on the setup and configuration of this program.
 ## Usage Example
-We have provided an example () using occurrence data from GBIF for 6 North American mammal species. Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/version1), and data on dispersal rate (in km/year) were collected by () The configuration file used in this example may be found at (). Note that the specific file paths described in the configuration file may need to be modified once downloaded.
+We have provided an example (https://github.com/brshipley/megaSDM/EXAMPLE.zip) using occurrence data from GBIF for 6 North American mammal species. Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/version1), and data on dispersal rate (in km/year) were collected by (). Note that the specific file paths described in the configuration file within the .zip folder may need to be modified once downloaded.
