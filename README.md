@@ -5,11 +5,10 @@ This package can efficiently create and project species distribution models usin
 ## Contributors
 
 
-## Dependencies *(updated 9 Sept 2019)*
+## Dependencies *(updated 16 Mar 2020)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
 #### R version 3.6.1
 ### R Package (Version Number)
-biomod2	(3.3-7.1)
 
 dplyr	(0.8.1)
 
