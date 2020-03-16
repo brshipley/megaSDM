@@ -14,7 +14,7 @@ Jenny L. McGuire
 ## Dependencies *(updated 16 Mar 2020)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
 #### R version 3.6.1
-### R Package (Version Number)
+### R Package (>=Version Number)
 
 dplyr	(0.8.1)
 
