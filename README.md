@@ -5,10 +5,15 @@ This package can efficiently create and project species distribution models usin
 ## Contributors
 
 Benjamin R. Shipley 
+
 Renee Bach
+
 Daniel Do
+
 Heather Strathearn
+
 Bistra Dilkina
+
 Jenny L. McGuire
 
 ## Dependencies *(updated 16 Mar 2020)*
