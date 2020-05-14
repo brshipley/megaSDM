@@ -4,30 +4,39 @@ This package can efficiently create and project species distribution models usin
 
 ## Contributors
 
+Benjamin Shipley
 
-## Dependencies *(updated 9 Sept 2019)*
+Renee Bach
+
+Daniel Do
+
+Heather Strathearn
+
+Jenny McGuire
+
+Bistra Dilkina
+
+## Dependencies *(updated 14 May 2020)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
-#### R version 3.6.1
+#### R version 3.6 or greater (last tested with v. 4.0.0)
 ### R Package (Version Number)
-biomod2	(3.3-7.1)
+dplyr	(>=0.8.1)
 
-dplyr	(0.8.1)
-
-gtools	(3.8.1)
+gtools	(>=3.8.1)
 
 parallel	(3.5.1)
 
 plotfunctions	(1.3)
 
-raster	(2.9-5)
+raster	(>=2.9)
 
-rgbif	(1.3)
+rgbif	(>=1.3)
 
-rgdal	(1.4-3)
+rgdal	(>=1.4)
 
-rgeos	(0.4-3)
+rgeos	(>=0.4)
 
-sampSurf	(0.7-4)
+sampSurf	(>=0.7)
 
 ## Installation Instructions
 Refer to the provided setup guide (https://github.com/brshipley/megaSDM/blob/master/megaSDM_Setup.pdf) for detailed instructions on the setup and configuration of this program.
