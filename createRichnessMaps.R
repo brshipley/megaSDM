@@ -1,8 +1,13 @@
+####createRichnesMaps.R####
+##Generates species richness maps for all time-scenario combinations
+
 #Initializations-----------------------------
+#Loads the necessary packages
+library(gtools)
 library(plotfunctions)
 library(raster)
-library(gtools)
 
+#Loads the necessary variables from "df"
 result_dir <- df[, "result_dir"]
 occ <- df[, "occurrences"]
 spplist <- df[, "spplist"]
@@ -32,19 +37,21 @@ if (rastertype == ".asc") {
   message("Error: Raster type unknown")
 }
 
-#Reading in the Taxon-Species list
+#Reads in the Taxon-Species list
 specieslist <- read.csv(spplist)
+
+#Makes a list of all species that have folders
 speciesfolders <- list.dirs(result_dir, recursive = FALSE)
 speciesfolders <- speciesfolders[grep("_", speciesfolders)]
-
-#Making a list of all species that have folders
 sppfold <- c()
-for (i in 1:length(speciesfolders)){
+#If the folders have data in them, add them to the list
+for (i in 1:length(speciesfolders)) {
   if (length(list.files(speciesfolders[i]) > 0)) {
     sppfold <- c(sppfold, speciesfolders[i])
   }
 }
 
+#Gets the species names out of the folder names
 sppfoldlist <- c()
 for (i in 1:length(sppfold)) {
   foldsplit <- unlist(strsplit(sppfold[i], "/"))
@@ -53,23 +60,25 @@ for (i in 1:length(sppfold)) {
 }
 SppFold <- data.frame(Species = sppfoldlist)
 
-#Merging the two lists
+#Merges the two lists
 taxonlist <- merge(specieslist, SppFold, by.x = c(colnames(specieslist)[2]), by.y = "Species", all.y = TRUE)
 colnames(taxonlist)[1] <- "Species"
 taxonlist$Species <- as.character(taxonlist$Species)
 
-#Finding and removing species with AUC Values less than desired threshold
+#Finds and removes species with AUC Values less than desired threshold
 DeleteSP <- c()
 for (sp in 1:nrow(taxonlist)) {
   focusspp <- gsub(" ", "_", taxonlist[sp, 1])
   setwd(paste0(result_dir, "/", focusspp))
   curfocus <- list.files(pattern = paste0("binary", rastertype, "$"))
+  #If no binary maps were generated, AUC < threshold
   if (!length(curfocus) > 0) {
     message(paste0(focusspp, " will be removed (no replicates with an AUC > ", aucval, ")"))
     DeleteSP <- c(DeleteSP, sp)
   }
 }
 
+#Deletes species from the taxonlist if AUC values are too small
 if (length(DeleteSP) > 0) {
   InitialTaxonList <- taxonlist[-DeleteSP, ]
 } else {
@@ -94,13 +103,14 @@ if (numScenario > 0) {
 } else {
   Scenarios <- c("Current")
 }
+
 #Gets a vector of Years
 years <-  as.numeric(df[, grep("^Year", colnames(df))])
 
 #No Dispersal------------------------------------------------------------
+#Uploads and stacks binary SDM rasters of particular time, taxon, and scenario
 FutureRichnessMaps <- function(taxon, y, s) {
   futstack <- c()
-  #Uploads and stacks binary SDM rasters of particular time, taxon, and scenario
   for (sp in 1:length(taxonlist2)) {
     FocusYear <- years[y]
     FocusScenario <- Scenarios[s]
@@ -133,7 +143,8 @@ for (t in 1:ntaxa) {
   }
   print(paste0("Creating current species richness maps for ", taxon, ", with ", length(taxonlist2), " total species"))
   
-  #Uploads and stacks binary rasters of all species within the taxa
+  #Uploads and stacks current binary rasters of all species within the taxa
+  #Removes species with AUC values < threshold
   curstack <- c()
   DeleteSP <- c()
   for (sp in 1:length(taxonlist2)) {
@@ -151,13 +162,14 @@ for (t in 1:ntaxa) {
     }
   }
   
+  #Deletes species with AUC values < threshold
   if (length(DeleteSP) > 0) {
     taxonlist2 <- taxonlist2[-DeleteSP]
   } else {
     taxonlist2 <- taxonlist2
   }
   
-  #Calculates the sum of the rasters (and therefore species richness), and creates rasters and PDFs
+  #Calculates the sum of the rasters (species richness), and writes rasters
   CurrentRichness <- calc(curstack, fun = sum)
   setwd(RichnessMaps)
   writeRaster(CurrentRichness, 
@@ -194,7 +206,7 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
     }
   }
   
-  #Calculates sum (total species richness) for given parameters, makes rasters and PDFs
+  #Calculates sum (total species richness) for given parameters, writes rasters
   FutureRichness <- calc(futstack, fun = sum)
   print(paste0("Creating species richness maps for ", taxon, " for Scenario ", FocusScenario, " and time ", FocusYear, " (including dispersal rate)"))
   setwd(RichnessMaps)
@@ -204,6 +216,7 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
               overwrite = TRUE,
               prj = TRUE)
   
+  #Loads Non-dispersal constrained richness maps for comparison
   NonDispersalSR <- raster(paste0("Richness_", taxon, "_", FocusYear, "_", FocusScenario, rastertype))
   
   #Calculates difference between dispersal and non-dispersal species richness maps
@@ -214,6 +227,7 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
               overwrite = TRUE,
               prj = TRUE)
   DiffVec <- unique(DifferenceSR)
+  #Sets graphical parameters for dispersal-difference PDFs
   if (min(DiffVec) < 0 & max(DiffVec) > 0) {
     color <- colorRampPalette(c("red", "grey91", "blue"))(length(DiffVec))
   } else if (min(DiffVec) < 0 & max(DiffVec) <= 0) {
@@ -222,12 +236,14 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
     color <- colorRampPalette(c("grey91", "deepskyblue", "blue"))(length(DiffVec))
   }
   
+  #Creates dispersal-difference PDFs
   pdf(file = paste0(result_dir, "/", "RichnessMaps/", taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalDifference.pdf"))
   plot(DifferenceSR, col = color, xlab = "", ylab = "", main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
   dev.off()
   rm(futstack)
 }
 
+#Makes dspersal-constrained richness maps by taxon 
 if (dispersalStep == "Y" && length(taxonlist2) > 0) {
   for (t in 1:ntaxa) {
     #Subsets out taxa of interest
@@ -243,6 +259,8 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
     #Uploads and stacks binary rasters of all species within the taxa
     curstack <- c()
     DeleteSP <- c()
+    
+    #Highlights species with AUC values < threshold, adds others to taxonlist
     for (sp in 1:length(taxonlist2)) {
       focusspp <- taxonlist2[sp]
       setwd(paste0(result_dir, "/", focusspp, "/", Scenarios[1]))
@@ -253,6 +271,7 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
       }
     }
     
+    #Deletes species with AUC values < threshold
     if (length(DeleteSP) > 0) {
       taxonlist2 <- taxonlist2[-DeleteSP]
     } else {
@@ -271,7 +290,9 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
 }
 
 #Making PDF Maps---------------------------------------------------------
+#Creates consistent species richness PDF maps for each taxon, scenario, and time period
 MakePDFMaps <- function(taxon) {
+  #Upload all raster files, calculate overall maximum richness (regardless of time, scenario)
   setwd(RichnessMaps)
   RasterList <- list.files(getwd(), pattern = paste0("\\", rastertype, "$"))
   FocusRasters <- RasterList[grep(paste0("Richness_", taxon), RasterList)] 
@@ -304,6 +325,7 @@ MakePDFMaps <- function(taxon) {
   gc()
 }
 
+#Creates PDF richness maps for all taxa
 print("Making PDF Maps...")
 for(t in 1:ntaxa) {
   taxon <- taxa[t]

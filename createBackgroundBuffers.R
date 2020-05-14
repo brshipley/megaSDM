@@ -1,11 +1,15 @@
+####createBackgroundBuffers.R####
+##Creates buffers to spatially weight the background points near the occurrences
 #Initializations---------------------------
+#Loads the necessary packages
+library(maptools)
 library(parallel)
 library(raster)
 library(rgdal)
 library(rgeos)
-library(raster)
 library(sampSurf)
 
+#Loads the necessary variables from "df"
 proj_trainingarea <- df[, "proj_trainingarea"]
 buff_dir <- df[, "buff_dir"]
 if (!dir.exists(buff_dir)) {
@@ -33,6 +37,7 @@ print(spp.list)
 
 #Functions------------------------
 BuffFiles <- function(CurSpp) {
+  #Species name management
   setwd(paste0(test, "/species"))
   species <- substr(CurSpp, 9, nchar(CurSpp))
   species <- read.csv(species)
@@ -68,22 +73,24 @@ BuffFiles <- function(CurSpp) {
     mindist <- c(mindist, min(DistanceZero))
   }
   BufferWidth <- 2 * quantile(mindist, 0.95) 
-  rm(Distance,mindist)
+  rm(Distance, mindist)
   gc()
   
-  #Makes a buffer (width dependent) around the occurrence points
+  #Makes a buffer (width dependent) around the first occurrence point
   combinedPolygon <- spCircle(BufferWidth, spUnits = crs(desiredCRS),
                               centerPoint = c(x = Locations[1, 1], y = Locations[1, 2]))$spCircle
   
+  #Creates buffers aroudn the remaining points and combines them
   for (b in 2:nrow(Locations)) {
     circle <- spCircle(BufferWidth, spUnits = crs(desiredCRS), centerPoint = c(x = Locations[b, 1], y = Locations[b, 2]))
     binded <- bind(combinedPolygon, circle$spCircle)
     combinedPolygon <- gUnaryUnion(binded)
   }
   
+  #Reprojects the buffer into the desired CRS
   proj4string(combinedPolygon) <- crs(desiredCRS)
   
-  #Create shapefile out of the buffer
+  #Write shapefile out of the buffer
   setwd(buff_dir)
   sp_poly_df <- SpatialPolygonsDataFrame(combinedPolygon, data = data.frame(ID = 1), match.ID = FALSE)
   writeOGR(sp_poly_df, dsn = buff_dir, layer = paste0(name), overwrite_layer = TRUE, driver = "ESRI Shapefile")
@@ -97,6 +104,7 @@ BuffFiles <- function(CurSpp) {
 }
 
 #Run------------------------------
+#Parallelization
 clus <- makeCluster(ncores, outfile = outfile)
 clusterExport(clus, varlist = c("buff_dir", "proj_trainingarea", "occurrences", "test", 
                               "desiredCRS", "defaultCRS", "spp.list", "BuffFiles",

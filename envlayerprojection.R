@@ -1,8 +1,12 @@
-#Initializations---------------------------
-library(rgdal)
-library(raster)
+####envlayerprojection.R####
+##ensures that all data are in the required projections
 
-#Variables from config.txt
+#Initializations---------------------------
+#Loads the necessary packages
+library(raster)
+library(rgdal)
+
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 rastertype <- df[, "rastertype"]
 original <- df[, "trainingarea"]
@@ -55,14 +59,14 @@ if (rastertype == ".asc") {
 trainingEnv <- list.files(path = original, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
 trainingEnv <- stack(trainingEnv)
 
-#If the training area doesn't need to be clipped, make the extent of the training stack the desired extent
+#If the training area doesn't need to be clipped, makes the extent of the training stack the desired extent
 if (TrainingAreaClip == "N") {
   TAExtent <- extent(trainingEnv)
   df[, "TrainClipLongitude"] <- paste0(ceiling(TAExtent[1]), ",", floor(TAExtent[2]))
   df[, "TrainClipLatitude"] <- paste0(ceiling(TAExtent[3]), ",", floor(TAExtent[4]))
 }
 
-# Projects each training-area environmental layer file to desired CRS
+#Projects each training-area environmental layer file to desired CRS
 setwd(proj)
 for (i in 1:nlayers(trainingEnv)) {
   trainbio <- projectRaster(trainingEnv[[i]], crs = desiredCRS, res = c(resolution, resolution), method = "ngb")
@@ -73,10 +77,10 @@ for (i in 1:nlayers(trainingEnv)) {
 studyEnv = list.files(path = originalsa, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
 
 if (length(studyEnv) >= 1) {
-  studyEnv2 <- stack(studyEnv)  
-  # Converts each study area environmental layer file to the correct CRS
+  studyEnv2 <- stack(studyEnv) 
   setwd(projsa)
   
+  #Converts each study area environmental layer file to the correct CRS
   for (i in 1:nlayers(studyEnv2)) {
     secbio <- projectRaster(studyEnv2[[i]], crs = desiredCRS, res = c(resolution, resolution), method = "ngb")
     writeRaster(secbio, paste0(names(studyEnv2[[i]]), ".bil"), format = "EHdr", overwrite = TRUE, prj = TRUE)
@@ -88,13 +92,17 @@ if (length(studyEnv) >= 1) {
 }
 
 #Future Data---------------------------
-#Converts each future scenario into the correct CRS
+#Converts each forecasted/hindcasted scenario into the correct CRS
 if (numScenario > 0) {
+  #Finds the file faths for the scenarios
   setwd(predictenv)
   predictenvdir <- list.dirs(path = predictenv, full.names = TRUE)
+  
   for (i in 1:length(predictenvdir)) {
     correctDir <- list.dirs(path = predictenvdir[i], full.names = TRUE)
+    #If the directory is an "end" directory with no subfolders
     if (length(correctDir) == 1) {
+      #Stacks climate data
       setwd(correctDir)
       futureenv <- list.files(correctDir, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
       futureenv <- stack(futureenv)
@@ -109,6 +117,7 @@ if (numScenario > 0) {
       setwd(Directories[length(Directories)])
       FutFilesRemove <- list.files()
       unlink(FutFilesRemove)
+      #Projects and writes forecasted/hindcasted data
       for (j in 1:nlayers(futureenv)) {
         secbio <- projectRaster(futureenv[[j]], crs = desiredCRS, res = c(resolution, resolution), method = "ngb")
         writeRaster(secbio, paste0(names(futureenv[[j]]), ".bil"), format = "EHdr", overwrite = TRUE, prj = TRUE)

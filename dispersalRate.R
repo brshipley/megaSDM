@@ -1,9 +1,13 @@
-#Initializations-----------------------
-library(biomod2)
-library(raster)
-library(parallel)
-library(gtools)
+####dispersalRate.R####
+##Models dispersal rate and constraints habitat suitability maps
 
+#Initializations-----------------------
+#Loads the necessary packages
+library(gtools)
+library(parallel)
+library(raster)
+
+#Loads the necessary variables from "df"
 result_dir <- df[, "result_dir"]
 dispersalRate_dir <- df[, "dispersalRate_dir"]
 
@@ -65,14 +69,18 @@ print(ListSpp)
 #Functions----------------------------
 #Creates distance rasters from original projection (studyarea environmental rasters)
 DistanceRaster <- function(spp, Time, Scen, CurrentBinary) {
+  #Loads and reclassifies the binary maps
   CurrentBinary <- CurrentBinary
-  CurrentPresence <- reclassify(CurrentBinary, c(0, 0, NA),include.lowest = TRUE)
+  CurrentPresence <- reclassify(CurrentBinary, c(0, 0, NA), include.lowest = TRUE)
   CurrentPresence <- trim(CurrentPresence)
+  #Calculates the distances from each pixel to the nearest presence
   CurrDist <- distance(CurrentPresence, doEdge = TRUE)
   CurrDist <- extend(CurrDist, extent(CurrentBinary))
   CurrDist[is.na(values(CurrDist))] <- max(values(CurrDist), na.rm = TRUE) + 1
   DistFinal <- mask(CurrDist, CurrentBinary)
+  #Converts distance (in meters) to kilometers (for dispersal rate)
   DistFinal <- DistFinal / 1000
+  #writes distance raster
   writeRaster(DistFinal, 
               filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, rastertype), 
               overwrite = TRUE, 
@@ -83,7 +91,7 @@ DistanceRaster <- function(spp, Time, Scen, CurrentBinary) {
   return(DistFinal)
 }
 
-#Creates dispersal probability raster
+#Creates dispersal probability raster from distance raster
 DispersalProbRaster <- function(rate, DistRaster, Elapsed) {
   #Calculates lambda of exponential distribution
   Lambda <- 1 / rate
@@ -93,19 +101,23 @@ DispersalProbRaster <- function(rate, DistRaster, Elapsed) {
     1 - pgamma(x, shape = Elapsed, rate = Lambda)
   }
   
+  #Relates distance raster to dispersal probability
   DistProb <- calc(DistRaster, fun = function(x){GammaProbFun(x)})
   print("Creating Dispersal Probability Raster")
   return(DistProb)
 }
 
+#Gets presence pixels in raster 1 but not raster 2
 t1nott2 <- function(t1, t2) {
   return(mask(t1, t2, inverse = FALSE, maskvalue = 1, updatevalue = 0))
 }
 
+#Calculates overlap between raster 1 and raster 2 presences
 overlap <- function(t1, t2) {
   return(mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
 }
 
+#Calculates the range centroid (average latitude, longitude)
 getCentroid <- function(raster) {
   # A matrix with three columns: x, y, and v (value)
   points <- rasterToPoints(raster, fun = function(x){x == 1}, spatial = FALSE)
@@ -120,13 +132,15 @@ getCentroid <- function(raster) {
   return(c(Clong, Clat))
 }
 
+#Calculates presence pixels covered by a protected area
 getProtected <- function(raster, protected) {
   m <- mask(raster, protected)
   return(freq(m, digits = 0, value = 1, useNA = 'no', progress = ''))
 }
 
-#The amount of pixels covered by an urban area
+#Calculates he amount of pixels covered by an urban area
 getUrbanized <- function(focusraster, decade, urban_files, urbanized) {
+  
   #get correct decade
   correctIndex <- 0
   if (length(urban_files) > 1) {
@@ -134,6 +148,7 @@ getUrbanized <- function(focusraster, decade, urban_files, urbanized) {
   } else {
     correctIndex <- 1
   }
+  #Masks presence raster by urbanized raster
   cur <- urbanized[[correctIndex]]
   if (length(unique(cur)) > 2) {
     UrbThresh <- median(cur, na.rm = TRUE)
@@ -145,16 +160,18 @@ getUrbanized <- function(focusraster, decade, urban_files, urbanized) {
   return (freq(m, digits = 0, value = 1, useNA = 'no', progress = ''))
 }
 
+#Conducts the actual dispersal rate analyses
 FinalDispersal <- function(spp) {
   #Gets species name and relevant dispersal rate
   speciesName = gsub("_", " ", spp)
   if (length(grep(paste0(speciesName), dispersal[, 1])) > 0) {
+    #Finds species-specific dispersal rate
     dispRateColumn <- which(unlist(lapply(dispersal, is.numeric)))
     dispersalRate <- dispersal[grep(paste0(speciesName, "\\s*$"), dispersal[, 1]), dispRateColumn]
     if (!is.na(dispersalRate)) {
       CurrentTime <- years[1]
       CurrentBinary <- raster(paste0(result_dir, "/", spp, "/", CurrentTime, "_binary", rastertype))
-      #For stats
+      #Creates variables for stats
       Projection <- c("Current")
       NumberCells <- c(cellStats(CurrentBinary, stat = sum))
       CellChange <- c(0)
@@ -166,6 +183,7 @@ FinalDispersal <- function(spp) {
       Protected <- c()
       Urbanized <- c()
       
+      #Conducts protected area analysis (if requested)
       if (ProtectedAnalysis == "Y") {
         setwd(proj_protected_dir)
         prot_files <- list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = TRUE)
@@ -173,6 +191,7 @@ FinalDispersal <- function(spp) {
         Protected <- c(Protected, getProtected(CurrentBinary, protected))
       } 
       
+      #Conducts urban area analysis (if requested)
       if (UrbanAnalysis == "Y") {
         setwd(proj_urbanized_dir)
         urblist <- list.files(pattern = paste0("\\.bil$"), full.names = TRUE)
@@ -180,7 +199,7 @@ FinalDispersal <- function(spp) {
         Urbanized <- c(Urbanized, getUrbanized(CurrentBinary, CurrentTime, urblist, urbanized))
       }
       
-      #Creates dispersal rasters and PDFs
+      #Creates dispersal rasters and PDFs for each Scenario + time 
       for (s in 1:length(Scenarios)) {
         CurScen <- Scenarios[s]
         curdir <- paste0(result_dir, "/", spp, "/", CurScen)
@@ -203,30 +222,34 @@ FinalDispersal <- function(spp) {
             }
           } else {
               FocusTime <- years[y - 1]
-              #Reading in the current distribution
+              
+              #Reads in the current distribution (from the previous time step)
               CurrentDistribution <- Binary_Dispersal
               
-              #Sizing down the raster for faster distance measuring
+              #Sizes down the raster for faster distance measuring
               TimeMap2 <- TimeMap
               TimeMap2[which(values(TimeMap2) == 0)] <- NA
               TimeMap2 <- trim(TimeMap2)
               TimeMap2[is.na(values(TimeMap2))] <- 0
               
-              #Making the places where species lived in the previous time step
+              #Highlights the places where species lived in the previous time step
               CurrentDistribution <- crop(CurrentDistribution, extent(TimeMap2))
               CurrentDistribution[which(values(CurrentDistribution) == 0)] <- NA
               
-              #Creating new distance raster
+              #Creates new distance raster
               CurrentDistance <- distance(CurrentDistribution) / 1000
               SppDistance <- extend(CurrentDistance, extent(Binary_Dispersal), value = max(values(SppDistance), na.rm = TRUE) + 1)
               SppDistance <- mask(SppDistance, CurrentBinary)
           }
           
+          #Calculates the dispersal probability for the given time step
           TimeDiff <- abs(CurYear - years[y - 1])
           SppDispProb <- DispersalProbRaster(dispersalRate, SppDistance, TimeDiff)
           setwd(curdir)
           RasterList <- list.files(curdir, pattern = paste0(rastertype, "$"))
+          
           #Creates an ensembled raster that incorporates dispersal rate
+          #Calculates the ensembled dispersal probability * habitat suitability
           EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled", rastertype), RasterList)
           EnsembleSD <- raster(RasterList[EnsembleNum])
           if (extent(SppDispProb) != extent(EnsembleSD) | ncol(SppDispProb) != ncol(EnsembleSD)) {
@@ -234,8 +257,9 @@ FinalDispersal <- function(spp) {
             SppDispProb <- intersect(SppDispProb, EnsembleSD)
             SppDispProb <- resample(SppDispProb, EnsembleSD, method = "bilinear")
           }
-          Ensemble_Dispersal <- SppDispProb * EnsembleSD
           
+          Ensemble_Dispersal <- SppDispProb * EnsembleSD
+          #Writes the ensembled dispersal rate raster
           writeRaster(Ensemble_Dispersal,
                       filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate", rastertype),
                       overwrite = TRUE, 
@@ -244,11 +268,13 @@ FinalDispersal <- function(spp) {
           
           DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
           
-          #Creates a binary raster that incorporates dispersal rate
+          #Creates a binary raster from the ensembled raster
           BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary", rastertype), RasterList)
           BinarySD <- raster(RasterList[BinaryNum])
-          Binary_Dispersal <- BinaryTransformation(SppDispProb * BinarySD, 0.5)
-          
+          Binary_Dispersal <- (SppDispProb * BinarySD)
+          Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
+          Binary_Dispersal[Binary_Dispersal < 0.5] <- 0
+          #Writes the binary raster
           writeRaster(Binary_Dispersal,
                       filename = paste0(CurYear, "_", CurScen, "_binary_dispersalRate", rastertype),
                       overwrite = TRUE, 
@@ -257,7 +283,6 @@ FinalDispersal <- function(spp) {
           DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate"))
           
           #Fills out the stats table
-          
           Projection <- c(Projection, paste0(CurScen, "_", CurYear))
           NumberCells <- c(NumberCells, cellStats(Binary_Dispersal, stat = sum))
           CellChange <- c(CellChange, NumberCells[length(NumberCells)] - NumberCells[1])
@@ -267,6 +292,7 @@ FinalDispersal <- function(spp) {
           CentroidX <- c(CentroidX, getCentroid(Binary_Dispersal)[1])
           CentroidY <- c(CentroidY, getCentroid(Binary_Dispersal)[2])
           
+          #Conducts urban analysis (if requested)
           if (UrbanAnalysis  == "Y") {
             setwd(proj_urbanized_dir)
             urblist <- list.files(pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
@@ -274,6 +300,7 @@ FinalDispersal <- function(spp) {
             Urbanized <- c(Urbanized, getUrbanized(Binary_Dispersal, CurYear, urblist, urbanized))
           }
           
+          #Conducts protected analysis (if requested)
           if (ProtectedAnalysis == "Y") {
             setwd(proj_protected_dir)
             ProtectList <- list.files(pattern = ("\\.shp$"), full.names = TRUE)
@@ -283,6 +310,7 @@ FinalDispersal <- function(spp) {
             Protected <- c(Protected, getProtected(Binary_Dispersal, protected))
           }
         }
+        
         #Writes PDFs
         DispersalRasters <- list.files(curdir, pattern = paste0("dispersalRate", rastertype, "$"), full.names = TRUE)
         DispersalRasters <- mixedsort(DispersalRasters)
@@ -298,6 +326,7 @@ FinalDispersal <- function(spp) {
         }
       }
       
+      #Fills out stats table 
       if ((UrbanAnalysis == "Y") | (ProtectedAnalysis == "Y")) {
         if (UrbanAnalysis == "N") {
           stats <- cbind(Projection, NumberCells, CellChange,                # Which columns do you want?
@@ -327,6 +356,7 @@ FinalDispersal <- function(spp) {
 }
 
 #Run-----------------------------------
+#Ensures that species have dispersal rate data
 for (w in 1:length(ListSpp)) {
   FocSpec <- gsub("_", " ", ListSpp[w])
   DispSpec <- grep(paste0("^", FocSpec, "$"), dispersal[, 1])
@@ -335,6 +365,7 @@ for (w in 1:length(ListSpp)) {
   }
 }
 
+#Parallelization
 clus <- makeCluster(ncores, outfile = outfile)
 clusterExport(clus, varlist = c("result_dir", "dispersalRate_dir", "format", "rastertype", "proj_urbanized_dir",
                               "proj_protected_dir", "numScenario", "Scenarios", "numYear", "years", "dispersal",

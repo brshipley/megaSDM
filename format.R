@@ -1,21 +1,29 @@
+####format.R####
+##sets up the dadta frame used in the rest of megaSDM
+
 #Initializations--------------------------------
-# Set location and name of config txt file to be used
+# Sets location and name of config txt file to be used
 configTXTloc <- paste(getwd(), "/config.txt", sep="")
 print(paste("Current config file location: ", configTXTloc, sep=""))
 
-# Pull data from config.txt file
+# Pulls data from config.txt file
 config <- read.csv(configTXTloc, sep = "=", comment.char = "#", header = FALSE, stringsAsFactors = FALSE, strip.white = TRUE) 
 row.names(config) <- config[, 1]
 config <- subset(config, select = -V1)
 names(config) <- "Parameters"
 
+#If the file paths have spaces in them and maxent needs to be run, Send error code
+if ((length(grep(" ", config["DataDirectory", ] )) > 0 | length(grep(" ", config["TrialDirectory", ])) > 0) & config["maxentStep", ] == "Y") {
+  stop("If running MaxEnt, directory paths should not have spaces in them! Revise config.txt and re-run")
+}
+
 #Functions--------------------------------------
-# Create subfolder and file locations based on main folder
+#Creates subfolder and file locations based on main folder
 createLocation <- function(mainFolder, dirloc) {
   return(paste(mainFolder, config[dirloc, ], sep = ""))
 }
 
-# Check if this experiment location exists; create if applicable
+#Checks if this experiment location exists; create if applicable
 checkDirExists <- function(folderVariable) {
   if(!dir.exists(folderVariable)) {
     dir.create(folderVariable)
@@ -23,23 +31,23 @@ checkDirExists <- function(folderVariable) {
   } 
 }
 
-# Check if file exists. Output to user to add file if applicable
-# userInput = 1 if file has to be inputted by user; 0 if file is created by program
+#Checks if file exists. Outputs to user to add file if applicable
+#userInput = 1 if file has to be inputted by user; 0 if file is created by program
 checkFileExists <- function(fileVariable, userInput) {
-  # If user needs to input file but it isn't there
+  #If user needs to input file but it isn't there
   if((userInput == 1) & (!file.exists(fileVariable))) {
     stop(paste("File doesn't exist: ", fileVariable, ". Please create the file and continue!"))
   }
 }
 
-# Check if file already exists, and give warning that it will be overwritten
+#Checks if file already exists, and give warning that it will be overwritten
 fileExistsWarning <- function (fileVariable) {
   if (file.exists(fileVariable)) {
     message(paste("File already exists and may be overwritten: ", fileVariable, ". Please move or delete before you run!"))
   }
 }
 
-# Check if folder contains data, and give warning that it will be overwritten; maxStartFiles = max allowable folders/files to start
+#Check if folder contains data, and give warning that it will be overwritten; maxStartFiles = max allowable folders/files to start
 folderHasDataWarning <- function (folderVariable, maxStartFiles) {
   if (length(dir(folderVariable)) > maxStartFiles) {
     message(paste0("Folder already contains data and may be overwritten: ", folderVariable, ". Please move or delete files in these directories before you run!"))
@@ -47,7 +55,7 @@ folderHasDataWarning <- function (folderVariable, maxStartFiles) {
 }
 
 #Location Creation--------------------------
-# Directories defined in config.txt created and added to df
+#Directories defined in config.txt created and added to df
 TrialDirectory <- config["TrialDirectory", ]
 spplist <- createLocation(TrialDirectory, "spplist")
 df <- data.frame(spplist, stringsAsFactors = FALSE)
@@ -66,7 +74,7 @@ df <- data.frame(df, result_dir, stringsAsFactors = FALSE)
 counts <- createLocation(TrialDirectory, "counts")
 df <- data.frame(df, counts, stringsAsFactors = FALSE)
 
-#Run---------------------------------------
+#megaSDM Steps---------------------------------------
 #Steps ("Y" or "N") added to df
 ClipEnvDataStep <- config["ClipEnvDataStep", ]
 df <- data.frame(df, ClipEnvDataStep, stringsAsFactors = FALSE)
@@ -80,6 +88,8 @@ subsampleVarelaStep <- config["subsampleVarelaStep", ]
 df <- data.frame(df, subsampleVarelaStep, stringsAsFactors = FALSE)
 speciesBufferStep <- config["speciesBufferStep", ]
 df <- data.frame(df, speciesBufferStep, stringsAsFactors = FALSE)
+maxentStep <- config["maxentStep", ]
+df <- data.frame(df, maxentStep, stringsAsFactors = FALSE)
 backgroundPointsStep <- config["backgroundPointsStep", ]
 df <- data.frame(df, backgroundPointsStep, stringsAsFactors = FALSE)
 UrbanAnalysis <- config["UrbanAnalysis", ]
@@ -93,6 +103,7 @@ df <- data.frame(df, RichnessStep, stringsAsFactors = FALSE)
 dispersalRan <- "N"
 df <- data.frame(df, dispersalRan, stringsAsFactors = FALSE)
 
+#Miscellaneous Variables----------------
 #Other preferences added to df
 TrainingAreaClip <- config["TrainingAreaClip", ]
 df <- data.frame(df, TrainingAreaClip, stringsAsFactors = FALSE)
@@ -126,6 +137,8 @@ nrep <- as.numeric(config["nrep", ])
 df <- data.frame(df, nrep, stringsAsFactors = FALSE)
 reptype <- config["reptype", ]
 df <- data.frame(df, reptype, stringsAsFactors = FALSE)
+test_percent <- config["test_percent", ]
+df <- data.frame(df, test_percent, stringsAsFactors = FALSE)
 aucval <- as.numeric(config["aucval", ])
 df <- data.frame(df, aucval, stringsAsFactors = FALSE)
 hinge <- as.character(config["hinge", ])
@@ -147,10 +160,13 @@ resolution <- as.numeric(config["resolution", ])
 df <- data.frame(df, resolution, stringsAsFactors = FALSE)
 Categorical <- as.character(config["Categorical", ])
 df <- data.frame(df, Categorical, stringsAsFactors = FALSE)
+spatial_weights <- as.numeric(config["spatial_weights", ])
+df <- data.frame(df, spatial_weights, stringsAsFactors = FALSE)
 nbg <- as.character(config["nbg", ])
 df <- data.frame(df, nbg, stringsAsFactors = FALSE)
 
-#Checking the number of years
+#Forecasting/Hindcasting Variables--------------
+#Checks the number of years
 numYear <- length(grep("^Year", row.names(config)))
 df <- data.frame(df, numYear, stringsAsFactors = FALSE)
 for (i in 1:numYear) {
@@ -166,7 +182,7 @@ for (i in 1:numYear) {
 years <-  rep(NA,length = numYear)
 years <-  as.numeric(config[grep("^Year", row.names(config)), ])
 
-#Checking the number of climate scenarios
+#Checks the number of climate scenarios
 numScenario <- length(grep("^Scenario", row.names(config)))
 df <- data.frame(df, numScenario, stringsAsFactors = FALSE)
 if (numScenario > 0) {
@@ -181,8 +197,8 @@ if (numScenario > 0) {
   }
 }
 
-
-# All data used for the species distribution modelling, etc.
+#Create Directories for megaSDM--------------------
+#All data used for the species distribution modelling, etc.
 DataDirectory <- config["DataDirectory", ]
 scripts <- createLocation(DataDirectory, "scripts")
 df <- data.frame(df, scripts, stringsAsFactors = FALSE)
@@ -217,7 +233,7 @@ if (dispersalStep=="Y") {
   df <- data.frame(df, dispersalRate_dir, stringsAsFactors = FALSE)
 }
 
-# Check if folders exist
+#Checks if folders exist
 checkDirExists(TrialDirectory)
 checkDirExists(test)
 checkDirExists(sppcountsloc)
@@ -225,7 +241,7 @@ checkDirExists(occurrences)
 checkDirExists(buff_dir)
 checkDirExists(result_dir)
 
-# Check if files already exist (warn that they will be overwritten)
+#Checks if files already exist (warn that they will be overwritten)
 if (gbifstep == "Y") {
   fileExistsWarning(counts)
   # Check if folder has data (warn that they will be overwritten)

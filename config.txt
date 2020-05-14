@@ -3,7 +3,7 @@
 
 ############# 1. Input Data Directory #######################------------------------------------
 
-DataDirectory = "F:/BetaTest/datadirectory"
+DataDirectory = "F:/EXAMPLE/datadirectory"
   #Directory where all environmental data folders necessary for the run should be placed (by user)
   #All scripts in this package will also be placed here
 
@@ -14,7 +14,7 @@ scripts = "/scripts"
 
 ############# 2. Trial Directory ###########################------------------------------------
 
-TrialDirectory =   "F:/BetaTest/Results"
+TrialDirectory =   "F:/EXAMPLE/Results"
   #Overall directory for occurrence files, background files, buffers, and results used in the trial
 
 --------------Sub-Directories (within "TrialDirectory")--------------------------------
@@ -116,7 +116,7 @@ maxlong_sa = -75
   #Note: if the extent crosses the anti-meridian (180/-180), redefine the origin of your CRS (desiredCRS in Section 5).
 
 resolution = 5000
-  #resolution (or desired resolution) of raster files (in m).
+  #resolution (or desired resolution) of all raster files (in m).
 
 Categorical = "NA"
   #A character string that will proceed any categorical environmental data
@@ -159,12 +159,17 @@ speciesBufferStep = "Y"
     #Set this to "Y" to weight background points close to occurrences more heavily (see Massin et al. 2012)
     #If occurrence point buffers already exist, place them in the "buff_dir" location and set this to "N"
 
+spatial_weights = 0.1
+  #A number between 0 and 1. If buffers exist (or speciesBufferStep = "Y"), the percentage of background points sampled from the buffers 
+    #0 means background points are sampled randomly across the study area
+    #1 means background points are exclusively sampled from within the buffers
+
 buff_dir =  "/Masks"				              
   #Location where (optional) buffer files are stored for each species (created if speciesBufferStep = "Y")
 
 nbg = 7500
   #Total number of background points wanted (due to environmental subsampling, actual number may vary)
-    #if buffers around occurrences exist, 1/2 will be sampled from within buffers, 1/2 will be sampled throughout training area
+    #if buffers around occurrences exist, spatial_weights give proportion of background points within the buffer.
   #If a number (n) followed by "X" is given (e.g.: "10X"), the number of background points will be roughly n times the number of subsampled occurrences.
   #More than 30000 background points may take a long time to generate
   
@@ -182,7 +187,7 @@ nsubsamp = 2
   #Number of runs with different sets of subsampled points (subsampleVarelastep="Y") and/or background points (Section 8)
 
 nPCAxes = 4
-  #How many Principal Component (PC) axes will used to environmentally subsample the occurrence and background data (subsampleVarelaStep="Y")
+  #How many Principal Component (PC) axes will be used to environmentally subsample the occurrence and background data (subsampleVarelaStep="Y")
   #If "NA" is given, nPCAxes will be calculated as the number of axis required to explain 95% variance in the data
   #At least 3 PC axes should be used, in order to keep enough variation in the subsample (Castellanos et al. 2018 suggests 4 PC axes)
   #NOTE: PCA will not be run if categorical environmental variables are given. Instead, the original data are used for subsampling.
@@ -196,8 +201,12 @@ randomseed = 474
 
 ############# 11. MaxEnt ####################################------------------------------------
 
+maxentStep = "Y"
+  #if habitat suitability maps have not already been generated, set this to "Y" (will use MaxEnt to determine suitability)
+  #if a different SDM method is preffered and/or habitat suitability has already been generated, set to "N"
+
 ncores = 2
-  #Number of computer cores running in parallel (can be up to 1 fewer than the number of cores the computer has)
+  #Number of computer cores running in parallel (can be any integer up to the number of cores the computer has, but 1 fewer is recommended)
 
 nrep = 2
 	#Number of replications within MaxEnt, i.e. the number of times MaxEnt will model the same data.
@@ -206,8 +215,12 @@ reptype = "Subsample"
 	#Type of replication Maxent uses. There are 3 options: "Subsample", "Crossvalidate", "Bootstrap"
 	#See the maxent.jar help file for more information on these three options.
 
+test_percent = 20
+	#What percent of the occurrence data should be held back for cross-validation and calculating model fit?
+	#Default is 20. 
+
 aucval = .7
-  #Minimum AUC value necessary for each run to be counted.. An AUC value 
+  #Minimum AUC value necessary for each run to be counted. AUC values estimate the predictive ability of a model, usually ranging from 0.5 (random) to 1 (perfect)
 
 hinge = "TRUE"
   #Whether or not to allow hinge features to be used during the MaxEnt projections ("true" or "false")
@@ -227,6 +240,7 @@ threshold = "Maximum.test.sensitivity.plus.specificity"
       #9:  "Equal.test.sensitivity.and.specificity"
       #10: "Balance.training.omission,.predicted.area.and.threshold.value"
       #11: "Equate.entropy.of.thresholded.and.original.distributions"
+      #12: Any value between 1 and 0 (NOT IN QUOTATION MARKS)
 
 AllOutputs = "Y"
   #Should (Y/N) these secondary outputs from MaxEnt be generated? (see MaxEnt help file for more information)
@@ -261,7 +275,7 @@ Year3 = 2070
 #List of Climate Models Examined
   #The first climate model (not current data) should be Scenario1, followed by Scenario2, Scenario3, etc.
   #If projection to a different time period is not needed, leave this section empty (delete the entire row)
-
+  #The scenario names CANNOT start with a number
 Scenario1 = "RCP4.5"
 Scenario2 = "RCP8.5"
 
