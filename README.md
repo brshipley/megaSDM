@@ -24,9 +24,7 @@ dplyr	(>=0.8.1)
 
 gtools	(>=3.8.1)
 
-parallel	(3.5.1)
-
-plotfunctions	(1.3)
+plotfunctions	(>=1.3)
 
 raster	(>=2.9)
 
