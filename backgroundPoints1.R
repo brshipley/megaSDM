@@ -1,9 +1,13 @@
-##This accesses the config file & names some variables that will be used
+####backgroundPoints1.R####
+##generates full-training area backgroundpoints (not species-specific)
+
+#Initializations--------------------------------------
+#Loads the necessary packages
 library(rgeos)
 library(raster)
 library(dplyr)
 
-#Initializations--------------------------------------
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 proj <- df[, "proj_trainingarea"]
 result_dir <- df[, "result_dir"]
@@ -15,6 +19,8 @@ rastertype<- df[, "rastertype"]
 desiredCRS <- df[, "desiredCRS"]
 randomseed <- df[, "randomseed"]
 Categorical <- df[, "Categorical"]
+spatial_weights <- df[, "spatial_weights"]
+
 ncores <- df[, "ncores"]
 outfile <- "statsout.txt"
 speciesBufferStep <- df[, "speciesBufferStep"]
@@ -22,12 +28,12 @@ spp_total <- spp_total
 
 nbg <- as.numeric(df[, "nbg"])
 if ((speciesBufferStep == "Y") | (length(list.files(buff_dir, pattern = paste0(rastertype, "$|.shp"))) == length(spp_total))) {
-  nbgTrain <- nbg/2
+  nbgTrain <- nbg * (1 - spatial_weights)
 } else {
   nbgTrain <- nbg
 }
 
-# To produce the same background csv files every time we run the code with the same inputs
+#To produce the same background csv files every time the code is run with the same inputs
 if (df[, "randomseed"]) {
   set.seed(randomseed)
 }
@@ -44,8 +50,8 @@ options(scipen = 999)
 train <- list.files(path = proj, full.names = TRUE, pattern = paste0("\\.bil$"))
 train <- stack(train)
 crs(train) <- desiredCRS
-#If nbg is more than the number of cells in the training raster, nbg should be equal to the number of cells
 
+#If nbg is more than the number of cells in the training raster, nbg should be equal to the number of cells
 if (nbgTrain > ncell(train[[1]])) {
   nbgTrain <- ncell(train[[1]])
   message(paste0("Warning: The number of background points is more than the number of raster cells (", ncell(train[[1]])), ")")
@@ -123,81 +129,93 @@ VarelaSample <- function (occurrences, ClimOccur, no_bins) {
 }
 
 #Run-----------------------------------------------
+#Generates empty vectors for background results 
 BuffClimateBins <- c()
 BuffNumber <- c()
 TrainClimateBins <- c()
 TrainNumber <- c()
 TotalNumber <- c()
 
-for (i in 1:nsubsamp) {
-  #Extract many more climate points than we need (will get subsampled down to correct number later)
-  #if nbg*10 is more than the number of cells in the raster, then sampleRandom won't work
-  if ((nbgTrain * 10) > ncell(train[[1]])) {
-    RastTrainBG <- ncell(train[[1]])
-  } else {
-    RastTrainBG <- nbgTrain * 10
-  }
-  ClimOccur <- sampleRandom(train, RastTrainBG, na.rm = TRUE, xy = TRUE)
-
-  #Run PCA analysis
-  if (is.na(Categorical)) {
-    PCAEnv <- prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
-    PCAImp <- summary(PCAEnv)$importance
-    #Determine the number of PC axes to use for subsampling
-    if (!is.na(nPCAxes)) {
-      NumberAxes <- nPCAxes
+if (nbgTrain > 0) {
+  for (i in 1:nsubsamp) {
+    #Extract many more climate points than we need (will get subsampled down to correct number later)
+    #if nbg*10 is more than the number of cells in the raster, then sampleRandom won't work
+    if ((nbgTrain * 10) > ncell(train[[1]])) {
+      RastTrainBG <- ncell(train[[1]])
     } else {
-      NumberAxes <- max(2, min(which(PCAImp[3,] > 0.95)))
+      RastTrainBG <- nbgTrain * 10
+    }
+    ClimOccur <- sampleRandom(train, RastTrainBG, na.rm = TRUE, xy = TRUE)
+  
+    #Run PCA analysis
+    if (is.na(Categorical)) {
+      PCAEnv <- prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
+      PCAImp <- summary(PCAEnv)$importance
+      
+      #Determine the number of PC axes to use for subsampling
+      if (!is.na(nPCAxes)) {
+        NumberAxes <- nPCAxes
+      } else {
+        NumberAxes <- max(2, min(which(PCAImp[3,] > 0.95)))
+      }
+      
+      if (NumberAxes > nlayers(train)) {
+        NumberAxes <- nlayers(train)
+        message(paste0("'NPCAxes' is more than the number of environmental variables (", NumberAxes, "): Setting 'NPCAxes' to ", NumberAxes, "."))
+      }
+      
+      #Add PCA values to the unsubsampled data frame
+      EnvOccur <- data.frame(cbind(ClimOccur[, 1:2], PCAEnv$x[, 1:NumberAxes]))
+    } else {
+      EnvOccur <- as.data.frame(ClimOccur)
     }
     
-    if (NumberAxes > nlayers(train)) {
-      NumberAxes <- nlayers(train)
-      message(paste0("'NPCAxes' is more than the number of environmental variables (", NumberAxes, "): Setting 'NPCAxes' to ", NumberAxes, "."))
+    #Determine the number of climate bins that are needed to make nbgTrain points
+    #For the first run, start at 1. Every other time, start at nbinscount - 10
+    if (i == 1) {
+      nbinscount <- 1
+    } else {
+      nbinscount <- max(1, nbinscount - 10)
     }
     
-    #Add PCA values to the unsubsampled data frame
-    EnvOccur <- data.frame(cbind(ClimOccur[, 1:2], PCAEnv$x[, 1:NumberAxes]))
-  } else {
-    EnvOccur <- as.data.frame(ClimOccur)
+    #Steadily increase the number of bins until the desired nbg is reached
+    nbgTest <- 0
+    bgdf_train <- data.frame(c())
+    while (nbgTest < nbgTrain && nbinscount < 99) {
+      bgdf_train <- VarelaSample(EnvOccur[, 1:2], ClimOccur, c(nbinscount:(nbinscount+1)))
+      nbinscount <- nbinscount + 1
+      nbgTest <- bgdf_train[nrow(bgdf_train), 1]
+    }
+    
+    #Output the number of background points and climate bins
+    NBinsFinal <- bgdf_train[which(abs(bgdf_train[, 1] - nbgTrain) == min(abs(bgdf_train[, 1] - nbgTrain)))[1], 2]
+    print(paste0("Number of Climate Bins Used For Training Area Subsampling: ", NBinsFinal))
+    
+    bgdf_train <- VarelaSample(RandomTrain[, 1:2], ClimOccur, NBinsFinal)
+    print(paste0("Number of Background Points In Training Area: ", nrow(bgdf_train)))
+    
+    #Create data frame of background points
+    bgtraindataframe <- data.frame(bgdf_train, stringsAsFactors = FALSE)
+    
+    #Statistics about background points/number of bins
+    TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
+    TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
+    
+    #Write background CSV Files
+    write.csv(bgtraindataframe, row.names = FALSE, file = paste0("backgrounds/Train_Background_", i, ".csv"))
   }
-  
-  #Determine the number of climate bins that are needed to make nbgTrain points
-  if (i == 1) {
-    nbinscount <- 1
-  } else {
-    nbinscount <- max(1, nbinscount - 10)
+} else {
+  for (i in 1:nsubsamp) {
+    bgtraindataframe <- sampleRandom(train, 1, na.rm = TRUE, xy = TRUE)
+    bgtraindataframe <- bgtraindataframe[-1, ]
+    #Write background CSV Files
+    write.csv(bgtraindataframe, row.names = FALSE, file = paste0("backgrounds/Train_Background_", i, ".csv"))
   }
-  
-  nbgTest <- 0
-  bgdf_train <- data.frame(c())
-  while (nbgTest < nbgTrain && nbinscount < 99) {
-    bgdf_train <- VarelaSample(EnvOccur[, 1:2], ClimOccur, c(nbinscount:(nbinscount+1)))
-    nbinscount <- nbinscount + 1
-    nbgTest <- bgdf_train[nrow(bgdf_train), 1]
-  }
-  
-  #Output the number of background points and climate bins
-  NBinsFinal <- bgdf_train[which(abs(bgdf_train[, 1] - nbgTrain) == min(abs(bgdf_train[, 1] - nbgTrain))), 2]
-  print(paste0("Number of Climate Bins Used For Training Area Subsampling: ", NBinsFinal))
-  
-  bgdf_train <- VarelaSample(RandomTrain[, 1:2], ClimOccur, NBinsFinal)
-  print(paste0("Number of Background Points In Training Area: ", nrow(bgdf_train)))
-  
-  #Create data frame of background points
-  bgtraindataframe <- data.frame(bgdf_train, stringsAsFactors = FALSE)
-  
-  #Statistics about background points/number of bins
-  TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
-  TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
-  
-  #Write background CSV Files
-  write.csv(bgtraindataframe, row.names = FALSE, file = paste0("backgrounds/Train_Background_", i, ".csv"))
+  TrainClimateBins <- rep(0, nsubsamp)
+  TrainNumber <- rep(0, nsubsamp)
 }
-
 #Write Statistics CSV into Results Folder
-bgstats <- data.frame(Subsample = c(1:nsubsamp),
-                      TrainClimateBins, 
-                      TrainNumber)
+bgstats <- data.frame(Subsample = c(1:nsubsamp), TrainClimateBins, TrainNumber)
 
 for (i in nrow(bgstats)) {
   if (bgstats$TrainClimateBins[i] == 99) {

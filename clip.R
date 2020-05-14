@@ -1,4 +1,11 @@
+####clip.R####
+##Clips all spatial data to training/study area
 #Initializations---------------------------
+#Loads the necessary packages
+library(raster)
+library(rgdal)
+
+#Loads the necessary variables from "df"
 rastertype <- df[, "rastertype"]
 trainingarea <- df[, "proj_trainingarea"]
 minlat <- as.numeric(df[, "minlat"])
@@ -27,8 +34,6 @@ if (numScenario > 0) {
 years <-  rep(NA, length = numYear)
 years <-  as.numeric(config[grep("^Year", row.names(config)), ])
 
-library(raster)
-library(rgdal)
 
 #Raster->format Dictionary
 if (rastertype == ".asc") {
@@ -47,15 +52,17 @@ if (rastertype == ".asc") {
   message("Error: Raster type unknown")
 }
 
-#Convert Study Area extent boundaries to correct projection and make data frame
+#Extent Checking----------------------------
+#Converts Study Area extent boundaries to correct projection
 Extent <- cbind(c(minlong, maxlong), c(minlat, maxlat))
 colnames(Extent) <- c("long", "lat")
-
 ExtentSP <- SpatialPoints(Extent, proj4string = CRS(defaultCRS))
 ExtentProj <- spTransform(ExtentSP, desiredCRS)
 
+#Makes data frame out of study area extent
 NewExtent <-as.data.frame(ExtentProj@coords)
 colnames(NewExtent) <- c("long", "lat")
+#Weird projections cause the reprojected layers to have issues (dealt with here)
 if (NewExtent$long[1] > NewExtent$long[2] | NewExtent$lat[1] > NewExtent$lat[2]) {
   NewExtent$long <- NewExtent$long[order(NewExtent$long, decreasing = FALSE)]
   NewExtent$lat <- NewExtent$lat[order(NewExtent$lat, decreasing = FALSE)]
@@ -69,16 +76,20 @@ if (NewExtent$long[1] > NewExtent$long[2] | NewExtent$lat[1] > NewExtent$lat[2])
 setwd(trainingarea)
 bioclim <- list.files(path = ".", pattern = paste0("\\.bil$"), full.names = TRUE)
 
-#Determine if all of the extents are constant
+#Determines if all of the extents are constant
 ExtentClim <- matrix(data = NA, nrow = 4, ncol = length(bioclim))
 for (i in 1:length(bioclim)) {
   ExtentClim[, i] <- extent(raster(bioclim[[i]]))[1:4]
 }
 ExtentUnique <- unique(ExtentClim, MARGIN=2)
+
+#Checks and deals with multiple raster extents
 if (ncol(ExtentUnique) > 1) {
   message("Warning! the environmental rasters have different extents: This program will use only the intersection of the rasters")
   df[, "TrainingAreaClip"] <- "Y"
   StackList <- c()
+  
+  #Stack all of the rasters with the same extents and create a list 
   for (j in 1:ncol(ExtentUnique)) {
     FocusStack <- c()
     for (p in 1:length(bioclim)) {
@@ -88,19 +99,32 @@ if (ncol(ExtentUnique) > 1) {
     }
     StackList <- c(StackList, stack(bioclim[FocusStack]))
   }
+  
+  #Goes through each raster stack and intersects with the others
+  #"pat" is template for resampling all of the rasters
   v <- 1
   pat <- StackList[[1]][[1]]
   while (v <= (length(StackList) - 1)) {
     SL_na <- c()
     if (v == 1) {
+      #Resample all layers in the next rasterstack 
       for (d in 1:nlayers(StackList[[v + 1]])) {
         SL_na <- c(SL_na, resample(StackList[[v + 1]][[d]], pat, method = "ngb"))
       }
+      
+      #Intersect the two raster stacks
       StackList[[v + 1]] <- stack(SL_na)
       bioclim_int <- intersect(StackList[[v + 1]], StackList[[v]])
       print(paste0("Intersecting Rasters..."))
-      bioclim <- stack(StackList[[1]], bioclim_int)
+      bioclim <- stack(StackList[[v]], bioclim_int)
     } else {
+      #Resample all layers in the next rasterstack
+      for (d in 1:nlayers(StackList[[v + 1]])) {
+        SL_na <- c(SL_na, resample(StackList[[v + 1]][[d]], pat, method = "ngb"))
+      }
+      
+      #Intersect the two raster stacks
+      StackList[[v + 1]] <- stack(SL_na)
       bioclim_int <- intersect(StackList[[v + 1]], bioclim)
       print(paste0("Intersecting Rasters..."))
       bioclim <- stack(bioclim, bioclim_int)
@@ -124,6 +148,7 @@ if (TrainingAreaClip == "N") {
 }
 
 colnames(Extent_TA) <- c("long", "lat")
+
 #If TrainingAreaClip is "N", then the CRS of the boudaries are in the correct projection
 if (TrainingAreaClip == "N") {
   ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(desiredCRS))
@@ -131,9 +156,12 @@ if (TrainingAreaClip == "N") {
   ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(defaultCRS))
 }
 
+#Convert the extent of the training area to the desiredCRS
 ExtentProj_TA <- spTransform(ExtentSP_TA, crs(desiredCRS))
 NewExtent_TA <- as.data.frame(ExtentProj_TA@coords)
 colnames(NewExtent_TA) <- c("long", "lat")
+
+#Weird projections cause the reprojected layers to have issues (dealt with here)
 if ((NewExtent_TA$long[1] > NewExtent_TA$long[2]) | (NewExtent_TA$lat[1] > NewExtent_TA$lat[2])) {
   NewExtent_TA$long <- NewExtent_TA$long[order(NewExtent_TA$long, decreasing = FALSE)]
   NewExtent_TA$lat <- NewExtent_TA$lat[order(NewExtent_TA$lat, decreasing = FALSE)]
@@ -174,6 +202,7 @@ if (TrainingAreaClip == "Y") {
     }
   }
   
+  #Writes and stores projected files in a temporary directory
   dir.create(paste0(DataDirectory, "/TEMP"))
   setwd(paste0(DataDirectory, "/TEMP"))
   for (k in 1:length(bioclim_t)) {
@@ -189,7 +218,7 @@ if (TrainingAreaClip == "Y") {
   rm(bioclim_t, bioclim)
   setwd(trainingarea)
 } else {
-  #Writes training area layers
+  #Writes and stores training area layers in a temporary directory
   bioclim_t2 <- stack(bioclim)
   dir.create(paste0(DataDirectory, "/TEMP"))
   setwd(paste0(DataDirectory, "/TEMP")) 
@@ -224,7 +253,6 @@ for (i in 2:length(bioclim_a)) {
 bioclim_na2 <- stack(bioclim_na)
 rm(bioclim_a)
 
-
 #Deletes all previous files within the projected study area directory
 setwd(studyarea)
 FilesToClear <- list.files(studyarea) 
@@ -237,17 +265,18 @@ for (k in 1:nlayers(bioclim_na2)) {
 }
 
 #Clipping Future Environmental Layers----------------------------------
-#Clip all of the future environmental rasters
+#Clips all of the future environmental rasters
 if (numScenario > 0) {
   setwd(proj_predictenv_dir)
-  #Separate out directories
+  
+  #Separates out directories
   predictenvdir <- list.dirs(path = proj_predictenv_dir, full.names = TRUE)
   for (i in 1:length(predictenvdir)) {
     correctDir <- list.dirs(path = predictenvdir[i], full.names = TRUE)
     
-    #If the directory is an endpoint, do the clip
+    #If the directory is an endpoint, clips
     if (length(correctDir) == 1) {
-      #Making a list of all future environmental layer files
+      #Makes a list of all future environmental layer files
       setwd(correctDir)
       future <- list.files(path=".", pattern=paste0("\\.bil$"), full.names = TRUE)
       future_a <- c()
@@ -288,19 +317,20 @@ if (UrbanAnalysis == "Y") {
     urban_a <- c(urban_a, crop(raster(urban[i]), extent(pat)))
   }
   
-  urban_na <- c()
   #resample to the environmental reference raster
+  urban_na <- c()
   for (i in 1:length(urban)) {
     urban_na <- c(urban_na, resample(urban_a[[i]], pat, method="ngb"))
   }
   
   rm(urban_a)
   
-  #writing the raster file
+  #overwriting the urbanized raster files
   urban_na <- stack(urban_na)
   setwd(proj_urbanized_dir)
   unlist(proj_urbanized_dir)
   for (j in 1:nlayers(urban_na)) {
+    #If thehre are multiple urbanized raster (for different time periods), write out each one
     if (length(grep(paste(years, collapse = "|"), names(urban_na))) == nlayers(urban_na)) {
       writeRaster(urban_na[[j]], filename = paste0("SA_urb", years[j], rastertype, sep = ""), overwrite = TRUE, bylayer = TRUE, format = "EHdr", prj = TRUE)
       print("Writing Urban Rasters")
@@ -312,16 +342,17 @@ if (UrbanAnalysis == "Y") {
 }
 
 if (ProtectedAnalysis == "Y") {
-  #listing the protected shapefiles (there usually should only be one)
+  #Lists the protected shapefiles (there usually should only be one)
   setwd(proj_protected_dir)
   protect <- list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = TRUE)
   protect_a <- c()
   
-  #Clipping the protected shapefiles
+  #Clips the protected shapefiles
   for (i in 1:length(protect)) {
     protect_a <- c(protect_a, crop(shapefile(protect[i]), extent(pat)))
   }
   
+  #Writes the shapefiles
   for (i in 1:length(protect_a)) {
     writeOGR(protect_a[[i]], dsn = proj_protected_dir, layer = paste0("protected_areas_sa_",i), overwrite_layer = TRUE, driver = "ESRI Shapefile")
   }

@@ -1,8 +1,13 @@
-##This accesses the config file & names some variables that will be used
+####backgroundPoints2.R####
+##Generates buffer area backgroundpoints and/or species-specific background points
+
+#Initializations----------------------------------------------
+#Loads the necessary packages
 library(rgeos)
 library(raster)
 library(dplyr)
 
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 proj <- df[, "proj_trainingarea"]
 buff_dir <- df[, "buff_dir"]
@@ -12,6 +17,7 @@ samples <- "samples"
 nbins <- df[, "nclimatebins"]
 nPCAxes <- df[, "nPCAxes"]
 Categorical <- df[, "Categorical"]
+spatial_weights <- df[, "spatial_weights"]
 rastertype<- df[, "rastertype"]
 desiredCRS <- df[, "desiredCRS"]
 randomseed <- df[, "randomseed"]
@@ -19,9 +25,12 @@ ncores <- df[, "ncores"]
 nbg <- df[, "nbg"]
 outfile <- "statsout.txt"
 speciesBufferStep <- df[, "speciesBufferStep"]
+
 if (df[, "randomseed"]) {
   set.seed(randomseed)
 }
+
+#Generates a global bounding box to remove problems with the anti-meridian
 GlobalBBox <- SpatialPoints(matrix(c(-179.9, 179.9, 89.9, -89.9), nrow = 2), proj4string = crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
 setwd(test)
 
@@ -114,6 +123,7 @@ VarelaSample <- function (OccurData, ClimOccur, no_bins) {
 
 bgpoints <- function(CurSpp) {
   
+  #Generates empty vectors for background results
   BuffClimateBins <- c()
   BuffNumber <- c()
   TrainClimateBins <- c()
@@ -124,12 +134,14 @@ bgpoints <- function(CurSpp) {
   spp <- CurSpp
   spp.name <- substr(spp, 9, (nchar(spp) - 4))
   
-  #Number of background points generated for each run (dependent on number of subsampled occurrences)
-  
+  #If species-dependent numbers of background points are necessary
   if (length(grep("x", tolower(nbg))) > 0) {
+    #Calculate number of occurrences
     OccurrenceFileName <- list.files(paste0(test, "/", samples, "/", spp.name), pattern = paste0("\\.csv$"))[1]
     OccurrenceFile <- read.csv(paste0(test, "/", samples, "/", spp.name, "/", OccurrenceFileName))
     OccurrenceNumber <- nrow(OccurrenceFile)
+    
+    #Multiply by the desired number
     Multiplier <- as.numeric(substr(nbg, 1, nchar(nbg) - 1))
     nbg <- Multiplier * OccurrenceNumber
     if (nbg > ncell(train[[1]])) {
@@ -146,14 +158,20 @@ bgpoints <- function(CurSpp) {
     }
   }
   
-  for (i in 1:nsubsamp) {
-    #Step 1: sampling the points inside the buffer----------
-    #finds the buffer for the species in the "buff_dir" folder (if exists)
+  #For each desired occurrence subsample
+  for (g in 1:nsubsamp) {
+    #Step 1: sampling the points inside the buffer (if exists)----------
     setwd(buff_dir)
     
-    #If the buffer is a raster, uses crs(), if not, uses SpatialPolygons()
     if (length(list.files(buff_dir)) > 0) {
-      nbgBuffer <- nbg / 2
+      #Calculate the number of buffer points necessary
+      nbgBuffer <- nbg * spatial_weights
+      
+      if(round(nbgBuffer) == 0) {
+        nbgBuffer <- 1
+      }
+      
+      #if buffers are rasters, use CRS. Otherwise use SpatialPolygons
       if (file.exists(paste0(buff_dir, "/", spp.name, rastertype))) {
         BuffFile <- raster(paste0(spp.name, rastertype), native = TRUE)
         crs(BuffFile) <- desiredCRS
@@ -171,8 +189,8 @@ bgpoints <- function(CurSpp) {
         }
       }
       
+      #If buffers are in raster form (else on line 260) 
       if (file.exists(paste0(spp.name, rastertype))) {
-        
         #randomly sample %nbg*5% number of points from the buffer raster
         #if nbg*5 is more than the number of cells in the buffer raster, then simply sample all of the raster cells
         if ((nbg * 5) > cellStats(BuffFile, stat = sum)) {
@@ -181,20 +199,24 @@ bgpoints <- function(CurSpp) {
           RastBuffBG <- nbg * 5
         }
         
+        #Randomly sample nbg * 5 points from the raster
         rasterValues <- rasterToPoints(BuffFile)
         randomCoord <- rasterValues[sample(nrow(rasterValues), size = RastBuffBG), ]
         randomCoordinates <- cbind(randomCoord[, 1], randomCoord[, 2])
         
+        #generate SpatialPoints object from sampled raster values
         randomCoordinates <- SpatialPoints(randomCoordinates, proj4string = crs(desiredCRS))
         
+        #Extract climate data
         ClimOccur <- extract(train, randomCoordinates)
         ClimOccur <- data.frame(x = randomCoordinates@coords[, 1], y = randomCoordinates@coords[, 2], ClimOccur)
         ClimOccur <- na.omit(ClimOccur)
         
         #Run PCA analysis
-        if (is.na(Categorical)) {
+        if (is.na(Categorical) & round(nbg * spatial_weights) > 0) {
           PCAEnv <- prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
           PCAImp <- summary(PCAEnv)$importance
+          
           #Determine the number of PC axes to use for subsampling
           if (!is.na(nPCAxes)) {
             NumberAxes <- nPCAxes
@@ -212,7 +234,8 @@ bgpoints <- function(CurSpp) {
         } else {
           EnvOccur <- ClimOccur
         }
-        #Varela Subsamples the buffer background points with a range of climate bins to get the closest to 1/2*nbg
+        
+        #Varela Subsamples the buffer background points with a range of climate bins to get the closest to nbg * spatial_weights
         nbinscount <- 1
         nbgTest <- 0
         bgdf_buffer <- data.frame(c())
@@ -220,8 +243,11 @@ bgpoints <- function(CurSpp) {
         if (NUniqueClim < nbgBuffer) {
           nbgBuffer <- NUniqueClim
           message("Warning! The number of unique climates within the buffer is less than the number of background points wanted")
-          message(paste0("Only ", NUniqueClim, " background points within the buffer will be generated"))
+          message(paste0("Only ", NUniqueClim, " background points within the buffer can be generated"))
+          nbinscount <- 98
         }
+        
+        #Steadily increase the number of bins until the desired nbg is reached
         while (nbgTest < nbgBuffer && nbinscount < max(99, nbins)) {
           bgdf_buffer <- VarelaSample(EnvOccur, ClimOccur, c(nbinscount:(nbinscount + 1)))
           nbinscount <- nbinscount + 1
@@ -229,19 +255,20 @@ bgpoints <- function(CurSpp) {
         }
         
         #Output the number of background points and climate bins
-        NBinsFinal <- bgdf_buffer[which(abs(bgdf_buffer[, 1] - nbgBuffer) == min(abs(bgdf_buffer[, 1] - nbgBuffer))), 2]
+        NBinsFinal <- bgdf_buffer[which(abs(bgdf_buffer[, 1] - nbgBuffer) == min(abs(bgdf_buffer[, 1] - nbgBuffer)))[1], 2]
         print(paste0("Number of Climate Bins Used For Buffer Subsampling: ", NBinsFinal))
         
         bgdf_buffer <- VarelaSample(EnvOccur, ClimOccur, NBinsFinal)
         print(paste0("Number of Background Points In Buffer: ", nrow(bgdf_buffer)))
-        
       } else {
+        #If the buffers are shapefiles
         
-        #randomly samples %nbg*5% number of points from the shapefile
+        #randomly samples nbg*5 number of points from the shapefile
         randomCoord <- spsample(BuffFile, (nbgBuffer * 5), "random", iter = 15)
         randomCoord2 <- spTransform(randomCoord, crs(train))
         randomCoordinates <- randomCoord2@coords
         
+        #Extracts climate data
         ClimOccur <- extract(train, randomCoordinates)
         ClimOccur <- data.frame(x = randomCoord2@coords[, 1], y = randomCoord2@coords[, 2], ClimOccur)
         ClimOccur <- na.omit(ClimOccur)
@@ -266,7 +293,7 @@ bgpoints <- function(CurSpp) {
         } else {
           EnvOccur <- ClimOccur
         }
-        #Varela Subsamples the buffer background points with a range of climate bins to get the closest to 1/2*nbg
+        #Varela Subsamples the buffer background points with a range of climate bins to get the closest to nbg * spatial_weights
         nbinscount <- 1
         nbgTest <- 0
         bgdf_buffer <- data.frame(c())
@@ -274,8 +301,11 @@ bgpoints <- function(CurSpp) {
         if (NUniqueClim < nbgBuffer) {
           nbgBuffer <- NUniqueClim
           message("Warning! The number of unique climates within the buffer is less than the number of background points wanted")
-          message(paste0("Only ", NUniqueClim, " background points within the buffer will be generated"))
+          message(paste0("Only ", NUniqueClim, " background points within the buffer can be generated"))
+          nbinscount <- 98
         }
+        
+        #Steadily increase the number of bins until the desired nbg is reached
         while (nbgTest < nbgBuffer && nbinscount < max(99, nbins)) {
           bgdf_buffer <- VarelaSample(EnvOccur, ClimOccur, c(nbinscount:(nbinscount+1)))
           nbinscount <- nbinscount + 1
@@ -283,7 +313,7 @@ bgpoints <- function(CurSpp) {
         }
         
         #Output the number of background points and climate bins
-        NBinsFinal <- bgdf_buffer[which(abs(bgdf_buffer[, 1] - nbgBuffer) == min(abs(bgdf_buffer[, 1] - nbgBuffer))), 2]
+        NBinsFinal <- bgdf_buffer[which(abs(bgdf_buffer[, 1] - nbgBuffer) == min(abs(bgdf_buffer[, 1] - nbgBuffer)))[1], 2]
         print(paste0("Number of Climate Bins Used For Buffer Subsampling: ", NBinsFinal))
         
         bgdf_buffer <- VarelaSample(EnvOccur, ClimOccur, NBinsFinal)
@@ -313,18 +343,22 @@ bgpoints <- function(CurSpp) {
     }
     
     #Step 2: Sampling from the entire training area------------ 
-    #if nbg*5 is more than the number of cells in the buffer raster, then sampleRandom won't work
+    #Checks to see if there are already background files created from "backgroundPoints1.R"
     BGTrainFiles <- list.files(paste0(test,"/backgrounds"), pattern=paste0(".csv$"))
+    
     if (length(BGTrainFiles) != nsubsamp) {  
+      #if nbg*5 is more than the number of cells in the buffer raster, then sampleRandom won't work
       if ((nbg * 5) > ncell(train[[1]])) {
         RastTrainBG <- ncell(train[[1]])
       } else {
         RastTrainBG <- nbg * 5
       }
       
+      #Sample the required number of full-training area background points
       RandomTrain <- sampleRandom(train, RastTrainBG, na.rm=TRUE, xy=TRUE)
       RandomTrain <- as.data.frame(RandomTrain)
       
+      #Run PC analysis
       if (is.na(Categorical)) {
         PCAEnv <- prcomp(RandomTrain[, 3:ncol(RandomTrain)], scale = TRUE)
         PCAImp <- summary(PCAEnv)$importance
@@ -350,30 +384,33 @@ bgpoints <- function(CurSpp) {
         nbgTrain <- 0
         bgdf_train <- data.frame(c())
         
+        #Steadily increase the number of bins until the desired nbg is reached
         while (nbgTrain < (nbg - nrow(bgbuffdataframe)) && nbinscount < max(99, nbins)) {
-          bgdf_train <- VarelaSample(EnvOccur, RandomTrain, c(nbinscount:(nbinscount+1)))
+          bgdf_train <- VarelaSample(EnvOccur, RandomTrain, c(nbinscount:(nbinscount + 1)))
           nbinscount <- nbinscount + 1
-          nbgTest <- bgdf_train[nrow(bgdf_buffer), 1]
+          nbgTrain <- bgdf_train[nrow(bgdf_train), 1]
         }
         
         #Shorten by splitting up
-        NBinsFinal <- bgdf_train[which(abs((bgdf_train$NumberofSamples + nrow(bgbuffdataframe)) - nbg) == min(abs(bgdf_train$NumberofSamples + nrow(bgbuffdataframe) - nbg))), 2]
+        NBinsFinal <- bgdf_train[which(abs((bgdf_train$NumberofSamples + nrow(bgbuffdataframe)) - nbg) == min(abs(bgdf_train$NumberofSamples + nrow(bgbuffdataframe) - nbg)))[1], 2]
         if (length(NBinsFinal) > 1) {
           NBinsFinal <- NBinsFinal[1]
         }
         bgdf_train <- VarelaSample(EnvOccur, RandomTrain, c(NBinsFinal))
       } else {
+        #if no buffer files exists, all points sampled from training area
         nbinscount <- 1
         nbgTrain <- 0
         bgdf_train <- data.frame(c())
         
+        #Steadily increase the number of bins until the desired nbg is reached
         while (nbgTrain < nbg && nbinscount < max(99, nbins)) {
-          bgdf_train <- VarelaSample(EnvOccur, RandomTrain, c(nbinscount:(nbinscount+1)))
+          bgdf_train <- VarelaSample(EnvOccur, RandomTrain, c(nbinscount:(nbinscount + 1)))
           nbinscount <- nbinscount + 1
-          nbgTest <- bgdf_train[nrow(bgdf_buffer), 1]
+          nbgTrain <- bgdf_train[nrow(bgdf_train), 1]
         }
         
-        NBinsFinal <- bgdf_train[which(abs(bgdf_train$NumberofSamples - nbg) == min(abs(bgdf_train$NumberofSamples - nbg))), 2]
+        NBinsFinal <- bgdf_train[which(abs(bgdf_train$NumberofSamples - nbg) == min(abs(bgdf_train$NumberofSamples - nbg)))[1], 2]
         if (length(NBinsFinal) > 1) {
           NBinsFinal <- NBinsFinal[1]
         }
@@ -386,29 +423,29 @@ bgpoints <- function(CurSpp) {
       #Creates the final background points data frame and append the statistics to the statistics vectors
       bgtraindataframe <- data.frame(Species = rep(spp.name,nrow(bgdf_train)), bgdf_train, stringsAsFactors = FALSE)
       
-      TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
-      TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
-      
-      if (length(list.files(buff_dir)) > 0){
+      if (length(list.files(buff_dir)) > 0 & (round(nbg* spatial_weights) != 0)) {
         Full_BGPoints <- rbind(bgbuffdataframe, bgtraindataframe)
       } else {
         Full_BGPoints <- bgtraindataframe
       }
       
+      TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
+      TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
       TotalNumber <- c(TotalNumber, nrow(Full_BGPoints))
-      write.csv(Full_BGPoints, row.names = FALSE, file = paste0(test, "/backgrounds/", spp.name, "/", spp.name, "_background_", i, ".csv"))
+      write.csv(Full_BGPoints, row.names = FALSE, file = paste0(test, "/backgrounds/", spp.name, "/", spp.name, "_background_", g, ".csv"))
     } else {
+      
       print("Appending pre-generated training area background points...")
-      bgdf_train <- read.csv(paste0(test, "/backgrounds/Train_Background_", i, ".csv"))
+      bgdf_train <- read.csv(paste0(test, "/backgrounds/Train_Background_", g, ".csv"))
       bgtraindataframe <- data.frame(Species = rep(spp.name, nrow(bgdf_train)), bgdf_train)
       Full_BGPoints <- rbind(bgbuffdataframe, bgtraindataframe)
       TotalNumber <- c(TotalNumber, nrow(Full_BGPoints))
-      write.csv(Full_BGPoints, row.names = FALSE, file = paste0(test, "/backgrounds/", spp.name, "/", spp.name, "_background_", i, ".csv"))
-    
+      write.csv(Full_BGPoints, row.names = FALSE, file = paste0(test, "/backgrounds/", spp.name, "/", spp.name, "_background_", g, ".csv"))
     }
   }
   #Creates (or appends) stats file for background points
   if (length(BGTrainFiles) == nsubsamp) {
+    #If backgroundPoints1.R already generated a stats file, append new data
     BG_Stats <- data.frame(read.csv(paste0(result_dir, "/BackgroundPoints_stats.csv")))
     if (file.exists(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv"))){
       Buffer_Stats <- data.frame(read.csv(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv")))
@@ -419,6 +456,7 @@ bgpoints <- function(CurSpp) {
     BG_Stats$TotalNumber <- TotalNumber
     write.csv(BG_Stats, file = paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv"), row.names = FALSE)
   } else {
+    #Creates statistics data frame
     BG_Stats <- data.frame(Subsample = c(1:nsubsamp), BuffClimateBins, BuffNumber, TrainClimateBins, TrainNumber, TotalNumber)
     if (file.exists(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv"))){
       Buffer_Stats <- data.frame(read.csv(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv")))
@@ -431,6 +469,7 @@ bgpoints <- function(CurSpp) {
 }
 
 #Run---------------------------
+#Creates species list for parallelization
 ListSpp <- c()
 setwd(test)
 speciesWorked <- spp_batch
@@ -441,10 +480,11 @@ ListSpp <- unique(ListSpp)
 print("   Will evaluate species:")
 print(ListSpp)
 
+#Parallelization
 clus <- makeCluster(ncores, outfile = outfile)
 clusterExport(clus, varlist = c("test", "ncores", "proj", "buff_dir", "nsubsamp", "samples", "nbg",
                                 "rastertype", "desiredCRS", "randomseed", "ListSpp", "speciesBufferStep",
-                                "train", "bgpoints", "nPCAxes", "VarelaSample", "nbins", "result_dir", "GlobalBBox", "Categorical"))
+                                "train", "bgpoints", "nPCAxes", "VarelaSample", "spatial_weights", "nbins", "result_dir", "GlobalBBox", "Categorical"))
 
 
 
