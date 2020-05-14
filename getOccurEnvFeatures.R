@@ -1,9 +1,14 @@
+####getOccurEnvFeatures.R####
+##Extracts climate data from occurrences
+
 #Initializations-------------------------------------
-library(biomod2)
+#Loads the necessary packages
 library(gtools)
 library(parallel)
 library(rgdal)
 library(raster)
+
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 ncores <- as.numeric(df[, "ncores"])
 outfile <- "statsout.txt"
@@ -13,10 +18,9 @@ defaultCRS <- df[, "defaultCRS"]
 dispersalStep <- df[, "dispersalStep"]
 backgroundPointsStep <- df[, "backgroundPointsStep"]
 
+#Loads and sorts climate data
 setwd(df[, "proj_trainingarea"])
-#load climate data:
 train <- list.files(pattern = paste0('.bil$'), full.names = TRUE)
-# sorting so they are in ascending order
 train <- mixedsort(train)
 
 train2 <- c()
@@ -33,30 +37,25 @@ print(paste0("      ", names(train2)))
 #Functions---------------------------------------------------
 run = function(CurSpp) {
   
-  #read in the occurrence data frame (should be formatted with columns 'Species', 'Lat', 'Long')
+  #Reads in the occurrence data frame (should be formatted with columns 'Species', 'Lat', 'Long')
   CurSpp2 <- (read.csv(CurSpp, stringsAsFactors = FALSE))
   
-  #just in case other data came in... Also will ensure that data is in proper format
+  #Ensures that data is in proper format
   
   tryCatch(CurSpp2 <- CurSpp2[, c("Species", "Longitude", "Latitude")],
-           error = function(e) "Not the right column headings"
-           )
+           error = function(e) "Not the right column headings")
   
   Species <- CurSpp2$Species
   
-  #Convert data into a SpatialPoints format
-  
+  #Converts data into a SpatialPoints format
   coordinates <- CurSpp2[, c("Longitude", "Latitude")]
- 
   CurSpp3 <- SpatialPoints(coordinates, proj4string = crs(df[, "defaultCRS"]))
   
-  #Reproject to projection of environmental data
+  #Reprojects to projection of environmental data
   CurSpp3 <- spTransform(CurSpp3, crs(desiredCRS))
   
-  #Extract data
+  #Extracts data
   data <- extract(train2, CurSpp3)
-  
-  #make it a df and not a vector
   data <- as.data.frame(data)
   
   #add the extracted values back to the CurSpp df
@@ -78,11 +77,16 @@ run = function(CurSpp) {
   #write out the .csv with the extracted data for the envSample call
   write.csv(CurSpp, file = paste("samples/", s, ".csv", sep = ""), row.names = FALSE)
   
+  #Extracts background point climate data (if bg points are already provided)
   if (backgroundPointsStep == "N") {
     
+    #Finds background point list 
     BPDirList <- list.files(paste0(test, "/backgrounds"), full.names = TRUE)
     CurSpecBPDir <- BPDirList[grep(s, BPDirList)]
+    
     for (f in 1:length(CurSpecBPDir)) {
+      
+      #Renames bg point column headings
       BP <- read.csv(file = paste0(CurSpecBPDir[f]))
       if (tolower(names(BP)[1]) == "x" && length(grep("^y$", tolower(names(BP)))) == 0) {
         BP <- BP[, 2:ncol(BP)]
@@ -93,6 +97,7 @@ run = function(CurSpp) {
       BP <- BP[, c("Species", "Longitude", "Latitude")]
       BP2 <- BP[, 2:3]
       
+      #Projects background points into desired CRS
       try({
         BPoints <- SpatialPoints(BP2, proj4string = crs(defaultCRS))
         BPoints2 <- spTransform(BPoints, crs(desiredCRS))
@@ -102,6 +107,7 @@ run = function(CurSpp) {
         BPoints2 <- SpatialPoints(BPoints, proj4string = crs(desiredCRS))
       }
       
+      #Extracts climate data from the projected bg points
       BPExtract <- extract(train2, BPoints2)
       BP_Final <- cbind(BP[, 1:3], BPExtract)
       BP_Final <- BP_Final[!is.na(BP_Final[, 4]),]
@@ -112,7 +118,7 @@ run = function(CurSpp) {
 }
 
 #Run---------------------------------------------------------
-
+#Generates the species list for parallelization
 setwd(test)
 ListSpp <- c()
 speciesWorked <- spp_batch
@@ -125,6 +131,7 @@ print(ListSpp)
 nfiles<- length(ListSpp)
 dir.create("samples")
 
+#Ensures that all species have background points (if they are already generated)
 BPDirList <- list.files(paste0(test, "/backgrounds"), full.names = TRUE)
 if (backgroundPointsStep == "N") {
   for (i in 1:length(ListSpp)) {
@@ -136,6 +143,7 @@ if (backgroundPointsStep == "N") {
   }
 }
 
+#Parallelization
 clus <- makeCluster(ncores, outfile = outfile)
 
 clusterExport(clus, varlist = c("ncores", "run", "train", "train2", 

@@ -1,4 +1,4 @@
-#getConfig
+####getConfig.R####
 #output: the destination location (where to save the downloaded file).
 getConfig <- function(output) {
   ConfURL <- "https://raw.githubusercontent.com/brshipley/megaSDM/master/config.txt"

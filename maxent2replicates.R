@@ -1,11 +1,13 @@
-# This is the main maxent modeling script (for 2 replicates)
-# It does both the initial modeling and the projections
+####maxent2replicates.R####
+##This is the main maxent modeling script (for 2 replicates)
+##It does both the initial modeling and the projections
 
 #Initializations------------------------
-library(biomod2)
+#Loads the necessary packages
 library(gtools)
 library(parallel)
-#reads in & sets up config options
+
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 proj <- df[, "proj_studyarea"]
 samples <- "samples"
@@ -37,27 +39,29 @@ if (rastertype == ".asc") {
   message("Error: Raster type unknown")
 }
 
-# number of cores to use in parallel
+#number of cores to use in parallel
 ncores <- as.numeric(df[, "ncores"]) 
-# name of output file for parallel
+#name of output file for parallel
 outfile <- "modelout.txt"
-# number of times to repeat ENTIRE PROCESS
+#number of times to repeat ENTIRE PROCESS
 nsubsamp <- as.numeric(df[, "nsubsamp"]) 
-# number of replications WITHIN MAXENT (crossvalidation/subsampling/etc)
+#number of replications WITHIN MAXENT (crossvalidation/subsampling/etc)
 nrep <- as.numeric(df[, "nrep"])
-# type of replicates (Subsample, etc.; see MAXENT manual)
+#type of replicates (Subsample, etc.; see MAXENT manual)
 reptype <- df[, "reptype"]
-# whether or not to use hinge features when modelling
+#percentage of occurrences to hold back for cross-validation/accuracy testing
+test_percent <- df[, "test_percent"]
+#whether or not to use hinge features when modelling
 hinge <- tolower(df[, "hinge"])
-# prefix string for categorical data
+#prefix string for categorical data
 Categorical <- df[, "Categorical"]
-# Which threshold to use
+#Which threshold to use
 ThreshMethod <- df[, "threshold"]
-# result directory
+#result directory
 result_dir <- df[, "result_dir"]
-# AUC cutoff value. We will only use models with AUC values greater than this value.
+#AUC cutoff value. We will only use models with AUC values greater than this value.
 aucval <- df[, "aucval"]
-# number of projections used
+#number of projections used
 nproj <- ((numScenario) * (numYear - 1) + 1)
 
 DeleteIndex <- c()
@@ -80,7 +84,7 @@ if (ProtectedAnalysis == "Y") {
   proj_protected_dir <- c()
 }
 
-# Should all secondary MaxEnt outputs be generated?
+#Should all secondary MaxEnt outputs be generated?
 AllOutputs <- df[, "AllOutputs"]
 if (AllOutputs == "Y") {
   alloutputs <- "true"
@@ -88,16 +92,16 @@ if (AllOutputs == "Y") {
   alloutputs <- "false"
 }
 
-# Create results directory
+#Create results directory
 dir.create(result_dir)
 
 #Functions------------------------------
-#Total number of cells in the raster
+#Calculates total number of cells in the raster
 getSize <- function(raster) {
   return(freq(raster, digits = 0, value = 1, useNA = 'no', progress = ''))
 }
 
-#The number of pixels covered by one raster but not the other
+#Calculates the number of pixels covered by one raster but not the other
 t1nott2 <- function(t1, t2) {
   tnew <- t1
   tnew[tnew == 1] <- 2
@@ -107,7 +111,7 @@ t1nott2 <- function(t1, t2) {
   return(Combined)
 }
 
-#The number of pixels covered by both rasters
+#Calculates the number of pixels covered by both rasters
 overlap <- function(t1, t2) {
   Combined <- t1 + t2
   Combined[Combined != 2] <- 0
@@ -115,7 +119,7 @@ overlap <- function(t1, t2) {
   return(Combined)
 }
 
-#The amount of pixels covered by a protected area
+#Calculates the number of pixels covered by a protected area
 getProtected <- function(raster, decade, prot_files) {
   correctIndex <- 0
   if (length(prot_files) > 1) {
@@ -128,7 +132,7 @@ getProtected <- function(raster, decade, prot_files) {
   return(freq(m, digits = 0, value = 1, useNA = 'no', progress = ''))
 }
 
-#The amount of pixels covered by an urban area
+#Calculates the number of pixels covered by an urban area
 getUrbanized <- function(focusraster, decade, urban_files, urbanized) {
   #get correct decade
   correctIndex <- 0
@@ -152,7 +156,7 @@ getUrbanized <- function(focusraster, decade, urban_files, urbanized) {
 
 #Calculates the centroid of the binary distribution
 getCentroid <- function(CentRaster) {
-  # A matrix with three columns: x, y, and v (value)
+  #A matrix with three columns: x, y, and v (value)
   points <- rasterToPoints(CentRaster, fun = function(x){x == 1}, spatial = FALSE)
   
   #average latitude (y)
@@ -170,26 +174,32 @@ threshold <- function(path, rasters, replicates, Scenario, decade) {
   rasters <- matrix(rasters, nrow = nrep)
   setwd(test)
   rasterNames <-  c()
-  #this lists all of the folders within "outputs"
+  #Lists all of the folders within "outputs"
   runs <- list.dirs(path = paste0("outputs/", path), full.names = TRUE, 
                     recursive = FALSE)
   nruns <- length(runs)
   ensemble.stack <- c()
   for (i in 1:nruns) {
     curmodel <- runs[i]
-    #this reads in the results file for each of the runs
+    #Reads in the results file for each of the runs
     results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
-      #this reads the threshold value for that results file
-      thresh <- results[j, ThreshMethod] 
+      #Reads the threshold value for that results file
+      if (!is.na(as.numeric(ThreshMethod))) {
+        thresh <- as.numeric(ThreshMethod)
+      } else {
+        thresh <- results[j, ThreshMethod] 
+      }
       tryCatch({
-        #this finds the AUC value of the run
+        #Finds the AUC value of the run
         auc <- results$Test.AUC[j]
-        #if the AUC value is below the AUC threshold, the run is not used
+        #If the AUC value is below the AUC threshold, the run is not used
         if (auc >= aucval) {
-          temp <- BinaryTransformation(raster(rasters[j, i]), thresh)
+          temp <- raster(rasters[j, i]) 
+          temp[temp >= thresh] <- 1
+          temp[temp < thresh] <- 0
           rasterNames <- c(rasterNames, filename(temp))
-          #creates a stack of output runs to be ensembled
+          #Creates a stack of output runs to be ensembled
           ensemble.stack <- stack(c(ensemble.stack, temp))
         }
       }, error = function(err) {
@@ -200,12 +210,15 @@ threshold <- function(path, rasters, replicates, Scenario, decade) {
   }
   
   if (length(ensemble.stack) > 0) {
-    #this sums all of the 0/1 values from the thresholded rasters
-    #and divides by the number of stacked files (the 3rd element in the
+    #Sums all of the 0/1 values from the thresholded rasters
+    #Divides by the number of stacked files (the 3rd element in the
     #dimensions of the ensemble stack)
     ensemble.calc <- (mean(ensemble.stack))
     rasterNames <- c(rasterNames, filename(ensemble.calc))
-    ensemble.calc <- BinaryTransformation(ensemble.calc, 0.5)
+    ensemble.calc[ensemble.calc >= 0.5] <- 1
+    ensemble.calc[ensemble.calc < 0.5] <- 0
+    
+    #Writes out binary rasters
     setwd(result_dir)
     if(decade == currentYear) {
       writeRaster(ensemble.calc, 
@@ -237,7 +250,7 @@ threshold <- function(path, rasters, replicates, Scenario, decade) {
 medianensemble <- function(path, rasters, replicates, Scenario, decade) {
   rasters <- matrix(rasters, nrow = nrep)
   setwd(test)
-  #this lists all of the folders within "outputs"
+  #Lists all of the folders within "outputs"
   message("starting median ensemble")
   runs <- list.dirs(path = paste0("outputs/", path), 
                     full.names = TRUE, 
@@ -246,16 +259,16 @@ medianensemble <- function(path, rasters, replicates, Scenario, decade) {
   ensemble.stack <- c()
   for (i in 1:nruns) {
     curmodel <- runs[i]
-    #this reads in the results file for each of the runs
+    #Reads in the results file for each of the runs
     results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
       tryCatch({
-        #this finds the AUC value of the run
+        #Finds the AUC value of the run
         auc <- results$Training.AUC[j]
-        #if the AUC value is below the AUC threshold, the run is not used
+        #If the AUC value is below the AUC threshold, the run is not used
         if (auc >= aucval) {
           temp <- raster(rasters[j, i])
-          #creates a stack of output runs to be ensembled
+          #Creates a stack of output runs to be ensembled
           ensemble.stack <- stack(c(ensemble.stack, temp))
         }
       }, error = function(err) {
@@ -264,7 +277,7 @@ medianensemble <- function(path, rasters, replicates, Scenario, decade) {
       })
     }
   }
-  #this finds the median of the stacked rasters
+  #Calculates the median of the stacked rasters
   ensemble.calc <- calc(ensemble.stack, median, na.rm = TRUE)
   setwd(result_dir)
   if (decade == currentYear) {
@@ -288,6 +301,7 @@ medianensemble <- function(path, rasters, replicates, Scenario, decade) {
 
 #Creates the stats file
 getStats <- function(cur, j, decade, binary, stats, modern.size, modern.binary) {
+  #Adds all of the variables into the stats data frame
   stats$Projection[j] <- cur
   stats$NumberCells[j] <- getSize(binary)
   stats$CellChange[j] <- getSize(binary) - modern.size
@@ -317,14 +331,14 @@ checkError <- function(result, spp.name, failed_runs, run) {
 #Projects algorithm onto study area/future climate layers
 projectSpeciesHabitat <- function(CurSpp) {
   setwd(test)
-  #identifies the species/set of species being run
+  #Identifies the species/set of species being run
   spp.name <- CurSpp
   spp.name <- substr(spp.name, 9, nchar(spp.name)) #9 corresponds to "outputs/"
   print(spp.name)
   setwd(result_dir)
   dir.create(spp.name)
   setwd(test)
-  #creates a stats table to be filled in & passed to next scripts
+  #Creates a stats table to be filled in & passed to next scripts
   stats <- as.data.frame(cbind(Projection = rep(0, times = nproj), 
                                NumberCells = rep(0, times = nproj), 
                                CellChange = rep(0, times = nproj), 
@@ -342,11 +356,11 @@ projectSpeciesHabitat <- function(CurSpp) {
     stats$Protected <- rep(0, times = nproj)		
   }
   
-  #get modern data stats first to use for comparison  
+  #Gets modern data stats first to use for comparison  
   setwd(test)
   modern <- list.dirs(path = paste0("outputs/", spp.name), recursive = FALSE)
   modern.rasters <- c()
-  #makes a list of modern rasters
+  #Creates and reorders a list of modern rasters
   for (j in 1:length(modern)) {
     r <- list.files(modern[j], 
                     pattern = paste0((strsplit(proj, "/"))[[1]][length((strsplit(proj, "/"))[[1]])], '.asc$'), 
@@ -360,11 +374,11 @@ projectSpeciesHabitat <- function(CurSpp) {
   gc()
   
   if (length(modern.binary) > 0) {
-    #this runs medianensemble function, which ensembles maps using a median function
+    #Runs medianensemble function, which ensembles maps using a median function
     modern.median <- medianensemble(spp.name, modern.rasters, nrep, "", currentYear)
-    #gc is "garbage collection", it releases memory after large processes
     gc()
-    #this fills in the stats row for the modern species
+    
+    #Fills in the stats row for the modern species
     stats$Projection[1] <- currentYear
     modern.size <- getSize(modern.binary)
     stats$NumberCells[1] <- modern.size
@@ -382,7 +396,7 @@ projectSpeciesHabitat <- function(CurSpp) {
       urbanized <- stack(urblist)
       stats$Urbanized[1] <- getUrbanized(modern.binary, currentYear, urblist, urbanized)
     }
-    #these are the species that will be projected
+    #Generates projections for hindcasted/forecasted climate layers
     if (numScenario > 0) {
       spp.name <- substr(CurSpp, 9, nchar(CurSpp))
       print(spp.name)
@@ -400,7 +414,7 @@ projectSpeciesHabitat <- function(CurSpp) {
       for (dataIndex in 1:length(futlistfull)) { 
          for (i in 1:nsubsamp) {
             for (g in 1:nrep) {
-              # THIS IS THE PROJECTIONS COMMAND>>
+              #THIS IS THE PROJECTIONS COMMAND>>
               setwd(test)
               system(paste0("java -mx900m -cp maxent.jar density.Project ", 
                             # location of lambdas file
@@ -411,15 +425,15 @@ projectSpeciesHabitat <- function(CurSpp) {
                             " projections/", spp.name, futlist[dataIndex], "/", 
                             strsplit(models[i], "/")[[1]][3], "_", g-1,
                             " noaskoverwrite nowarnings -a"))
-              }
             }
+          }
       
           setwd(test)
-          #parses out the scenario & date values
+          #Parses out the scenario & date values
           futscenario <- strsplit(futlist[dataIndex], "/")[[1]][2]
           futdate <- strsplit(futlist[dataIndex], "/")[[1]][3]
           
-          #this makes a list of the projections files to use for threshold/ensemble functions
+          #Makes a list of the projections files to use for threshold/ensemble functions
           cur.rasters <- list.files(path = paste0(test, "/projections/", spp.name, "/", futscenario, "/", futdate), 
                                     pattern = paste0('\\.asc$'), 
                                     full.names = TRUE)
@@ -430,17 +444,17 @@ projectSpeciesHabitat <- function(CurSpp) {
             }
           }
           length(cur.proj)
-          #Next, we threshold & get medians of the projected rasters
+          #Thresholds & gets medians of the projected rasters
           cur.binary <- threshold(spp.name, cur.proj, nrep, futscenario, futdate)
           gc()
           cur.median <- medianensemble(spp.name, cur.proj, nrep, futscenario, futdate)
           gc()
-          #Now we fill in the stats table for the projected rasters
+          #Fill in the stats table for the projected rasters
           stats <- getStats(paste0(futscenario, "_", futdate), dataIndex + 1, futdate, cur.binary, 
                             stats, modern.size, modern.binary)
           gc()
           
-          #these functions are optional
+          #Conducts urban analysis (if requested)
           if (UrbanAnalysis  == "Y") {
             setwd(proj_urbanized_dir)
             urblist <- list.files(pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
@@ -448,6 +462,7 @@ projectSpeciesHabitat <- function(CurSpp) {
             stats$Urbanized[dataIndex + 1] <- getUrbanized(cur.binary, futdate, urblist, urbanized)
           }
           
+          #Conducts protected analysis (if requested)
           if (ProtectedAnalysis == "Y") {
             setwd(proj_protected_dir)
             ProtectList <- list.files(pattern = ("\\.shp$"), full.names = TRUE)
@@ -460,7 +475,7 @@ projectSpeciesHabitat <- function(CurSpp) {
       }
     }
     setwd(paste0(result_dir, "/", spp.name))
-    #this writes the stats table to be used later
+    #Writes the stats table to be used later
     write.csv(stats, file = "Results.csv")
   } else {
     message(paste0("Removing ", spp.name, " from further analysis"))
@@ -474,7 +489,7 @@ maxent <- function(CurSpp) {
   spp.name <- substr(CurSpp, 9, nchar(CurSpp)) #9 corresponds to "samples/"
   print(spp.name)
   
-  #Start modelling
+  #Creates directories for habitat suitability models
   starttime <- Sys.time()
   print(paste0("Start time for ", spp.name, ": ", starttime))
   setwd(test)
@@ -483,18 +498,19 @@ maxent <- function(CurSpp) {
   all_runs <- list.files(path = CurSpp, full.names = TRUE, pattern = "\\.csv$")
   all_runs <- mixedsort(all_runs)
   failed_runs <- c()
+  #Models the species habitat suitability
   for (i in 1:nsubsamp) {
     run <- i
     dir.create(paste0("outputs/", spp.name, "/RUN_", run))
     SppRun <- all_runs[i]
-    # THIS IS THE MODEL CREATION COMMAND>>
+    #THIS IS THE MODEL CREATION COMMAND>>
     model.out <- tryCatch({
       #can turn off a lot of output writing for the final experiment 
       #(jackknifing, write plot pngs) press help in maxent for details
       system(paste0("java -mx900m -jar maxent.jar -e ", "backgrounds/", spp.name, 
                     "/", spp.name, "_background_", run, ".csv -s ", SppRun, 
                     " -J -o outputs/", spp.name, "/RUN_", run, 
-                    " noaskoverwrite logistic threshold -X 20 replicates=", nrep,
+                    " noaskoverwrite logistic threshold -X ", test_percent, " replicates=", nrep,
                     " writeclampgrid=", alloutputs, " writemess=", alloutputs, 
                     " nowarnings writeplotdata=", alloutputs ," -j ", 
                     gsub(" ", "\\\\ ", proj), " -a ", reptype, " hinge=", hinge, " togglelayertype=", Categorical))
@@ -514,8 +530,8 @@ maxent <- function(CurSpp) {
 }
 
 #Run-------------------------------------------
-# NOTE: folders need to be in correct format: folder/scenario/futuredate
-# this section creates a list of locations for all scenarios/futuredates
+#NOTE: folders need to be in correct format: folder/scenario/time period
+#this section creates a list of locations for all scenarios/time periods
 if (numScenario > 0) {
   predictenvdir <- list.dirs(path = predictenv, recursive = TRUE)
 } else {
@@ -531,13 +547,13 @@ years <- rep(NA, length = numYear)
 years <- as.numeric(config[grep("^Year", row.names(config)), ])
 currentYear <- years[1]
 
-#Future address Formatting
+#Formats forecasted/hindcasted climate data directories
 if (numScenario > 0) {
   setwd(predictenv)
-  #lists all directories and subdirectories in "predictenv"
+  #Lists all directories and subdirectories in "predictenv"
   directory <- list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
   nfolders <- length(directory)
-  #selects only the addresses of the subdirectory locations
+  #Selects only the addresses of the subdirectory locations
   fut <- directory[grep("/([^:]+)/", directory)]
   
   Scenarios <- rep(NA, length = numScenario)
@@ -558,7 +574,7 @@ if (numScenario > 0) {
     unlink(CacheFile[grep("maxent.cache", CacheFile)], recursive = TRUE)
   }
   
-  #creates full addresses, including "predictenv" location
+  #creates full directory addresses, including "predictenv" location
   for (i in 1:length(fut)) {
     for (ScenIndex in 1:numScenario) {
       if (grepl(Scenarios[ScenIndex], fut[i], ignore.case = TRUE)) {
@@ -572,9 +588,11 @@ if (numScenario > 0) {
     }
   }
 }
+futlist <- unique(futlist)
+futlistfull <- unique(futlistfull)
 setwd(test)
 
-#these are the species that will be split between the cores
+#Generates the species list for parallelization
 setwd(test)
 ListSpp <- c()
 speciesWorked <- spp_batch
@@ -586,8 +604,7 @@ ListSpp <- unique(ListSpp)
 print("   Will evaluate species:")
 print(ListSpp)
 
-#this sends the necessary data & scripts to the cluster
-#this has been updated with new variables to pass
+#Parallelization
 clus <- makeCluster(ncores, outfile = outfile)
 clusterExport(clus, varlist = c("projectSpeciesHabitat", "checkError", "maxent", "proj", "years",
                                 "futlistfull", "test", "predictenv", "predictenvdir", "samples",
@@ -596,21 +613,21 @@ clusterExport(clus, varlist = c("projectSpeciesHabitat", "checkError", "maxent",
                                 "getStats", "getUrbanized", "medianensemble", "ListSpp", 
                                 "overlap", "t1nott2", "threshold", "proj_protected_dir",
                                 "proj_urbanized_dir", "test", "aucval", "nproj", "ncores", "ThreshMethod",
-                                "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "format", "futlist", "Categorical"))
+                                "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "format", "futlist", "test_percent", "Categorical"))
 clusterEvalQ(clus, library(raster))
-clusterEvalQ(clus, library(biomod2))
 clusterEvalQ(clus, library(gtools))
 
-#this tells you where the output files can be found
+#Pritns where the output files can be found
 print("   Beginning maxent files in directory:")
 print(paste0("      ", test, "/outputs/%Species_Name%"))
 # Sys.time()
-# 
-# #runs maxent first! "CheckError" function is nested within
+
+#Runs maxent
 out <- parLapply(clus, ListSpp, function(x) maxent(x))
 print("   Completing maxent files.")
 Sys.time()
 
+#Ensures that all species were modelled correctly
 setwd(test)
 ListSpp <- c()
 speciesWorked <- spp_batch
@@ -620,6 +637,8 @@ for (i in 1:length(speciesWorked)) {
 }
 ListSpp <- unique(ListSpp)
 
+
+#Removes species with low AUC values from subsequent analysis
 AUCRetain <- c()
 message(paste0("Removing species with Test AUC Values < ", df[,"aucval"], " from subsequent analyses:"))
 for (l in 1:length(ListSpp)) {
@@ -630,9 +649,9 @@ for (l in 1:length(ListSpp)) {
   HighAUC <- c()
   for (i in 1:nruns) {
     curmodel <- runs[i]
-    #this reads in the results file for each of the runs
+    #Reads in the results file for each of the runs
     results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
-    #this reads the threshold value for that results file
+    #Reads the threshold value for that results file
     auc <- results$Test.AUC
     aucAbove <- which(auc > df[, "aucval"])
     HighAUC <- c(HighAUC, aucAbove)
@@ -644,17 +663,16 @@ for (l in 1:length(ListSpp)) {
   }
 }
 
+#Creates list of species to forecast/hindcast the maxent model
 spp_batch <- spp_batch[c(AUCRetain)]
-
 speciesWorked <- spp_batch
-
 ListSpp <- rep(NA, length = length(speciesWorked))
 for (i in 1:length(speciesWorked)) {
   ListSpp[i] <- paste0("outputs/", substr(speciesWorked[i], 1, nchar(speciesWorked[i]) - 4))
 }
-
 ListSpp <- unique(ListSpp)
 
+#Parallelization
 if (length(ListSpp) < ncores) {
   stopCluster(clus)
   clus <- makeCluster(length(ListSpp), outfile = outfile)
@@ -665,9 +683,8 @@ if (length(ListSpp) < ncores) {
                                   "getStats", "getUrbanized", "medianensemble", "hinge", "alloutputs", 
                                   "overlap", "t1nott2", "threshold", "proj_protected_dir",
                                   "proj_urbanized_dir", "test", "aucval", "nproj", "ncores", "ListSpp",
-                                  "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "urblist", "format", "futlist", "ThreshMethod"))
+                                  "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "urblist", "format", "test_percent", "futlist", "ThreshMethod"))
   clusterEvalQ(clus, library(raster))
-  clusterEvalQ(clus, library(biomod2))
   clusterEvalQ(clus, library(gtools))
   ListSpp <- ListSpp
 }
@@ -675,8 +692,7 @@ if (length(ListSpp) < ncores) {
 nruns <- length(runs)
 ensemble.stack <- c()
 
-#runs the "projectSpeciesHabitat" function
-#all other functions are nested in "project"
+#Runs the "projectSpeciesHabitat" function
 if (length(spp_batch) > 0) {
   print("   Beginning projection files in directory:")
   print(paste0("      ", test, "/projections/%Species_Name%"))
@@ -686,5 +702,5 @@ if (length(spp_batch) > 0) {
 
 print("   Completing project files.")
 Sys.time()
-#frees computer cores
+#Frees computer cores
 stopCluster(clus)

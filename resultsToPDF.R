@@ -1,4 +1,8 @@
+####resultsToPDF.R####
+##Generates PDF maps for all raster data (habitat suitability maps/binary distribution maps)
+
 #Initializations-------------------------
+#Loads the necessary variables from "df"
 test <- df[, "test"]
 result_dir <- df[, "result_dir"]
 numScenario <- df[, "numScenario"]
@@ -35,7 +39,7 @@ print(paste0("      ", result_dir, "/SPECIES_NAME/map_pdfs"))
 
 #Run----------------------------------
 for (i in 1:nspp) {
-  #Create PDF directory
+  #Creates PDF directory
   setwd(result_dir)
   setwd(spp.list[i])
   dir.create("map_pdfs")

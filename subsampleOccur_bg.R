@@ -1,5 +1,5 @@
 ####subsampleOccur.R####
-##Conducts environmental subsampling (Varela et al. 2014)
+##Conducts environmental subsampling on background points (Varela et al. 2014)
 
 #Initializations----------------------------
 #Loads the necessary packages
@@ -10,7 +10,7 @@ library(rgdal)
 
 #Loads the necessary variables from "df"
 test <- df[, "test"]
-samples <- "samples"
+backgrounds <- "backgrounds"
 nsubsamp <- df[, "nsubsamp"]
 nclimatebins <- df[, "nclimatebins"]
 nPCAxes <- df[, "nPCAxes"]
@@ -19,12 +19,15 @@ randomseed <- as.numeric(df[, "ncores"])
 outfile <- "statsout.txt"
 Categorical <- df[, "Categorical"]
 
+#ptz: df with Latitude, Longitude, extracted environment variables
+#no_bins: the number of bins to make in each dimension
+#output is a df of latitude, longitude points, one for each occupied bin
 set.seed(randomseed)
 
 #Functions-----------------------------------
-#Conducts the environmental subsampling
-#ptz: df with Latitude, Longitude, extracted environment variables
-#no_bins: the number of bins to make in each dimension
+#Conducts the environmental subsampling	
+#ptz: df with Latitude, Longitude, extracted environment variables	
+#no_bins: the number of bins to make in each dimension	
 #output is a df of latitude, longitude points, one for each occupied bin
 envSample <- function (ptz, no_bins = nclimatebins) {
   #Makes a landing spot for the bin membership vectors
@@ -34,7 +37,7 @@ envSample <- function (ptz, no_bins = nclimatebins) {
   if (is.na(Categorical)) {
     PCAptz <- prcomp(ptz[, 3:ncol(ptz)], scale = TRUE)
     PCAImp <- summary(PCAptz)$importance
-    #Determine the number of PC axes to use for subsampling
+    #Determines the number of PC axes to use for subsampling
     if (!is.na(nPCAxes)) {
       NumberAxes <- nPCAxes
     } else {
@@ -49,7 +52,7 @@ envSample <- function (ptz, no_bins = nclimatebins) {
     #Adds PCA values to the unsubsampled data frame
     ptz <- cbind(ptz[, 1:2], PCAptz$x[, 1:NumberAxes])
   }
-  #cycles through all of the environmental variable combinations (PC axes) (columns 3 to end)
+  #Cycles through all of the environmental variable combinations (PC axes) (columns 3 to end)
   for(i in 3:length(names(ptz))) {
     #Makes a data frame that is this variable with no NA values
     k <- ptz[!is.na(ptz[, i]), i]
@@ -64,7 +67,7 @@ envSample <- function (ptz, no_bins = nclimatebins) {
     f[f == 0] <- 1 #Moves the zeros into the 1 bin
     #Corrects the name of the vector, so it will carry over to the output
     names(f) <- names(ptz)[i]
-    #Sdds the bin membership vector to the output df for this section
+    #Adds the bin membership vector to the output df for this section
     out_ptz <- cbind(out_ptz, f)
     #Gets the names correct
     names(out_ptz)[length(names(out_ptz))] <- names(ptz)[i]
@@ -106,42 +109,38 @@ envSample <- function (ptz, no_bins = nclimatebins) {
 
 run <- function(cur) {
   print("   Writing files to:")
-  print(paste0("      ", test, "/", samples, "/", cur))
+  print(paste0("      ", test, "/", cur))
   
-  #Loads the points from the .csv file named 'cur' in the wd
+  #Loads the points from the .csv file named 'cur' in the wd and clean (remove NaN and Inf)
   cur2 <- na.omit((read.csv(cur)))
+  cur2 <- cur2[!is.infinite(rowSums(cur2[, names(cur2) != "Species"])), ]
   cur2 <- unique(cur2)
-  
   #Pulls the species' name from this file
   if (length(grep("_", cur)) > 0) {
     s <- as.character(cur2$Species[1])
-    #change 'Species name' to 'Species_name'
+    #Changes 'Species name' to 'Species_name'
     s <- gsub(" ", "_" , s)
   } else {
     s <- c(unlist(strsplit(as.character(cur2$Species[1]), " ")))[1]
   }
   
-  #Makes a directory called 'samples/%speciesname%'
-  dir.create(paste0(samples, "/", s))
+  #Makes a directory called 'backgrounds/%speciesname%'
+  dir.create(paste0("backgrounds/", s))
   
   #Works through the number of subsamples from the config file
   for (r in 1:nsubsamp) {
     #Removes species name column for cleaner subsampling
     coords <- envSample(cur2[, names(cur2) != "Species"])
-    #Join defaults to left join, keeping only rows from the first df
+    #Joins defaults to left join, keeping only rows from the first df
+    out <- left_join(coords, cur2) 
     #so 'out' has the structure Longitude, Latitude, Species name, env vars
     #with the rows chosen as the env subsample
-    out <- left_join(coords, cur2) 
     #Reorders columns to be Species, Latitude, Longitude      
     out <- out[, c(3, 1, 2, 4:ncol(out))]
     colnames(out)[2] <- "x"
     colnames(out)[3] <- "y"
-    #If there are any duplicated occurrences, filters them out
-    if (length(which(duplicated(out))) > 0) {
-      out <- unique(out)
-    }
     #Writes the subsampled data out
-    write.csv(out,file=paste0(paste0(samples, "/", s, "/"), "OccurrenceSamplePoints_", r, ".csv", sep = ""), row.names = FALSE)
+    write.csv(out, file = paste0("backgrounds/", s, "/", s, "_background_", r, ".csv", sep = ""), row.names = FALSE)
   }
 } #end of run function.
 
@@ -149,9 +148,9 @@ run <- function(cur) {
 #Generates the species list for parallelization
 setwd(test)
 spp.list <- c()
-speciesWorked <- spp_batch
+speciesWorked <- substr(spp_batch, 1, nchar(spp_batch) - 4)
 for (i in 1:length(speciesWorked)) {
-  spp.list <- c(spp.list, list.files(path = samples, full.names = TRUE, pattern = speciesWorked[i]))
+  spp.list <- c(spp.list, list.files(path = "backgrounds", full.names = TRUE, pattern = paste0(speciesWorked[i], "_background")))
 }
 spp.list <- unique(spp.list)
 print("   Will evaluate species:")
