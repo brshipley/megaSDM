@@ -296,7 +296,10 @@ for (f in 1:nspp) {
   if (OccP[[1]][1] == "no data found, try a different search") {
     message("No Occurrence data found for ", s, ", check spelling or try searching a synonym")
     next
-  } else if (is.na(OccP[2, 1])) {
+  } else if (nrow(OccP) != 2) {
+    message("No Occurrence data found for ", s, ", check spelling or try searching a synonym")
+    next
+  } else if(is.na(OccP[2, 1])) {
     message("No Occurrence data found for ", s, ", check spelling or try searching a synonym")
     next
   }
