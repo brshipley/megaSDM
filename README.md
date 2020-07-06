@@ -8,7 +8,7 @@ Benjamin Shipley
 
 Renee Bach
 
-Daniel Do
+Youngje Do
 
 Heather Strathearn
 
@@ -28,7 +28,7 @@ plotfunctions	(>=1.3)
 
 raster	(>=2.9)
 
-rgbif	(>=1.3)
+rgbif	(>=3.1)
 
 rgdal	(>=1.4)
 
