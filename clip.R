@@ -74,14 +74,14 @@ if (NewExtent$long[1] > NewExtent$long[2] | NewExtent$lat[1] > NewExtent$lat[2])
 
 #Gets a list of files to clip from training area
 setwd(trainingarea)
-bioclim <- list.files(path = ".", pattern = paste0("\\.bil$"), full.names = TRUE)
+bioclim <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = FALSE)
 
 #Determines if all of the extents are constant
 ExtentClim <- matrix(data = NA, nrow = 4, ncol = length(bioclim))
 for (i in 1:length(bioclim)) {
   ExtentClim[, i] <- extent(raster(bioclim[[i]]))[1:4]
 }
-ExtentUnique <- unique(ExtentClim, MARGIN=2)
+ExtentUnique <- unique(ExtentClim, MARGIN = 2)
 
 #Checks and deals with multiple raster extents
 if (ncol(ExtentUnique) > 1) {
@@ -151,9 +151,9 @@ colnames(Extent_TA) <- c("long", "lat")
 
 #If TrainingAreaClip is "N", then the CRS of the boudaries are in the correct projection
 if (TrainingAreaClip == "N") {
-  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(desiredCRS))
+  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = crs(desiredCRS))
 } else {
-  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(defaultCRS))
+  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = crs(defaultCRS))
 }
 
 #Convert the extent of the training area to the desiredCRS
@@ -278,7 +278,7 @@ if (numScenario > 0) {
     if (length(correctDir) == 1) {
       #Makes a list of all future environmental layer files
       setwd(correctDir)
-      future <- list.files(path=".", pattern=paste0("\\.bil$"), full.names = TRUE)
+      future <- list.files(path = getwd(), pattern=paste0("\\.bil$"), full.names = TRUE)
       future_a <- c()
       
       #Clipping each individual raster file
@@ -309,7 +309,7 @@ if (UrbanAnalysis == "Y") {
   
   #Making a list of the urban raster files
   setwd(proj_urbanized_dir)
-  urban <- list.files(path=".", pattern = paste0("\\.bil$"), full.names=TRUE)
+  urban <- paste0("/", list.files(path = ".", pattern = paste0("\\.bil$"), full.names = FALSE))
   urban_a <- c()
   
   #Clipping each individual raster file
@@ -344,7 +344,7 @@ if (UrbanAnalysis == "Y") {
 if (ProtectedAnalysis == "Y") {
   #Lists the protected shapefiles (there usually should only be one)
   setwd(proj_protected_dir)
-  protect <- list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = TRUE)
+  protect <- paste0("/", list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = FALSE))
   protect_a <- c()
   
   #Clips the protected shapefiles

@@ -27,7 +27,7 @@ speciesBufferStep <- df[, "speciesBufferStep"]
 spp_total <- spp_total
 
 nbg <- as.numeric(df[, "nbg"])
-if ((speciesBufferStep == "Y") | (length(list.files(buff_dir, pattern = paste0(rastertype, "$|.shp"))) == length(spp_total))) {
+if ((speciesBufferStep == "Y") | (length(list.files(path = buff_dir, pattern = paste0(rastertype, "$|.shp"))) == length(spp_total))) {
   nbgTrain <- nbg * (1 - spatial_weights)
 } else {
   nbgTrain <- nbg
@@ -95,8 +95,7 @@ VarelaSample <- function (occurrences, ClimOccur, no_bins) {
     sub_ptz$grp <- c(1:no_grps)
     
     #join the out_ptz with the subsample to capture the group membership info
-    #note: join() will automatically match the variable names from these two dfs
-    out_ptz <- left_join(out_ptz, sub_ptz)
+    out_ptz <- left_join(out_ptz, sub_ptz, by = names(out_ptz[3:ncol(out_ptz)]))
     #out_ptz now has a group membership  for each input point
     
     #select a random point for each group -- this is an additional improvement on the 
@@ -124,16 +123,14 @@ VarelaSample <- function (occurrences, ClimOccur, no_bins) {
   if (length(no_bins) == 1) {
     return(final_out)
   } else {
-    return(data.frame(NumberofSamples = nsamples,NumberOfClimateBins = no_bins))
+    return(data.frame(NumberofSamples = nsamples, NumberOfClimateBins = no_bins))
   }
 }
 
 #Run-----------------------------------------------
 #Generates empty vectors for background results 
-BuffClimateBins <- c()
 BuffNumber <- c()
-TrainClimateBins <- c()
-TrainNumber <- c()
+FullTrainNumber <- c()
 TotalNumber <- c()
 
 if (nbgTrain > 0) {
@@ -189,7 +186,9 @@ if (nbgTrain > 0) {
     
     #Output the number of background points and climate bins
     NBinsFinal <- bgdf_train[which(abs(bgdf_train[, 1] - nbgTrain) == min(abs(bgdf_train[, 1] - nbgTrain)))[1], 2]
-    print(paste0("Number of Climate Bins Used For Training Area Subsampling: ", NBinsFinal))
+    if (NBinsFinal == 99) {
+      message("Warning: the number of background points wanted is too high! Only 99 environmental bins used")
+    }
     
     bgdf_train <- VarelaSample(RandomTrain[, 1:2], ClimOccur, NBinsFinal)
     print(paste0("Number of Background Points In Training Area: ", nrow(bgdf_train)))
@@ -197,9 +196,7 @@ if (nbgTrain > 0) {
     #Create data frame of background points
     bgtraindataframe <- data.frame(bgdf_train, stringsAsFactors = FALSE)
     
-    #Statistics about background points/number of bins
-    TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
-    TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
+    FullTrainNumber <- c(FullTrainNumber, nrow(bgtraindataframe))
     
     #Write background CSV Files
     write.csv(bgtraindataframe, row.names = FALSE, file = paste0("backgrounds/Train_Background_", i, ".csv"))
@@ -211,17 +208,11 @@ if (nbgTrain > 0) {
     #Write background CSV Files
     write.csv(bgtraindataframe, row.names = FALSE, file = paste0("backgrounds/Train_Background_", i, ".csv"))
   }
-  TrainClimateBins <- rep(0, nsubsamp)
-  TrainNumber <- rep(0, nsubsamp)
+  FullTrainNumber <- rep(0, nsubsamp)
 }
 #Write Statistics CSV into Results Folder
-bgstats <- data.frame(Subsample = c(1:nsubsamp), TrainClimateBins, TrainNumber)
+bgstats <- data.frame(Subsample = c(1:nsubsamp), FullTrainNumber)
 
-for (i in nrow(bgstats)) {
-  if (bgstats$TrainClimateBins[i] == 99) {
-    message("Warning: the number of background points wanted is too high! Only 99 environmental bins used")
-  }
-}
 write.csv(bgstats, file = paste0(result_dir, "/BackgroundPoints_stats.csv"), row.names = FALSE)
 rm(train, RastTrainBG)
 gc()

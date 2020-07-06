@@ -117,16 +117,14 @@ VarelaSample <- function (OccurData, ClimOccur, no_bins) {
   if (length(no_bins) == 1) {
     return(final_out)
   } else {
-    return(data.frame(NumberofSamples = nsamples,NumberOfClimateBins = no_bins))
+    return(data.frame(NumberofSamples = nsamples, NumberOfClimateBins = no_bins))
   }
 }
 
 bgpoints <- function(CurSpp) {
   
   #Generates empty vectors for background results
-  BuffClimateBins <- c()
   BuffNumber <- c()
-  TrainClimateBins <- c()
   TrainNumber <- c()
   TotalNumber <- c()
   
@@ -137,7 +135,7 @@ bgpoints <- function(CurSpp) {
   #If species-dependent numbers of background points are necessary
   if (length(grep("x", tolower(nbg))) > 0) {
     #Calculate number of occurrences
-    OccurrenceFileName <- list.files(paste0(test, "/", samples, "/", spp.name), pattern = paste0("\\.csv$"))[1]
+    OccurrenceFileName <- list.files(path = paste0(test, "/", samples, "/", spp.name), pattern = paste0("\\.csv$"))[1]
     OccurrenceFile <- read.csv(paste0(test, "/", samples, "/", spp.name, "/", OccurrenceFileName))
     OccurrenceNumber <- nrow(OccurrenceFile)
     
@@ -330,21 +328,19 @@ bgpoints <- function(CurSpp) {
       rowlength <- nrow(bgbuffdataframe)
       
       #Adds information to the stats output
-      BuffClimateBins <- c(BuffClimateBins, NBinsFinal)
       BuffNumber <- c(BuffNumber, rowlength)
       
       dir.create(paste0("backgrounds/", spp.name))
     } else {
       message ("No buffer file(s) found, skipping spatially constrained background point selection")
       bgbuffdataframe <- c()
-      BuffClimateBins <- c(BuffClimateBins, "NA")
       BuffNumber <- c(BuffNumber, "NA")
       dir.create(paste0(test, "/backgrounds/", spp.name))
     }
     
     #Step 2: Sampling from the entire training area------------ 
     #Checks to see if there are already background files created from "backgroundPoints1.R"
-    BGTrainFiles <- list.files(paste0(test,"/backgrounds"), pattern=paste0(".csv$"))
+    BGTrainFiles <- list.files(path = paste0(test,"/backgrounds"), pattern = paste0(".csv$"))
     
     if (length(BGTrainFiles) != nsubsamp) {  
       #if nbg*5 is more than the number of cells in the buffer raster, then sampleRandom won't work
@@ -429,7 +425,6 @@ bgpoints <- function(CurSpp) {
         Full_BGPoints <- bgtraindataframe
       }
       
-      TrainClimateBins <- c(TrainClimateBins, NBinsFinal)
       TrainNumber <- c(TrainNumber, nrow(bgtraindataframe))
       TotalNumber <- c(TotalNumber, nrow(Full_BGPoints))
       write.csv(Full_BGPoints, row.names = FALSE, file = paste0(test, "/backgrounds/", spp.name, "/", spp.name, "_background_", g, ".csv"))
@@ -451,13 +446,12 @@ bgpoints <- function(CurSpp) {
       Buffer_Stats <- data.frame(read.csv(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv")))
       BG_Stats$BufferWidth <- Buffer_Stats$x
     }
-    BG_Stats$BuffClimateBins <- BuffClimateBins
     BG_Stats$BuffNumber <- BuffNumber
     BG_Stats$TotalNumber <- TotalNumber
     write.csv(BG_Stats, file = paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv"), row.names = FALSE)
   } else {
     #Creates statistics data frame
-    BG_Stats <- data.frame(Subsample = c(1:nsubsamp), BuffClimateBins, BuffNumber, TrainClimateBins, TrainNumber, TotalNumber)
+    BG_Stats <- data.frame(Subsample = c(1:nsubsamp), BuffNumber, TrainNumber, TotalNumber)
     if (file.exists(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv"))){
       Buffer_Stats <- data.frame(read.csv(paste0(result_dir, "/", spp.name, "/BackgroundPoints_stats.csv")))
       BG_Stats$BufferWidth <- Buffer_Stats$x
@@ -481,7 +475,7 @@ print("   Will evaluate species:")
 print(ListSpp)
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("test", "ncores", "proj", "buff_dir", "nsubsamp", "samples", "nbg",
                                 "rastertype", "desiredCRS", "randomseed", "ListSpp", "speciesBufferStep",
                                 "train", "bgpoints", "nPCAxes", "VarelaSample", "spatial_weights", "nbins", "result_dir", "GlobalBBox", "Categorical"))

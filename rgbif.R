@@ -311,7 +311,7 @@ for (f in 1:nspp) {
     
     #Renames species dispersal rate data (if applicable)
     if (dispersalStep == "Y") {
-      DispDataName <- list.files(dispersalRate_dir, pattern = ".csv")
+      DispDataName <- list.files(path = dispersalRate_dir, pattern = ".csv")
       DispData <- read.csv(paste0(dispersalRate_dir, "/", DispDataName[1]), stringsAsFactors = FALSE)
       DispSpec <- grep(" ", DispData[1, ])
       Specloc <- grep(paste0(s, "$"), DispData[, DispSpec])
@@ -353,22 +353,22 @@ write.csv(OurSpp, file = df[, "counts"])
 
 #Copies occurrence files to the occurrences folder
 setwd(occurrences)
-ListSpp <- list.files(pattern = '\\.csv', full.names = TRUE)
+ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = TRUE)
 nspp <- length(ListSpp)
 for(j in 1:nspp) {
-  file.copy(paste0(occurrences, "/", ListSpp[j]), test)
+  file.copy(paste0(ListSpp), test)
 }
 options(warn = 0)
 setwd(test)
 dir.create("species")
-ListSpp <- list.files(pattern = '\\.csv', full.names = TRUE)
+ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = TRUE)
 ListSpp <- ListSpp[1:length(ListSpp)]
 out<- lapply(ListSpp, function(x) convert(x))
 write.csv(SppList, file = paste0(df[, "spplist"]), row.names = FALSE)
 
 #Re-writes out changes dispersal file (if species names needed to be changed)
 if (!exists("DispData") && dispersalStep == "Y") {
-  DispDataName <- list.files(dispersalRate_dir, pattern = ".csv")
+  DispDataName <- list.files(path = dispersalRate_dir, pattern = ".csv")
   DispData <- read.csv(paste0(dispersalRate_dir, "/", DispDataName[1]), stringsAsFactors = FALSE)
 }
 if (dispersalStep == "Y") {

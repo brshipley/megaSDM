@@ -41,7 +41,7 @@ if (rastertype == ".asc") {
 specieslist <- read.csv(spplist)
 
 #Makes a list of all species that have folders
-speciesfolders <- list.dirs(result_dir, recursive = FALSE)
+speciesfolders <- list.dirs(path = result_dir, recursive = FALSE)
 speciesfolders <- speciesfolders[grep("_", speciesfolders)]
 sppfold <- c()
 #If the folders have data in them, add them to the list
@@ -70,7 +70,7 @@ DeleteSP <- c()
 for (sp in 1:nrow(taxonlist)) {
   focusspp <- gsub(" ", "_", taxonlist[sp, 1])
   setwd(paste0(result_dir, "/", focusspp))
-  curfocus <- list.files(pattern = paste0("binary", rastertype, "$"))
+  curfocus <- list.files(path = getwd(), pattern = paste0("binary", rastertype, "$"))
   #If no binary maps were generated, AUC < threshold
   if (!length(curfocus) > 0) {
     message(paste0(focusspp, " will be removed (no replicates with an AUC > ", aucval, ")"))
@@ -151,7 +151,7 @@ for (t in 1:ntaxa) {
     focusspp <- taxonlist2[sp]
     if (dir.exists(paste0(result_dir, "/", focusspp))) {  
       setwd(paste0(result_dir, "/", focusspp))
-      curfocus <- list.files(pattern = paste0("binary", rastertype, "$"))
+      curfocus <- list.files(path = getwd(), pattern = paste0("binary", rastertype, "$"))
       if (length(curfocus) > 0){
         curraster <- raster(curfocus, crs = desiredCRS)
         curstack <- stack(c(curstack, curraster))
@@ -238,12 +238,13 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
   
   #Creates dispersal-difference PDFs
   pdf(file = paste0(result_dir, "/", "RichnessMaps/", taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalDifference.pdf"))
-  plot(DifferenceSR, col = color, xlab = "", ylab = "", main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
+  plot(DifferenceSR, col = color, xlab = "", ylab = "", legend = FALSE, main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
+  gradientLegend(c(min(DiffVec):max(DiffVec)), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
   dev.off()
   rm(futstack)
 }
 
-#Makes dspersal-constrained richness maps by taxon 
+#Makes dispersal-constrained richness maps by taxon 
 if (dispersalStep == "Y" && length(taxonlist2) > 0) {
   for (t in 1:ntaxa) {
     #Subsets out taxa of interest
@@ -264,7 +265,7 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
     for (sp in 1:length(taxonlist2)) {
       focusspp <- taxonlist2[sp]
       setwd(paste0(result_dir, "/", focusspp, "/", Scenarios[1]))
-      curfocus <- list.files(pattern = paste0("binary_dispersalRate", rastertype, "$"))
+      curfocus <- list.files(path = getwd(), pattern = paste0("binary_dispersalRate", rastertype, "$"))
       if (!length(curfocus) > 0) {
         message(paste0(focusspp, " will be removed (no dispersal rate rasters were found)"))
         DeleteSP <- c(DeleteSP, sp)
@@ -294,7 +295,7 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
 MakePDFMaps <- function(taxon) {
   #Upload all raster files, calculate overall maximum richness (regardless of time, scenario)
   setwd(RichnessMaps)
-  RasterList <- list.files(getwd(), pattern = paste0("\\", rastertype, "$"))
+  RasterList <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"))
   FocusRasters <- RasterList[grep(paste0("Richness_", taxon), RasterList)] 
   FocusStack <- stack(FocusRasters)
   MaximumRich <- max(cellStats(FocusStack, stat = max, na.rm = TRUE))
@@ -318,7 +319,7 @@ MakePDFMaps <- function(taxon) {
     #Creates pdf of the species richness raster
     pdf(file = paste0(result_dir, "/", "RichnessMaps/", substr(FocusRasters[e], 1, (nchar(FocusRasters[e]) - 4)), ".pdf"))
     plot(legend = FALSE, Raster1, col = color[1:(MaxRaster1 + 1)], xlab = "", ylab = "", main = names(FocusStack[[e]]))
-    gradientLegend(c(0:MaximumRich), color = color, pos = 0.125, side = 4, n.seg = 2, fit.margin = TRUE, inside = TRUE)
+    gradientLegend(c(0:MaximumRich), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
     dev.off()
   }
   rm(FocusStack)

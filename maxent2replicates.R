@@ -53,6 +53,8 @@ reptype <- df[, "reptype"]
 test_percent <- df[, "test_percent"]
 #whether or not to use hinge features when modelling
 hinge <- tolower(df[, "hinge"])
+#regularization parameter (penalty for more complex models)
+regularization <- as.numeric(df[, "regularization"])
 #prefix string for categorical data
 Categorical <- df[, "Categorical"]
 #Which threshold to use
@@ -72,7 +74,7 @@ ProtectedAnalysis <- df[, "ProtectedAnalysis"]
 if (UrbanAnalysis == "Y") {
   proj_urbanized_dir <- df[, "proj_urbanized_dir"]
   setwd(proj_urbanized_dir)
-  urblist <- list.files(pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
+  urblist <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
 } else {
   proj_urbanized_dir <- c()
   urblist <- c()
@@ -92,7 +94,7 @@ if (AllOutputs == "Y") {
   alloutputs <- "false"
 }
 
-#Create results directory
+#Creates results directory
 dir.create(result_dir)
 
 #Functions------------------------------
@@ -203,16 +205,15 @@ threshold <- function(path, rasters, replicates, Scenario, decade) {
           ensemble.stack <- stack(c(ensemble.stack, temp))
         }
       }, error = function(err) {
-        print(paste("MY_ERROR: ", path, " ", err, " i= ", i, " j=", j, 
+        print(paste("MY_ERROR: ", path, " ", err, " i= ", i, " j= ", j, 
                     " Scenario= ", Scenario, " Decade= ", decade))
       })
     }
   }
   
   if (length(ensemble.stack) > 0) {
-    #Sums all of the 0/1 values from the thresholded rasters
-    #Divides by the number of stacked files (the 3rd element in the
-    #dimensions of the ensemble stack)
+    #Takes the mean of the binary rasters
+    #If the mean is >= 0.5 (more than half of the replicates show presence), set to 1
     ensemble.calc <- (mean(ensemble.stack))
     rasterNames <- c(rasterNames, filename(ensemble.calc))
     ensemble.calc[ensemble.calc >= 0.5] <- 1
@@ -360,17 +361,16 @@ projectSpeciesHabitat <- function(CurSpp) {
   setwd(test)
   modern <- list.dirs(path = paste0("outputs/", spp.name), recursive = FALSE)
   modern.rasters <- c()
-  #Creates and reorders a list of modern rasters
+  #Creates and re-orders a list of modern rasters
   for (j in 1:length(modern)) {
-    r <- list.files(modern[j], 
+    r <- list.files(path = modern[j], 
                     pattern = paste0((strsplit(proj, "/"))[[1]][length((strsplit(proj, "/"))[[1]])], '.asc$'), 
                     full.names = TRUE)
     modern.rasters <- c(modern.rasters, r)
   }
   modern.rasters <- mixedsort(modern.rasters)
-  #this runs "threshold" function, which creates and ensembles binary maps
+  #Runs "threshold" function, which creates and ensembles binary maps
   modern.binary <- threshold(spp.name, modern.rasters, nrep, "", currentYear)
-  #gc is "garbage collection", it releases memory after large processes
   gc()
   
   if (length(modern.binary) > 0) {
@@ -387,12 +387,12 @@ projectSpeciesHabitat <- function(CurSpp) {
     stats$CentroidY[1] <- modern.centroid[2]
     if (ProtectedAnalysis == "Y") {
       setwd(proj_protected_dir)
-      ProtectList <- list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = TRUE)
+      ProtectList <- paste0("/", list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = FALSE))
       stats$Protected[1] <- getProtected(modern.binary, currentYear, ProtectList)
     } 
     if (UrbanAnalysis == "Y") {
       setwd(proj_urbanized_dir)
-      urblist <- list.files(pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
+      urblist <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
       urbanized <- stack(urblist)
       stats$Urbanized[1] <- getUrbanized(modern.binary, currentYear, urblist, urbanized)
     }
@@ -449,7 +449,7 @@ projectSpeciesHabitat <- function(CurSpp) {
           gc()
           cur.median <- medianensemble(spp.name, cur.proj, nrep, futscenario, futdate)
           gc()
-          #Fill in the stats table for the projected rasters
+          #Fills in the stats table for the projected rasters
           stats <- getStats(paste0(futscenario, "_", futdate), dataIndex + 1, futdate, cur.binary, 
                             stats, modern.size, modern.binary)
           gc()
@@ -511,8 +511,8 @@ maxent <- function(CurSpp) {
                     "/", spp.name, "_background_", run, ".csv -s ", SppRun, 
                     " -J -o outputs/", spp.name, "/RUN_", run, 
                     " noaskoverwrite logistic threshold -X ", test_percent, " replicates=", nrep,
-                    " writeclampgrid=", alloutputs, " writemess=", alloutputs, 
-                    " nowarnings writeplotdata=", alloutputs ," -j ", 
+                    " betamultiplier=", regularization, " writeclampgrid=", alloutputs, 
+                    " writemess=", alloutputs, " nowarnings writeplotdata=", alloutputs ," -j ", 
                     gsub(" ", "\\\\ ", proj), " -a ", reptype, " hinge=", hinge, " togglelayertype=", Categorical))
     }, error = function(err) {
       print(paste("MY_ERROR: ", spp.name, " ", err))
@@ -531,7 +531,7 @@ maxent <- function(CurSpp) {
 
 #Run-------------------------------------------
 #NOTE: folders need to be in correct format: folder/scenario/time period
-#this section creates a list of locations for all scenarios/time periods
+#Creates a list of locations for all scenarios/time periods
 if (numScenario > 0) {
   predictenvdir <- list.dirs(path = predictenv, recursive = TRUE)
 } else {
@@ -551,7 +551,7 @@ currentYear <- years[1]
 if (numScenario > 0) {
   setwd(predictenv)
   #Lists all directories and subdirectories in "predictenv"
-  directory <- list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
+  directory <- paste0("/", list.dirs(path = ".", full.names = FALSE, recursive = TRUE))
   nfolders <- length(directory)
   #Selects only the addresses of the subdirectory locations
   fut <- directory[grep("/([^:]+)/", directory)]
@@ -605,23 +605,23 @@ print("   Will evaluate species:")
 print(ListSpp)
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("projectSpeciesHabitat", "checkError", "maxent", "proj", "years",
                                 "futlistfull", "test", "predictenv", "predictenvdir", "samples",
-                                "nsubsamp", "nrep", "reptype", "hinge", "result_dir", "urblist", "DeleteIndex", 
-                                "getCentroid", "getProtected", "getSize", "numScenario", "alloutputs",
-                                "getStats", "getUrbanized", "medianensemble", "ListSpp", 
+                                "nsubsamp", "nrep", "reptype", "regularization", "hinge", "result_dir", "numScenario",
+                                "getCentroid", "getProtected", "getSize", "DeleteIndex",
+                                "getStats", "getUrbanized", "medianensemble", "ListSpp", "alloutputs",
                                 "overlap", "t1nott2", "threshold", "proj_protected_dir",
                                 "proj_urbanized_dir", "test", "aucval", "nproj", "ncores", "ThreshMethod",
-                                "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "format", "futlist", "test_percent", "Categorical"))
+                                "urblist", "UrbanAnalysis", "ProtectedAnalysis", "currentYear",
+                                "rastertype", "test_percent", "format", "futlist", "Categorical"))
 clusterEvalQ(clus, library(raster))
 clusterEvalQ(clus, library(gtools))
 
-#Pritns where the output files can be found
+#Prints where the output files can be found
 print("   Beginning maxent files in directory:")
 print(paste0("      ", test, "/outputs/%Species_Name%"))
-# Sys.time()
-
+#Sys.time()
 #Runs maxent
 out <- parLapply(clus, ListSpp, function(x) maxent(x))
 print("   Completing maxent files.")
@@ -663,6 +663,23 @@ for (l in 1:length(ListSpp)) {
   }
 }
 
+#Adds in the subsample index to the results file
+for (l in 1:length(ListSpp)) {
+  runs <- list.dirs(path = paste0(ListSpp[l]), full.names = TRUE, 
+                    recursive = FALSE)
+  runs <- runs[grep("RUN", runs)]
+  nruns <- length(runs)
+  HighAUC <- c()
+  for (i in 1:nruns) {
+    curmodel <- runs[i]
+    #Reads in the results file for each of the runs
+    results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
+    results$Subsample <- rep(i, (nrep + 1))
+    write.csv(results, paste0(curmodel, "/maxentResults.csv"), row.names = FALSE)
+  }
+}
+
+
 #Creates list of species to forecast/hindcast the maxent model
 spp_batch <- spp_batch[c(AUCRetain)]
 speciesWorked <- spp_batch
@@ -675,7 +692,7 @@ ListSpp <- unique(ListSpp)
 #Parallelization
 if (length(ListSpp) < ncores) {
   stopCluster(clus)
-  clus <- makeCluster(length(ListSpp), outfile = outfile)
+  clus <- makeCluster(length(ListSpp), outfile = outfile, setup_timeout = 0.5)
   clusterExport(clus, varlist = c("projectSpeciesHabitat", "checkError", "maxent", "proj",
                                   "futlistfull", "test", "predictenv", "samples", "predictenvdir", "years", 
                                   "nsubsamp", "nrep", "reptype", "result_dir", "numScenario",
@@ -683,7 +700,8 @@ if (length(ListSpp) < ncores) {
                                   "getStats", "getUrbanized", "medianensemble", "hinge", "alloutputs", 
                                   "overlap", "t1nott2", "threshold", "proj_protected_dir",
                                   "proj_urbanized_dir", "test", "aucval", "nproj", "ncores", "ListSpp",
-                                  "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", "urblist", "format", "test_percent", "futlist", "ThreshMethod"))
+                                  "UrbanAnalysis", "ProtectedAnalysis", "currentYear", "rastertype", 
+                                  "urblist", "test_percent", "format", "futlist", "ThreshMethod"))
   clusterEvalQ(clus, library(raster))
   clusterEvalQ(clus, library(gtools))
   ListSpp <- ListSpp

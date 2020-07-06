@@ -1,5 +1,5 @@
 ####format.R####
-##sets up the dadta frame used in the rest of megaSDM
+##sets up the data frame used in the rest of megaSDM
 
 #Initializations--------------------------------
 # Sets location and name of config txt file to be used
@@ -88,6 +88,8 @@ subsampleVarelaStep <- config["subsampleVarelaStep", ]
 df <- data.frame(df, subsampleVarelaStep, stringsAsFactors = FALSE)
 speciesBufferStep <- config["speciesBufferStep", ]
 df <- data.frame(df, speciesBufferStep, stringsAsFactors = FALSE)
+variableEnvStep <- config["variableEnvStep", ]
+df <- data.frame(df, variableEnvStep, stringsAsFactors = FALSE)
 maxentStep <- config["maxentStep", ]
 df <- data.frame(df, maxentStep, stringsAsFactors = FALSE)
 backgroundPointsStep <- config["backgroundPointsStep", ]
@@ -141,6 +143,8 @@ test_percent <- config["test_percent", ]
 df <- data.frame(df, test_percent, stringsAsFactors = FALSE)
 aucval <- as.numeric(config["aucval", ])
 df <- data.frame(df, aucval, stringsAsFactors = FALSE)
+regularization <- as.numeric(config["regularization", ])
+df <- data.frame(df, regularization, stringsAsFactors = FALSE)
 hinge <- as.character(config["hinge", ])
 df <- data.frame(df, hinge, stringsAsFactors = FALSE)
 threshold <- as.character(paste0(config["threshold", ], ".logistic.threshold"))

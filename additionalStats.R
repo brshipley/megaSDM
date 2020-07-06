@@ -16,7 +16,8 @@ dispersalStep <- df[, "dispersalStep"]
 dispersalRan <- df[, "dispersalRan"]
 
 if (dispersalStep == "Y") {
-  dispersal <- read.csv(list.files(df[, "dispersalRate_dir"], full.names = TRUE)[1])
+  dispersal <- read.csv(list.files(path = df[, "dispersalRate_dir"], full.names = TRUE)[1])
+  dispersal[, 1] <- gsub("_", " ", dispersal[, 1])
 }
 
 if (numScenario > 0) {
@@ -36,7 +37,7 @@ Scenarios <- c()
 
 if (numScenario > 0) {
   #Lists all projected directories
-  predictenvdir <- list.dirs(predictenv, recursive = TRUE)
+  predictenvdir <- list.dirs(path = predictenv, recursive = TRUE)
   for (ScenIndex in 1:numScenario) {
     if(ScenIndex != 1) {
       cScenario <- paste0("Scenario.", ScenIndex - 1)
@@ -95,7 +96,7 @@ getDiffScenariosGraph <- function(spp, stats, dispersalApplied) {
     barplot(stats$NumberCells[c(1, (2 + ((ScenIndex - 1) * (numYear - 1))):((2 + ((ScenIndex - 1) * (numYear - 1))) + numYear - 2))], 
             ylab = "Number of Cells", 
             axes = FALSE, 
-            main = Scenarios[ScenIndex], 
+            main = paste0(spp, "_", Scenarios[ScenIndex]), 
             names.arg = years, 
             cex.names = 0.7, 
             cex.axis = 0.5, 
@@ -317,12 +318,12 @@ DispersalCompare <- function(spp, stats, myvars) {
     #graphical parameters and barplot
     par(mfrow = c(1, 1), mar = c(5, 5, 4, 8))
     barplot(DispComp,
-            main = paste0("Dispersal vs. Non-Dispersal: ", Scenarios[scen]),
+            main = c(spp, paste0("Dispersal Rate Constrained vs. Unconstrained: ", Scenarios[scen])),
             ylab = "Number of Cells",
             names.arg = c(years[2:length(years)]),
             col = c("darkblue", "red"),
-            legend = c("NoDisp", "Disp"),
-            args.legend = list(x = "bottomright",bty = "n",inset = c(-0.25, 0)),
+            legend = c("Unconstrained", "Constrained"),
+            args.legend = list(x = "bottomright", bty = "n",inset = c(-0.35, 0)),
             beside = TRUE)
     dev.off()
   }
@@ -417,7 +418,7 @@ if ((dispersalStep == "Y") && (dispersalRan == "Y")) {
 }
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("colScenario", "colYear", "col13", "result_dir",
                                 "UrbanAnalysis", "ProtectedAnalysis", "numYear", "numScenario", "dispersalStep",
                                 "dispersalRan", "DispersalCompare", "predictenv", "years","Scenarios",

@@ -20,7 +20,7 @@ backgroundPointsStep <- df[, "backgroundPointsStep"]
 
 #Loads and sorts climate data
 setwd(df[, "proj_trainingarea"])
-train <- list.files(pattern = paste0('.bil$'), full.names = TRUE)
+train <- list.files(path = getwd(), pattern = paste0('.bil$'), full.names = TRUE)
 train <- mixedsort(train)
 
 train2 <- c()
@@ -81,7 +81,7 @@ run = function(CurSpp) {
   if (backgroundPointsStep == "N") {
     
     #Finds background point list 
-    BPDirList <- list.files(paste0(test, "/backgrounds"), full.names = TRUE)
+    BPDirList <- list.files(path = paste0(test, "/backgrounds"), full.names = TRUE)
     CurSpecBPDir <- BPDirList[grep(s, BPDirList)]
     
     for (f in 1:length(CurSpecBPDir)) {
@@ -132,7 +132,7 @@ nfiles<- length(ListSpp)
 dir.create("samples")
 
 #Ensures that all species have background points (if they are already generated)
-BPDirList <- list.files(paste0(test, "/backgrounds"), full.names = TRUE)
+BPDirList <- list.files(path = paste0(test, "/backgrounds"), full.names = TRUE)
 if (backgroundPointsStep == "N") {
   for (i in 1:length(ListSpp)) {
     Species1 <- substr(ListSpp[i], 9, nchar(ListSpp[i]) - 4)
@@ -144,7 +144,7 @@ if (backgroundPointsStep == "N") {
 }
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 
 clusterExport(clus, varlist = c("ncores", "run", "train", "train2", 
                                 "test", "df", "rastertype", "ListSpp", "project", 

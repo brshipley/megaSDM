@@ -5,10 +5,25 @@
 #Sets the number of DLLs able to be loaded to 500
 Sys.setenv("R_MAX_NUM_DLLS" = 500)
 
-#Loads necessary packages for megaSDM_run
-library(raster)
-library(parallel)
-library(rgdal)
+#Set the system's "locale" to "all" in case of faulty string searches
+Sys.setlocale('LC_ALL','C')
+
+#Loads or installs necessary packages for megaSDM_run
+LoadPackage <- function(pkg) {
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) {
+    install.packages(new.pkg, dependencies = TRUE)
+  }
+  sapply(pkg, require, character.only = TRUE)
+}
+
+megaSDMPackages <- c("dplyr", "gtools", 
+                     "plotfunctions", 
+                     "raster", "rgbif", 
+                     "rgdal", "rgeos", 
+                     "parallel", "sampSurf")
+
+LoadPackage(megaSDMPackages)
 
 #Set the working directory by navigating to and clicking on this file (or any other script file in the same directory)
 setwd(dirname(file.choose()))
@@ -104,7 +119,7 @@ if (length(ProjUnique) > 1) {
 
 #Ensures that the raster-type is correct
 setwd(trainingarea)
-trainstack <- stack(list.files(trainingarea, pattern = paste0(rastertype, "$")))
+trainstack <- stack(list.files(path = trainingarea, pattern = paste0(rastertype, "$")))
 if (length (trainstack) == 0) {
   stop(message(paste0("No ", rastertype, " files found in Training Area Directory: add files or change rastertype")))
 }
@@ -194,7 +209,7 @@ if (ClipEnvDataStep == "Y") {
   setwd(projsa)
   
   #Defines a standard raster to which the other rasters will be resampled
-  env_files <- list.files(path = ".", pattern = paste0("\\.bil$"), full.names = TRUE)
+  env_files <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
   resample_raster <- raster(env_files[1])
   
   #Resample forecasted/hindcasted rasters to standard resolution
@@ -208,7 +223,7 @@ if (ClipEnvDataStep == "Y") {
       if (length(correctDir) == 1) {
         #Makes a list of all future environmental layer files
         setwd(correctDir)
-        future <- list.files(path = ".", pattern = paste0("\\.bil$"), full.names = TRUE)
+        future <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
         
         #Resamples to the environmental layer raster
         future_res <- c()
@@ -234,7 +249,7 @@ if (ClipEnvDataStep == "Y") {
   #Resamples urbanization rasters (if provided)
   if (UrbanAnalysis == "Y") {
     setwd(proj_urbanized_dir)
-    urb_files <- list.files(path = ".", pattern = paste0("\\.bil$"), full.names = TRUE)
+    urb_files <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
     urban_res <- c()
     
     for (i in 1:length(urb_files)) {
@@ -276,15 +291,15 @@ if (gbifstep == "Y") {
   
   #Creates a list of occurrence CSV files found, copies them into "test" folder 
   setwd(occurrences)
-  ListSpp <- list.files(pattern = '\\.csv', full.names = TRUE)
+  ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = TRUE)
   nspp <- length(ListSpp)
   for(j in 1:nspp) {
-    file.copy(paste0(occurrences, "/", ListSpp[j]), test, overwrite = TRUE)
+    file.copy(paste0(ListSpp[j]), test, overwrite = TRUE)
   }
   
   setwd(test)
   dir.create("species")
-  ListSpp <- list.files(pattern = '\\.csv', full.names = TRUE)
+  ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = FALSE)
   ListSpp <- ListSpp[1:length(ListSpp)]
   
   #Re-formats the occurrence layers for use in subsequent steps
@@ -294,18 +309,18 @@ if (gbifstep == "Y") {
   
   for (G in 1:length(ListSpp)) {
     FocusSpecies <- ListSpp[G]
-    SpeciesName <- gsub("_", " ", substr(FocusSpecies, 3, (nchar(FocusSpecies) - 4)))
+    SpeciesName <- gsub("_", " ", substr(FocusSpecies, 1, (nchar(FocusSpecies) - 4)))
     CurSpp <- read.csv(FocusSpecies)
     CurSpp <- data.frame(lapply(CurSpp, as.character), stringsAsFactors = FALSE)
     
     #Names the correct column heading of the occurrence data (scientific name) "Species"
-    #If the species name laready has "_" in it
+    #If the species name already has "_" in it
     if ((length(grep(SpeciesName, CurSpp[1, ])) > 0) | (length(grep(gsub(" ", "_", SpeciesName), CurSpp[1, ])) > 0)) {
       names(CurSpp)[grep(SpeciesName, CurSpp[1, ])[1]] <- "Species"
       names(CurSpp)[grep(gsub(" ", "_", SpeciesName), CurSpp[1, ])[1]] <- "Species"
     } else {
       #If no column with the correct scientific name is found, makes a new one
-      SpeciesName <- substr(FocusSpecies, 3, (nchar(FocusSpecies) - 4))
+      SpeciesName <- substr(FocusSpecies, 1, (nchar(FocusSpecies) - 4))
       if (length(grep(SpeciesName, CurSpp[1, ])) == 0) {
         message(paste0("Warning! Species ", SpeciesName, " has no column with scientific name in it"))
         message("    Creating new species name column...")
@@ -446,9 +461,9 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   } else {
     
     #Automatically moves files to "samples" directory
-    OccurrenceFiles <- list.files(occurrences, pattern = ".csv", full.names = TRUE)
+    OccurrenceFiles <- list.files(path = occurrences, pattern = ".csv", full.names = TRUE)
     file.copy(OccurrenceFiles, to = paste0(test, "/", samples), overwrite = TRUE)
-    OccurrenceFiles <- list.files(samples, pattern = ".csv", full.names = TRUE)
+    OccurrenceFiles <- list.files(path = samples, pattern = ".csv", full.names = TRUE)
     OccurrenceRename <- gsub(" ", "_", OccurrenceFiles)
     
     for(o in 1:length(OccurrenceFiles)) {
@@ -506,7 +521,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   if (speciesBufferStep == "Y") {
     #Gets a list of buffers already in the buffer directory
     BuffersList <- substr(spp_batch, 1, nchar(spp_batch) - 4)
-    BuffIndex <- grep(paste(BuffersList, collapse = "|"), list.files(buff_dir, pattern = paste0(".shp$")))
+    BuffIndex <- grep(paste(BuffersList, collapse = "|"), list.files(path = buff_dir, pattern = paste0(".shp$")))
     #If buffers have already been generated, skips this step
     if (length(BuffIndex) != length(spp_batch)) {
       setwd(scripts)
@@ -523,7 +538,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   gc()
   
   #Samples background points from buffer (if desired) or if species-specific background points are needed
-  BufferFiles <- list.files(buff_dir, pattern = paste0(rastertype, "$|.shp$"))
+  BufferFiles <- list.files(path = buff_dir, pattern = paste0(rastertype, "$|.shp$"))
   if (((length(BufferFiles) > 0) | (length(grep("x", tolower(nbg))) > 0)) && (backgroundPointsStep == "Y")) {
     #If buffer files exist or if the number of desired background points is species-dependent, runs this step
     setwd(scripts)
@@ -550,7 +565,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   } else {
     #Uses background points provided by user 
     setwd(paste0(test, "/backgrounds/"))
-    BackgroundFiles <- list.files(paste0(getwd()), pattern=paste0(".csv$"), full.names = TRUE, recursive = TRUE)
+    BackgroundFiles <- list.files(path = getwd(), pattern = paste0(".csv$"), full.names = TRUE, recursive = TRUE)
     #Finds and copies background point files to the correct directories
     for (s in 1:length(spp_batch)) {
       currentspec <- substr(spp_batch[s], 1, nchar(spp_batch[s]) - 4)
@@ -575,6 +590,13 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       }
     }
     gc()
+  }
+  
+  if (variableEnvStep == "Y") {
+    setwd(scripts)
+    print("Running variableEnvStep.R...")
+    source("variableEnv.R")
+    print(Sys.time())
   }
 }
 
@@ -686,7 +708,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
                     recursive = TRUE)
         }
         
-        bg.csv = list.files(path=paste0(test, "/backgrounds/", spp.name), full.names = TRUE)
+        bg.csv = list.files(path = paste0(test, "/backgrounds/", spp.name), full.names = TRUE)
         for (f in 1:length(bg.csv)) {
           file.copy(from = bg.csv[f], 
                     to = paste0(result_dir, "/", spp.name, "/backgrounds"),
@@ -710,13 +732,13 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       }
       
       #Deletes the copied (or not) folders from the test directory
-      unlink(paste0(test, "/outputs/", spp.name),recursive = TRUE)
+      unlink(paste0(test, "/outputs/", spp.name), recursive = TRUE)
       
       if (backgroundPointsStep == "Y") {
-        unlink(paste0(test, "/backgrounds/", spp.name),recursive = TRUE)
+        unlink(paste0(test, "/backgrounds/", spp.name), recursive = TRUE)
       }
       if (subsampleVarelaStep == "Y") {
-        unlink(paste0(test, "/samples/", spp.name),recursive = TRUE)
+        unlink(paste0(test, "/samples/", spp.name), recursive = TRUE)
       }
       if (numScenario > 0) {
         unlink(paste0(test, "/projections/", spp.name), recursive = TRUE)
@@ -727,7 +749,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     if (speciesBatchIndex == ncol(all_spp)){
       #Reads in the Taxon-Species list
       specieslist <- read.csv(df[,"spplist"])
-      speciesfolders <- list.dirs(result_dir, recursive = FALSE)
+      speciesfolders <- list.dirs(path = result_dir, recursive = FALSE)
       speciesfolders <- speciesfolders[grep("_", speciesfolders)]
       
       #Makes a list of all species that have folders
@@ -756,8 +778,8 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       for (sp in 1:nrow(taxonlist)) {
         focusspp <- gsub(" ", "_", taxonlist[sp, 1])
         setwd(paste0(result_dir, "/", focusspp))
-        curfocus <- list.files(pattern = paste0("binary", rastertype, "$"))
-        if (!length(curfocus) > 0){
+        curfocus <- list.files(path = getwd(), pattern = paste0("binary", rastertype, "$"))
+        if (!length(curfocus) > 0) {
           message(paste0(focusspp, " will be removed (no replicates with an AUC > ", aucval, ")"))
           DeleteSP <- c(DeleteSP, sp)
         }

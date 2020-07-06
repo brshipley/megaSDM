@@ -105,14 +105,14 @@ BuffFiles <- function(CurSpp) {
 
 #Run------------------------------
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("buff_dir", "proj_trainingarea", "occurrences", "test", 
                               "desiredCRS", "defaultCRS", "spp.list", "BuffFiles",
                               "format", "nsubsamp","result_dir"))
 clusterEvalQ(clus, library(maptools))
+clusterEvalQ(clus, library(raster))
 clusterEvalQ(clus, library(rgdal))
 clusterEvalQ(clus, library(rgeos))
-clusterEvalQ(clus, library(raster))
 clusterEvalQ(clus, library(sampSurf))
 
 out<-parLapply(clus, spp.list, function(x) BuffFiles(x))

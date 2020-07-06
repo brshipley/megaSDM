@@ -53,7 +53,11 @@ years <-  as.numeric(config[grep("^Year", row.names(config)), ])
 
 #Reads in the dispersal data
 setwd(dispersalRate_dir)
-dispersal <- read.csv(list.files(getwd(), pattern = ".csv"), stringsAsFactors = FALSE)
+dispersal <- read.csv(list.files(path = getwd(), pattern = ".csv"), stringsAsFactors = FALSE)
+
+#Ensures that dispersal rate data are properly formatted
+dispersal[, 1] <- gsub("_", " ", dispersal[, 1])
+
 
 #Gets a list of the species analyzed on this go-around
 ListSpp <- c()
@@ -68,24 +72,31 @@ print(ListSpp)
 
 #Functions----------------------------
 #Creates distance rasters from original projection (studyarea environmental rasters)
-DistanceRaster <- function(spp, Time, Scen, CurrentBinary) {
+DistanceRaster <- function(spp, Time, Scen, CurrentBinary, TimeMap) {
   #Loads and reclassifies the binary maps
   CurrentBinary <- CurrentBinary
   CurrentPresence <- reclassify(CurrentBinary, c(0, 0, NA), include.lowest = TRUE)
-  CurrentPresence <- trim(CurrentPresence)
+  #Trims the time map as an extent template for faster calculations
+  TimeMap2 <- TimeMap
+  TimeMap2[which(values(TimeMap2) == 0)] <- NA
+  TimeMap2 <- trim(TimeMap2)
+  TimeMap2[is.na(values(TimeMap2))] <- 0
+  #Trims "CurrentPresence" to the extent of the time maps
+  CurrentPresence <- crop(CurrentPresence, extent(TimeMap2))
   #Calculates the distances from each pixel to the nearest presence
   CurrDist <- distance(CurrentPresence, doEdge = TRUE)
-  CurrDist <- extend(CurrDist, extent(CurrentBinary))
+  #Extends the raster back out to full study area extent
+  CurrDist <- extend(CurrDist, extent(CurrentBinary), value = max(values(CurrDist), na.rm = TRUE) + 1)
   CurrDist[is.na(values(CurrDist))] <- max(values(CurrDist), na.rm = TRUE) + 1
   DistFinal <- mask(CurrDist, CurrentBinary)
   #Converts distance (in meters) to kilometers (for dispersal rate)
   DistFinal <- DistFinal / 1000
   #writes distance raster
-  writeRaster(DistFinal, 
-              filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, rastertype), 
-              overwrite = TRUE, 
-              format = format, 
-              prj = TRUE)
+# writeRaster(DistFinal, 
+#             filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, rastertype), 
+#             overwrite = TRUE, 
+#             format = format, 
+#             prj = TRUE)
   rm(CurrentPresence, CurrDist)
   gc()
   return(DistFinal)
@@ -186,7 +197,7 @@ FinalDispersal <- function(spp) {
       #Conducts protected area analysis (if requested)
       if (ProtectedAnalysis == "Y") {
         setwd(proj_protected_dir)
-        prot_files <- list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = TRUE)
+        prot_files <- paste0("/", list.files(path = ".", pattern = paste0("\\", ".shp", "$"), full.names = FALSE))
         protected <- shapefile(prot_files[1])
         Protected <- c(Protected, getProtected(CurrentBinary, protected))
       } 
@@ -194,7 +205,7 @@ FinalDispersal <- function(spp) {
       #Conducts urban area analysis (if requested)
       if (UrbanAnalysis == "Y") {
         setwd(proj_urbanized_dir)
-        urblist <- list.files(pattern = paste0("\\.bil$"), full.names = TRUE)
+        urblist <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
         urbanized <- stack(urblist)
         Urbanized <- c(Urbanized, getUrbanized(CurrentBinary, CurrentTime, urblist, urbanized))
       }
@@ -211,10 +222,10 @@ FinalDispersal <- function(spp) {
           
           #Calculates distance from current distribution
           if (y == 2) {
-            DistanceRastersExist <- list.files(paste0(result_dir, "/", spp), 
+            DistanceRastersExist <- list.files(path = paste0(result_dir, "/", spp), 
                                                pattern = paste0("distance_", years[1], "_Current", rastertype, "$"))
             if (length(DistanceRastersExist) == 0) {
-              SppDistance <- DistanceRaster(spp, CurrentTime, "Current", CurrentBinary)
+              SppDistance <- DistanceRaster(spp, CurrentTime, "Current", CurrentBinary, TimeMap)
               OriginalDistance <- SppDistance
             } else {
               OriginalDistance <- raster(paste0(result_dir, "/", spp, "/", DistanceRastersExist))
@@ -246,7 +257,7 @@ FinalDispersal <- function(spp) {
           TimeDiff <- abs(CurYear - years[y - 1])
           SppDispProb <- DispersalProbRaster(dispersalRate, SppDistance, TimeDiff)
           setwd(curdir)
-          RasterList <- list.files(curdir, pattern = paste0(rastertype, "$"))
+          RasterList <- list.files(path = curdir, pattern = paste0(rastertype, "$"))
           
           #Creates an ensembled raster that incorporates dispersal rate
           #Calculates the ensembled dispersal probability * habitat suitability
@@ -295,7 +306,7 @@ FinalDispersal <- function(spp) {
           #Conducts urban analysis (if requested)
           if (UrbanAnalysis  == "Y") {
             setwd(proj_urbanized_dir)
-            urblist <- list.files(pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
+            urblist <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
             urbanized <- stack(urblist)
             Urbanized <- c(Urbanized, getUrbanized(Binary_Dispersal, CurYear, urblist, urbanized))
           }
@@ -303,7 +314,7 @@ FinalDispersal <- function(spp) {
           #Conducts protected analysis (if requested)
           if (ProtectedAnalysis == "Y") {
             setwd(proj_protected_dir)
-            ProtectList <- list.files(pattern = ("\\.shp$"), full.names = TRUE)
+            ProtectList <- list.files(path = getwd(), pattern = ("\\.shp$"), full.names = TRUE)
             if (!exists("protected")) {
               protected <- shapefile(ProtectList[1])
             }
@@ -312,17 +323,25 @@ FinalDispersal <- function(spp) {
         }
         
         #Writes PDFs
-        DispersalRasters <- list.files(curdir, pattern = paste0("dispersalRate", rastertype, "$"), full.names = TRUE)
+        DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate", rastertype, "$"), full.names = TRUE)
         DispersalRasters <- mixedsort(DispersalRasters)
         DispersalNames <- mixedsort(DispersalNames)
         setwd(paste0(result_dir, "/", spp))
         dir.create("map_pdfs")
         setwd("map_pdfs")
         for (d in 1:length(DispersalRasters)) {
-          title <- DispersalNames[d]
-          pdf(file = paste0(DispersalNames[d], ".pdf"))
-          plot(raster(DispersalRasters[d], native = TRUE), main = title)
-          dev.off()
+          if (grepl("binary", DispersalRasters[d])) {
+            title <- DispersalNames[d]
+            pdf(file = paste0(DispersalNames[d], ".pdf"))
+            plot(raster(DispersalRasters[d], native = TRUE), legend = FALSE, main = title)
+            legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
+            dev.off()
+          } else {
+            title <- DispersalNames[d]
+            pdf(file = paste0(DispersalNames[d], ".pdf"))
+            plot(raster(DispersalRasters[d], native = TRUE), main = title)
+            dev.off()
+          }
         }
       }
       
@@ -366,14 +385,13 @@ for (w in 1:length(ListSpp)) {
 }
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("result_dir", "dispersalRate_dir", "format", "rastertype", "proj_urbanized_dir",
                               "proj_protected_dir", "numScenario", "Scenarios", "numYear", "years", "dispersal",
                               "ncores", "DistanceRaster", "DispersalProbRaster", "FinalDispersal", "ListSpp",
                               "getCentroid", "getProtected", "getUrbanized", "t1nott2", "overlap", "UrbanAnalysis",
                               "ProtectedAnalysis"))
 clusterEvalQ(clus, library(raster))
-clusterEvalQ(clus, library(biomod2))
 clusterEvalQ(clus, library(gtools))
 
 out<-parLapply(clus, ListSpp, function(x) FinalDispersal(x))

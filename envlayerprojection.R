@@ -56,7 +56,7 @@ if (rastertype == ".asc") {
 
 #Current Data---------------------------
 #Creates a stack of training-area environmental raster files
-trainingEnv <- list.files(path = original, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
+trainingEnv <- list.files(path = original, pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
 trainingEnv <- stack(trainingEnv)
 
 #If the training area doesn't need to be clipped, makes the extent of the training stack the desired extent
@@ -104,7 +104,7 @@ if (numScenario > 0) {
     if (length(correctDir) == 1) {
       #Stacks climate data
       setwd(correctDir)
-      futureenv <- list.files(correctDir, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
+      futureenv <- list.files(full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
       futureenv <- stack(futureenv)
       setwd(projpredictenv)
       Directories <- unlist(strsplit(correctDir, "/"))
@@ -129,7 +129,7 @@ if (numScenario > 0) {
 
 #Buffer Rasters---------------------------
 #Projects buffer rasters (if provided)
-BuffRastList <- list.files(buff_dir , pattern = paste0(rastertype, "$"), full.names = TRUE)
+BuffRastList <- list.files(buff_dir, pattern = paste0(rastertype, "$"), full.names = TRUE)
 if (length(BuffRastList) > 0) {
   for(i in 1:length(BuffRastList)) {
     currast <- raster(BuffRastList[i])
@@ -155,7 +155,7 @@ if (df$ProtectedAnalysis == "Y") {
 #Projects urban intensity raster(s) into desired CRS
 if (df$UrbanAnalysis == "Y") {  
   setwd(urbanized_dir)
-  urbanized <- list.files(pattern=paste0("\\", rastertype, "$"), full.names=TRUE)
+  urbanized <- list.files(path = urbanized_dir, pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
   urbanized <- stack(urbanized)
   
   setwd(proj_urbanized_dir)

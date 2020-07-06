@@ -45,13 +45,13 @@ for (i in 1:nspp) {
   dir.create("map_pdfs")
   
   #Lists the paths of the current species distribution maps
-  maps <- list.files(full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
+  maps <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"), full.names = FALSE)
   
   if (length(maps) > 0) {
     if (numScenario > 0) {
       #Lists and appends the paths of the non-current species distribution maps
       for(ScenIndex in 1:numScenario) {
-        files <- list.files(path = Scenarios[ScenIndex], full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
+        files <- list.files(path = Scenarios[ScenIndex], pattern = paste0("\\", rastertype, "$"), full.names = TRUE)
         maps <- c(maps, files)
       }
     } else {
@@ -60,9 +60,9 @@ for (i in 1:nspp) {
     
     for (j in 1:length(maps)) {
       tryCatch({
-        if (substr(maps[j], 1, 1) == ".") {
+        if (!grepl("/", maps[j])) {
           #Creates pdf with same title as file name
-          title <- substr(maps[j], 3, nchar(maps[j]) - 4)
+          title <- paste0(spp.list[i], "_", substr(maps[j], 1, nchar(maps[j]) - 4))
           pdf(file = paste0("map_pdfs/", title, ".pdf"))
         } else {
           #Finds name of Scenario/time for pdf creation
@@ -74,7 +74,7 @@ for (i in 1:nspp) {
             }
           }
           #Creates pdf with same title as file name
-          title <- substr(maps[j], Scenariolength + 2, nchar(maps[j]) - 4)
+          title <- paste0(spp.list[i], "_", substr(maps[j], Scenariolength + 2, nchar(maps[j]) - 4))
           pdf(file = paste0("map_pdfs/", title, ".pdf"))
         }
         #plots the maps on the created pdf file
@@ -85,4 +85,5 @@ for (i in 1:nspp) {
       })
     }
   }
+  unlink("RPlots.pdf")
 }

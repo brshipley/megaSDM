@@ -158,7 +158,7 @@ print("   Will evaluate species:")
 print(spp.list)
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("randomseed", "test", "samples", "nsubsamp","nclimatebins","spp.list", "nPCAxes", "run", "envSample", "Categorical"))
 
 clusterEvalQ(clus, library(raster))

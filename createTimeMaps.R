@@ -17,7 +17,8 @@ dispersalStep <- df[, "dispersalStep"]
 ncores <- df[, "ncores"]
 dispersalRan <- df[, "dispersalRan"]
 if (dispersalStep == "Y") {
-  dispersal <- read.csv(list.files(df[, "dispersalRate_dir"], full.names = TRUE)[1])
+  dispersal <- read.csv(list.files(path = df[, "dispersalRate_dir"], full.names = TRUE)[1])
+  dispersal[, 1] <- gsub("_", " ", dispersal[, 1])
 }
 outfile <- "statsout.txt"
 ScenarioNames <- as.character(df[grep("^Scenario", colnames(df))])
@@ -677,7 +678,7 @@ for (ScenIndex in 1:numScenario) {
 }
 
 #Parallelization
-clus <- makeCluster(ncores, outfile = outfile)
+clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("timeMapsNoDispersal", "timeMapsDispersal",
                                 "test", "nsubsamp", "nrep", "reptype","result_dir",
                                 "ncores", "consecutiveCheck", "setbinary",
