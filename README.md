@@ -8,7 +8,7 @@ Benjamin Shipley
 
 Renee Bach
 
-Youngje Do
+Younje Do
 
 Heather Strathearn
 
