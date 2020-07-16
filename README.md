@@ -18,23 +18,23 @@ Bistra Dilkina
 
 ## Dependencies *(updated 14 May 2020)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
-#### R version 3.6 or greater (last tested with v. 4.0.0)
-### R Package (Version Number)
-dplyr	(>=0.8.1)
+#### R version 3.6 or greater (last tested with v. 4.0.2)
+### R Package (Version Number of Last Tested)
+dplyr	(>=1.0.0)
 
-gtools	(>=3.8.1)
+gtools	(>=3.8.2)
 
 plotfunctions	(>=1.3)
 
-raster	(>=2.9)
+raster	(>=3.1.5)
 
-rgbif	(>=3.1)
+rgbif	(>=3.1.0)
 
-rgdal	(>=1.4)
+rgdal	(>=1.4.8)
 
-rgeos	(>=0.4)
+rgeos	(>=0.5.2)
 
-sampSurf	(>=0.7)
+sampSurf	(>=0.7.5)
 
 ## Installation Instructions
 Refer to the provided setup guide (https://github.com/brshipley/megaSDM/blob/master/megaSDM_Setup.pdf) for detailed instructions on the setup and configuration of this program.
