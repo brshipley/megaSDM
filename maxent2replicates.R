@@ -566,10 +566,14 @@ if (numScenario > 0) {
   
   for (s in 1:length(Scenarios)) {
     FutTest1 <- fut[grep(Scenarios[s], fut)]
+    if (length(FutTest1) == 0) {
+      stop(paste0("Error: folder for cliamte scenario '", Scenarios[s], "' not found within the 'proj_predictenv' folders"))
+    }
+    
     for (y in 2:length(years)) {
       FutTest2 <- grep(years[y], FutTest1)
       if (length(FutTest2) == 0) {
-        message(paste0("Warning: folder for time period '", years[yearIndex], "' not found within ", Scenarios[s]))
+        stop(paste0("Error: folder for time period '", years[y], "' not found within ", Scenarios[s]))
       }
     }
   }
