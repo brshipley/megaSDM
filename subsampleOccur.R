@@ -105,7 +105,7 @@ envSample <- function (ptz, no_bins = nclimatebins) {
 }
 
 run <- function(cur) {
-  print("   Writing files to:")
+  print("   Creating files in:")
   print(paste0("      ", test, "/", samples, "/", cur))
   
   #Loads the points from the .csv file named 'cur' in the wd
@@ -154,9 +154,8 @@ for (i in 1:length(speciesWorked)) {
   spp.list <- c(spp.list, list.files(path = samples, full.names = TRUE, pattern = speciesWorked[i]))
 }
 spp.list <- unique(spp.list)
-print("   Will evaluate species:")
-print(spp.list)
-
+print("    Subsampling:")
+print(paste0("        ", spp_batch))
 #Parallelization
 clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
 clusterExport(clus, varlist = c("randomseed", "test", "samples", "nsubsamp","nclimatebins","spp.list", "nPCAxes", "run", "envSample", "Categorical"))

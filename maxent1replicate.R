@@ -95,7 +95,9 @@ if (AllOutputs == "Y") {
 }
 
 #Creates results directory
-dir.create(result_dir)
+if (!dir.exists(result_dir)) {
+  dir.create(result_dir)
+}
 
 #Functions------------------------------
 #Calculates total number of cells in the raster
@@ -603,8 +605,8 @@ for (i in 1:length(speciesWorked)) {
   ListSpp[i] <- paste0(samples, "/", substr(speciesWorked[i], 1, (nchar(speciesWorked[i]) - 4)))
 }
 ListSpp <- unique(ListSpp)
-print("   Will evaluate species:")
-print(ListSpp)
+print("    Will evaluate species:")
+print(paste0("        ", spp_batch))
 
 #Parallelization
 clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
@@ -621,12 +623,12 @@ clusterEvalQ(clus, library(raster))
 clusterEvalQ(clus, library(gtools))
 
 #Prints where the output files can be found
-print("   Beginning maxent files in directory:")
-print(paste0("      ", test, "/outputs/%Species_Name%"))
-#Sys.time()
+print("    Beginning maxent files in directory:")
+print(paste0("        ", test, "/outputs/%Species_Name%"))
+
 #Runs maxent
 out <- parLapply(clus, ListSpp, function(x) maxent(x))
-print("   Completing maxent files.")
+print("    Completing maxent files.")
 Sys.time()
 
 #Ensures that all species were modelled correctly
@@ -641,7 +643,7 @@ ListSpp <- unique(ListSpp)
 
 #Removes species with low AUC values from subsequent analysis
 AUCRetain <- c()
-message(paste0("Removing species with Test AUC Values < ", df[,"aucval"], " from subsequent analyses:"))
+print(paste0("    Removing species with Test AUC Values < ", df[,"aucval"], " from subsequent analyses:"))
 for (l in 1:length(ListSpp)) {
   runs <- list.dirs(path = paste0(ListSpp[l]), full.names = TRUE, 
                     recursive = FALSE)
@@ -713,13 +715,13 @@ ensemble.stack <- c()
 
 #Runs the "projectSpeciesHabitat" function
 if (length(spp_batch) > 0) {
-  print("   Beginning projection files in directory:")
-  print(paste0("      ", test, "/projections/%Species_Name%"))
+  print("    Beginning projection files in directory:")
+  print(paste0("        ", test, "/projections/%Species_Name%"))
   Sys.time()
   out <- parLapply(clus, ListSpp, function(x) projectSpeciesHabitat(x))
 }
 
-print("   Completing project files.")
+print("    Completing project files.")
 Sys.time()
 #Frees computer cores
 stopCluster(clus)

@@ -17,6 +17,18 @@ if ((length(grep(" ", config["DataDirectory", ] )) > 0 | length(grep(" ", config
   stop("If running MaxEnt, directory paths should not have spaces in them! Revise config.txt and re-run")
 }
 
+if ((length(grep("~", config["DataDirectory", ] )) > 0 | length(grep("~", config["TrialDirectory", ])) > 0)) {
+  stop("DataDirectory and TrialDirectory should be full file paths, without tilde expansion '~': Revise config.txt and re-run")
+}
+
+
+#If the script directory is different from the working directory, print an error
+if (!dir.exists(config["DataDirectory", ])) {
+  stop("Data directory not found! Ensure that the 'DataDirectory' and 'TrialDirectory' paths are correct")
+}
+
+
+
 #Functions--------------------------------------
 #Creates subfolder and file locations based on main folder
 createLocation <- function(mainFolder, dirloc) {
@@ -147,8 +159,6 @@ regularization <- as.numeric(config["regularization", ])
 df <- data.frame(df, regularization, stringsAsFactors = FALSE)
 hinge <- as.character(config["hinge", ])
 df <- data.frame(df, hinge, stringsAsFactors = FALSE)
-threshold <- as.character(paste0(config["threshold", ], ".logistic.threshold"))
-df <- data.frame(df, threshold, stringsAsFactors = FALSE)
 AllOutputs <- as.character(config["AllOutputs", ])
 df <- data.frame(df, AllOutputs, stringsAsFactors = FALSE)
 defaultCRS <- config["defaultCRS", ]
@@ -168,6 +178,19 @@ spatial_weights <- as.numeric(config["spatial_weights", ])
 df <- data.frame(df, spatial_weights, stringsAsFactors = FALSE)
 nbg <- as.character(config["nbg", ])
 df <- data.frame(df, nbg, stringsAsFactors = FALSE)
+
+#Determine the threshold required for binary conversion
+threshold <- config["threshold",]
+if (!is.na(as.numeric(threshold))){
+  threshold <- as.numeric(threshold)
+  df <- data.frame(df, threshold, stringsAsFactors = FALSE)
+} else {
+  threshold <- as.character(paste0(config["threshold", ], ".logistic.threshold"))
+  if (threshold == "10.percentile.training.presence.logistic.threshold") {
+    threshold <- paste0("X", threshold)
+  }
+  df <- data.frame(df, threshold, stringsAsFactors = FALSE)
+}
 
 #Forecasting/Hindcasting Variables--------------
 #Checks the number of years

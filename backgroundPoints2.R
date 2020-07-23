@@ -35,7 +35,9 @@ GlobalBBox <- SpatialPoints(matrix(c(-179.9, 179.9, 89.9, -89.9), nrow = 2), pro
 setwd(test)
 
 #creates a new folder "backgrounds" in "test"
-dir.create("backgrounds")
+if (!dir.exists(paste0(test, "/backgrounds"))) {
+  dir.create("backgrounds")
+}
 
 #Creates a list of the active species including the "samples" path
 ListSpp <- list.dirs(path = samples, recursive = FALSE)
@@ -340,7 +342,7 @@ bgpoints <- function(CurSpp) {
     
     #Step 2: Sampling from the entire training area------------ 
     #Checks to see if there are already background files created from "backgroundPoints1.R"
-    BGTrainFiles <- list.files(path = paste0(test,"/backgrounds"), pattern = paste0(".csv$"))
+    BGTrainFiles <- list.files(path = paste0(test,"/backgrounds"), pattern = paste0("Train_Background_"))
     
     if (length(BGTrainFiles) != nsubsamp) {  
       #if nbg*5 is more than the number of cells in the buffer raster, then sampleRandom won't work
@@ -471,8 +473,8 @@ for (i in 1:length(speciesWorked)) {
   ListSpp <- c(ListSpp, list.files(path = samples, full.names = TRUE, pattern = speciesWorked[i]))
 }
 ListSpp <- unique(ListSpp)
-print("   Will evaluate species:")
-print(ListSpp)
+print("    Generating Background Points for:")
+print(paste0("        ", spp_batch))
 
 #Parallelization
 clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)
@@ -487,8 +489,8 @@ clusterEvalQ(clus, library(raster))
 clusterEvalQ(clus, library(dplyr))
 
 
-print("   Creating background files in:")
-print(paste0("      ", test, "/backgrounds/%Species_Name%"))
+print("    Creating background files in:")
+print(paste0("        ", test, "/backgrounds/%Species_Name%"))
 
 out <- parLapply(clus, ListSpp, function(x) bgpoints(x))
 stopCluster(clus)

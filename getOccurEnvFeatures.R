@@ -31,8 +31,7 @@ for (i in 1:length(train)) {
 train2 <- stack(train2)
 crs(train2) <- desiredCRS
 
-print("   Climate data loaded:")
-print(paste0("      ", names(train2)))
+print("    Climate data loaded")
 
 #Functions---------------------------------------------------
 run = function(CurSpp) {
@@ -67,8 +66,6 @@ run = function(CurSpp) {
     s <- c(unlist(strsplit(as.character(CurSpp4$Species[1]), " ")))[1]
   }
   
-  print(paste0("      Evaluating: ", s))
-  
   #write the changes
   s <- gsub(" ", "_" , s)
   #remove any rows with NA's
@@ -82,7 +79,12 @@ run = function(CurSpp) {
     
     #Finds background point list 
     BPDirList <- list.files(path = paste0(test, "/backgrounds"), full.names = TRUE)
-    CurSpecBPDir <- BPDirList[grep(s, BPDirList)]
+    CurSpecBPDir <- BPDirList[grep(paste0(s), BPDirList)]
+    
+    #If background points are in nested folders, pulls them out
+    if (length(grep(paste0(s, "$"), CurSpecBPDir)) > 0) {
+      CurSpecBPDir <- list.files(CurSpecBPDir[grep(paste0(s, "$"), CurSpecBPDir)][1], full.names = TRUE)
+    }
     
     for (f in 1:length(CurSpecBPDir)) {
       
@@ -126,10 +128,12 @@ for (i in 1:length(speciesWorked)) {
   ListSpp <- c(ListSpp, list.files(path = "species", pattern = speciesWorked[i], full.names = TRUE))
 }
 ListSpp <- unique(ListSpp)
-print(ListSpp)
-
+print("    Extracting Env Data")
+print(paste0("        ", spp_batch))
 nfiles<- length(ListSpp)
-dir.create("samples")
+if (!dir.exists(paste0(test, "/samples"))) {
+  dir.create("samples")
+}
 
 #Ensures that all species have background points (if they are already generated)
 BPDirList <- list.files(path = paste0(test, "/backgrounds"), full.names = TRUE)
@@ -151,7 +155,7 @@ clusterExport(clus, varlist = c("ncores", "run", "train", "train2",
                                 "defaultCRS", "desiredCRS", "dispersalStep", "backgroundPointsStep"))
 clusterEvalQ(clus, library(raster))
 
-print(paste0("   Creating files in:"))
+print(paste0("    Creating files in:"))
 print(paste0("      ", getwd(), "/samples"))
 out<-parLapply(clus, ListSpp, function(x) run(x))
 stopCluster(clus)

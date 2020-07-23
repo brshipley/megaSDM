@@ -34,16 +34,18 @@ spp.list <- list.dirs(path = "samples", full.names = FALSE, recursive = FALSE)
 nspp <- length(spp.list)
 
 #Message
-print("   Creating species pdf Scenario maps in:")
-print(paste0("      ", result_dir, "/SPECIES_NAME/map_pdfs"))
+print("    Creating PDF outputs in:")
+print(paste0("        ", result_dir, "/SPECIES_NAME/map_pdfs"))
 
 #Run----------------------------------
 for (i in 1:nspp) {
   #Creates PDF directory
   setwd(result_dir)
   setwd(spp.list[i])
-  dir.create("map_pdfs")
-  
+  if (!dir.exists(paste0(getwd(), "/map_pdfs"))) {
+    dir.create("map_pdfs")
+  }
+
   #Lists the paths of the current species distribution maps
   maps <- list.files(path = getwd(), pattern = paste0("\\", rastertype, "$"), full.names = FALSE)
   

@@ -67,8 +67,8 @@ for (i in 1:length(speciesWorked)) {
   ListSpp[i] <- paste0(substr(speciesWorked[i], 1, nchar(speciesWorked[i]) - 4))
 }
 ListSpp <- unique(ListSpp)
-print("   Will evaluate species:")
-print(ListSpp)
+print("    Incorporating dispersal rate:")
+print(paste0("        ", spp_batch))
 
 #Functions----------------------------
 #Creates distance rasters from original projection (studyarea environmental rasters)
@@ -258,26 +258,27 @@ FinalDispersal <- function(spp) {
           SppDispProb <- DispersalProbRaster(dispersalRate, SppDistance, TimeDiff)
           setwd(curdir)
           RasterList <- list.files(path = curdir, pattern = paste0(rastertype, "$"))
+           
+           #
+#          Creates an ensembled raster that incorporates dispersal rate
+#          Calculates the ensembled dispersal probability * habitat suitability
+#          EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled", rastertype), RasterList)
+#          EnsembleSD <- raster(RasterList[EnsembleNum])
+#          if (extent(SppDispProb) != extent(EnsembleSD) | ncol(SppDispProb) != ncol(EnsembleSD)) {
+#            message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
+#            SppDispProb <- intersect(SppDispProb, EnsembleSD)
+#            SppDispProb <- resample(SppDispProb, EnsembleSD, method = "bilinear")
+#          }
           
-          #Creates an ensembled raster that incorporates dispersal rate
-          #Calculates the ensembled dispersal probability * habitat suitability
-          EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled", rastertype), RasterList)
-          EnsembleSD <- raster(RasterList[EnsembleNum])
-          if (extent(SppDispProb) != extent(EnsembleSD) | ncol(SppDispProb) != ncol(EnsembleSD)) {
-            message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
-            SppDispProb <- intersect(SppDispProb, EnsembleSD)
-            SppDispProb <- resample(SppDispProb, EnsembleSD, method = "bilinear")
-          }
+#          Ensemble_Dispersal <- SppDispProb * EnsembleSD
+#          #Writes the ensembled dispersal rate raster
+#          writeRaster(Ensemble_Dispersal,
+#                      filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate", rastertype),
+#                      overwrite = TRUE, 
+#                      format = format,
+#                      prj = TRUE)
           
-          Ensemble_Dispersal <- SppDispProb * EnsembleSD
-          #Writes the ensembled dispersal rate raster
-          writeRaster(Ensemble_Dispersal,
-                      filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate", rastertype),
-                      overwrite = TRUE, 
-                      format = format,
-                      prj = TRUE)
-          
-          DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
+#          DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
           
           #Creates a binary raster from the ensembled raster
           BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary", rastertype), RasterList)
@@ -285,6 +286,7 @@ FinalDispersal <- function(spp) {
           Binary_Dispersal <- (SppDispProb * BinarySD)
           Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
           Binary_Dispersal[Binary_Dispersal < 0.5] <- 0
+          
           #Writes the binary raster
           writeRaster(Binary_Dispersal,
                       filename = paste0(CurYear, "_", CurScen, "_binary_dispersalRate", rastertype),
@@ -332,13 +334,13 @@ FinalDispersal <- function(spp) {
         for (d in 1:length(DispersalRasters)) {
           if (grepl("binary", DispersalRasters[d])) {
             title <- DispersalNames[d]
-            pdf(file = paste0(DispersalNames[d], ".pdf"))
+            pdf(file = paste0(spp, "_", DispersalNames[d], ".pdf"))
             plot(raster(DispersalRasters[d], native = TRUE), legend = FALSE, main = title)
             legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
             dev.off()
           } else {
             title <- DispersalNames[d]
-            pdf(file = paste0(DispersalNames[d], ".pdf"))
+            pdf(file = paste0(spp, "_", DispersalNames[d], ".pdf"))
             plot(raster(DispersalRasters[d], native = TRUE), main = title)
             dev.off()
           }

@@ -85,7 +85,7 @@ ExtentUnique <- unique(ExtentClim, MARGIN = 2)
 
 #Checks and deals with multiple raster extents
 if (ncol(ExtentUnique) > 1) {
-  message("Warning! the environmental rasters have different extents: This program will use only the intersection of the rasters")
+  message("Warning: the environmental rasters have different extents: megaSDM will use only the intersection of the rasters")
   df[, "TrainingAreaClip"] <- "Y"
   StackList <- c()
   
@@ -151,9 +151,9 @@ colnames(Extent_TA) <- c("long", "lat")
 
 #If TrainingAreaClip is "N", then the CRS of the boudaries are in the correct projection
 if (TrainingAreaClip == "N") {
-  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = crs(desiredCRS))
+  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(desiredCRS))
 } else {
-  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = crs(defaultCRS))
+  ExtentSP_TA <- SpatialPoints(Extent_TA, proj4string = CRS(defaultCRS))
 }
 
 #Convert the extent of the training area to the desiredCRS
@@ -203,7 +203,9 @@ if (TrainingAreaClip == "Y") {
   }
   
   #Writes and stores projected files in a temporary directory
-  dir.create(paste0(DataDirectory, "/TEMP"))
+  if (!dir.exists(paste0(DataDirectory, "/TEMP"))) {
+    dir.create(paste0(DataDirectory, "/TEMP"))  
+  }
   setwd(paste0(DataDirectory, "/TEMP"))
   for (k in 1:length(bioclim_t)) {
     writeRaster(bioclim_t[[k]], 
@@ -212,9 +214,8 @@ if (TrainingAreaClip == "Y") {
                 overwrite = TRUE,
                 format = "EHdr",
                 prj = TRUE)
-    print("Writing Raster (Training Area)")
   }
-  
+  print("Clipping Rasters (Training Area)")
   rm(bioclim_t, bioclim)
   setwd(trainingarea)
 } else {
@@ -229,9 +230,8 @@ if (TrainingAreaClip == "Y") {
                 bylayer = TRUE, 
                 format = "EHdr",
                 prj = TRUE)
-    print("Writing Raster (Training Area)")
   }
-  
+  print("Clipping Rasters (Training Area)")
   #Clips study area to desired extent
   bioclim_a <- c()
   for (k in 1:nlayers(bioclim_t2)) {
@@ -261,8 +261,8 @@ unlink(FilesToClear)
 #Names and writes clipped rasters
 for (k in 1:nlayers(bioclim_na2)) {
   writeRaster(bioclim_na2[[k]], filename = paste0(names(bioclim_na2)[k], ".bil"), overwrite = TRUE, bylayer = TRUE, format = "EHdr", prj = TRUE)
-  print("Writing Raster (Study Area)")
 }
+print("Clipping Rasters (Study Area)")
 
 #Clipping Future Environmental Layers----------------------------------
 #Clips all of the future environmental rasters
@@ -279,7 +279,31 @@ if (numScenario > 0) {
       #Makes a list of all future environmental layer files
       setwd(correctDir)
       future <- list.files(path = getwd(), pattern=paste0("\\.bil$"), full.names = TRUE)
+      if (length(future) == 0) {
+        stop(paste0("Forecasted/hindcasted climate rasters not found or not in ", rastertype, " format!", "\n", 
+                    "  Ensure that all predicted climate rasters are in the correct locations"))
+      } else if (length(future) != length(bioclim_na)) {
+        stop(paste0("Number of forecasted/hindcasted climate rasters does not equal number of current cliamte variables", "\n",
+                    "  Ensure that every predicted climate raster is in the correct location"))
+      }
       future_a <- c()
+      
+      #Ensures that all environmental rasters are in the same projection
+      ProjEnv <- rep(NA, len = length(future))
+      for (i in 1:length(future)) {
+        ProjEnv[i] <- as.character(crs(raster(future[[i]])))
+      }
+      
+      ProjUnique <- unique(ProjEnv)
+      if (length(ProjUnique) > 1) {
+        stop("Not all of the forecasted/hindcasted environmental rasters are in the same projection")
+      }
+      
+      #Ensures that all rasters have a defined coordinate projection
+      futurestack <- stack(future)
+      if(is.na(crs(futurestack))) {
+        stop("forecasted/hindcasted raster crs = NA: Ensure all rasters have a defined coordinate projection")
+      }
       
       #Clipping each individual raster file
       for (j in 1:length(future)) {
@@ -297,10 +321,11 @@ if (numScenario > 0) {
       setwd(correctDir)
       for (k in 1:nlayers(future_na2)){
         writeRaster(future_na2[[k]], filename = paste0((names(future_na2)[k]), ".bil"), overwrite = TRUE, bylayer = TRUE, format = "EHdr", prj = TRUE)
-        print("Writing Rasters (Future Env)")
+        
       }
     }
   }
+  print("Clipping Rasters (Future Env)")
 }
 
 #Urban and Protected Analysis-------------------------------
@@ -333,12 +358,11 @@ if (UrbanAnalysis == "Y") {
     #If thehre are multiple urbanized raster (for different time periods), write out each one
     if (length(grep(paste(years, collapse = "|"), names(urban_na))) == nlayers(urban_na)) {
       writeRaster(urban_na[[j]], filename = paste0("SA_urb", years[j], rastertype, sep = ""), overwrite = TRUE, bylayer = TRUE, format = "EHdr", prj = TRUE)
-      print("Writing Urban Rasters")
     } else {
       writeRaster(urban_na[[j]], filename = paste0("SA_urb", j, rastertype, sep = ""), overwrite = TRUE, bylayer = TRUE, format = "EHdr", prj = TRUE)
-      print("Writing Urban Raster")
     }
   }
+  print("Writing Urban Rasters")
 }
 
 if (ProtectedAnalysis == "Y") {
@@ -364,7 +388,6 @@ unlink(trainingarea)
 TrainingFiles <- list.files(paste0(DataDirectory, "/TEMP"))
 for (f in 1:length(TrainingFiles)) {
   file.copy(from = paste0(DataDirectory, "/TEMP/", TrainingFiles[f]), to = paste0(trainingarea), overwrite = TRUE)
-  print("Copying Files")
 }
 
 rm(TrainingFiles)

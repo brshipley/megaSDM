@@ -93,7 +93,10 @@ if (ntaxa == 2) {
 }
 ntaxa <- length(taxa)
 
-dir.create(paste0(result_dir, "/", "RichnessMaps"))
+if(!dir.exists(paste0(result_dir, "/RichnessMaps"))) {
+  dir.create(paste0(result_dir, "/", "RichnessMaps"))
+}
+
 RichnessMaps <- paste0(result_dir, "/", "RichnessMaps")
 
 #Gets a vector of Scenarios
@@ -123,7 +126,6 @@ FutureRichnessMaps <- function(taxon, y, s) {
   
   #Calculates sum (total species richness) for given parameters, makes rasters and PDFs
   FutureRichness <- calc(futstack, fun = sum)
-  print(paste0("Creating species richness maps for ", taxon, " for Scenario ", FocusScenario, " and time ", FocusYear))
   setwd(RichnessMaps)
   writeRaster(FutureRichness, 
               filename = paste0("Richness_", taxon, "_", FocusYear, "_", FocusScenario, rastertype),
@@ -141,7 +143,7 @@ for (t in 1:ntaxa) {
   } else {
     taxonlist2 <- gsub(" ", "_", InitialTaxonList[which(InitialTaxonList[, 2] == taxon), 1])
   }
-  print(paste0("Creating current species richness maps for ", taxon, ", with ", length(taxonlist2), " total species"))
+  print(paste0("    Creating current species richness maps for ", taxon, ", with ", length(taxonlist2), " total species"))
   
   #Uploads and stacks current binary rasters of all species within the taxa
   #Removes species with AUC values < threshold
@@ -185,6 +187,7 @@ for (t in 1:ntaxa) {
         FutureRichnessMaps(taxon, y, s)
       }
     }
+    print(paste0("    Creating species richness maps for forecasted/hindcasted scenarios"))
   }
 }
 
@@ -208,7 +211,6 @@ FutureRichnessMapsDisp <- function(taxon, y, s) {
   
   #Calculates sum (total species richness) for given parameters, writes rasters
   FutureRichness <- calc(futstack, fun = sum)
-  print(paste0("Creating species richness maps for ", taxon, " for Scenario ", FocusScenario, " and time ", FocusYear, " (including dispersal rate)"))
   setwd(RichnessMaps)
   writeRaster(FutureRichness, 
               filename = paste0("Richness_", taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalRate", rastertype),
@@ -255,7 +257,6 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
     } else {
       taxonlist2 <- gsub(" ", "_", InitialTaxonList[which(InitialTaxonList[, 2] == taxon), 1])
     }
-    print(paste0("Creating current species richness maps for ", taxon, ", with ", length(taxonlist2), " total species"))
     
     #Uploads and stacks binary rasters of all species within the taxa
     curstack <- c()
@@ -286,6 +287,7 @@ if (dispersalStep == "Y" && length(taxonlist2) > 0) {
           FutureRichnessMapsDisp(taxon, y, s)
         }
       }
+      print(paste0("    Creating species richness maps for forecasted/hindcasted scenarios (including dispersal rate)"))
     }
   }
 }
@@ -327,7 +329,7 @@ MakePDFMaps <- function(taxon) {
 }
 
 #Creates PDF richness maps for all taxa
-print("Making PDF Maps...")
+print("    Making PDF Maps...")
 for(t in 1:ntaxa) {
   taxon <- taxa[t]
   MakePDFMaps(taxon)

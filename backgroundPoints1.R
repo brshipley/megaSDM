@@ -40,7 +40,9 @@ if (df[, "randomseed"]) {
 setwd(test)
 
 #creates a new folder "backgrounds" in "test"
-dir.create("backgrounds")
+if (!dir.exists(paste0(test, "/backgrounds"))) {
+  dir.create("backgrounds")
+}
 
 #disables scientific notation
 options(scipen = 999)
@@ -168,11 +170,11 @@ if (nbgTrain > 0) {
     }
     
     #Determine the number of climate bins that are needed to make nbgTrain points
-    #For the first run, start at 1. Every other time, start at nbinscount - 10
+    #For the first run, start at 1. Every other time, start at nbinscount - 5
     if (i == 1) {
       nbinscount <- 1
     } else {
-      nbinscount <- max(1, nbinscount - 10)
+      nbinscount <- max(1, nbinscount - 5)
     }
     
     #Steadily increase the number of bins until the desired nbg is reached
@@ -191,7 +193,7 @@ if (nbgTrain > 0) {
     }
     
     bgdf_train <- VarelaSample(RandomTrain[, 1:2], ClimOccur, NBinsFinal)
-    print(paste0("Number of Background Points In Training Area: ", nrow(bgdf_train)))
+    print(paste0("    Number of Background Points In Training Area (Run ", i, "): ", nrow(bgdf_train)))
     
     #Create data frame of background points
     bgtraindataframe <- data.frame(bgdf_train, stringsAsFactors = FALSE)

@@ -124,8 +124,13 @@ run <- function(cur) {
     s <- c(unlist(strsplit(as.character(cur2$Species[1]), " ")))[1]
   }
   
+  names(cur2)[c(grep("lon", tolower(names(cur2))), grep("^x$", tolower(names(cur2))))] <- "Longitude"
+  names(cur2)[c(grep("lat", tolower(names(cur2))), grep("^y$", tolower(names(cur2))))] <- "Latitude"
+  
   #Makes a directory called 'backgrounds/%speciesname%'
-  dir.create(paste0("backgrounds/", s))
+  if(!dir.exists(paste0(test, "/backgrounds/", s))) {
+    dir.create(paste0("backgrounds/", s))
+  }
   
   #Works through the number of subsamples from the config file
   for (r in 1:nsubsamp) {
@@ -153,8 +158,8 @@ for (i in 1:length(speciesWorked)) {
   spp.list <- c(spp.list, list.files(path = "backgrounds", full.names = TRUE, pattern = paste0(speciesWorked[i], "_background")))
 }
 spp.list <- unique(spp.list)
-print("   Will evaluate species:")
-print(spp.list)
+print("   Subsampling Background Points:")
+print(paste0("    ", spp_batch))
 
 #Parallelization
 clus <- makeCluster(ncores, outfile = outfile, setup_timeout = 0.5)

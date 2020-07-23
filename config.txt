@@ -6,8 +6,9 @@
 
 TrialDirectory =   "F:/EXAMPLE/Results"
   #Overall directory for occurrence files, background files, buffers, and results used in the trial
+  #Must be the full directory path (no shortening with "~")
 
---------------Sub-Directories (within "TrialDirectory")--------------------------------
+#--------------Sub-Directories (within "TrialDirectory")--------------------------------#
 
 spplist = "/spplist/specieslist.csv"	  
   #File path of a CSV file with a list of target species (Taxon and Scientific Name columns)
@@ -18,8 +19,6 @@ test = 	"/Test"
 
 result_dir = "/Results"			            
   #Directory where all final outputs will be written or copied.
-
-
 
 occurrences = "/occurrences"			        
   #Directory containing occurrence data (generated if gbifstep ="Y" (Section 6)).
@@ -38,8 +37,9 @@ counts = "/SppCount.csv"
 DataDirectory = "F:/EXAMPLE/datadirectory"
   #Directory where all environmental data folders necessary for the run should be placed (by user)
   #All scripts in this package will also be placed here
+  #Must be the full directory path (no shortening with "~")
 
---------------Sub-Directories (within "DataDirectory")----------------------------------
+#--------------Sub-Directories (within "DataDirectory")----------------------------------#
 
 scripts = "/scripts"
   #Folder (within "DataDirectory") containing all R Scripts of this package and this configuration file	
@@ -107,13 +107,13 @@ defaultCRS = "+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"
 
 ############# 5. Raster Clipping and Resampling #############------------------------------------
 
-ClipEnvDataStep = "Y"
+ClipEnvDataStep = "N"
   #This step clips the environmental rasters, urbanized data, and protected area data to the desired geographic regions
     #Set this to "Y" if these data do not have the same extent, or if the extent is different than desired
     #Set this to "Y" if these data are not the same resolution
     #The extent of the desired study area is given by the parameters "minlat", "maxlat", "minlong", and "maxlong" in this file
 
-TrainingAreaClip = "Y"
+TrainingAreaClip = "N"
   #Should the training environmental layers be clipped to a different desired extent? 
   #Use if environmental rasters are much larger than the desired "training area"
   #Set this to "Y" if the study area layers must be created, but are outside or larger than the training area extent 
@@ -167,7 +167,7 @@ speciesBufferStep = "Y"
   #This step creates a buffer around all of the occurrence points in order to sample for pseudo-absence points
     #If occurrence point buffers already exist, place them in the "buff_dir" location and set this to "N"
 
-spatial_weights = 0.1
+spatial_weights = 0.5
   #A number between 0 and 1. If buffers exist (or speciesBufferStep = "Y"), indicates the percentage of total background points to be sampled from the buffers 
   #Values can be used to fine tune the background point selection method. 
     
@@ -180,7 +180,7 @@ spatial_weights = 0.1
 buff_dir =  "/Masks"				              
   #Location where (optional) buffer files are stored for each species (created if speciesBufferStep = "Y")
 
-nbg = 7500
+nbg = 5000
   #Total number of background points wanted (due to environmental subsampling, actual number may vary)
     #if buffers around occurrences exist, spatial_weights give proportion of background points within the buffer.
   #If a number (n) followed by "X" is given (e.g.: "10X"), the number of background points will be roughly n times the number of subsampled occurrences.
@@ -263,9 +263,9 @@ threshold = "Maximum.test.sensitivity.plus.specificity"
       #7:  "Equal.training.sensitivity.and.specificity"
       #8:  "Maximum.training.sensitivity.plus.specificity" 
       #9:  "Equal.test.sensitivity.and.specificity"
-      #10: "Balance.training.omission,.predicted.area.and.threshold.value"
+      #10: "Balance.training.omission..predicted.area.and.threshold.value"
       #11: "Equate.entropy.of.thresholded.and.original.distributions"
-      #12: Any value between 1 and 0 (NOT IN QUOTATION MARKS)
+      #12: Any value between 1 and 0 (NOT RECOMMENDED)
 
 AllOutputs = "Y"
   #Should secondary outputs from MaxEnt be generated (Y/N)? Including:    

@@ -90,6 +90,7 @@ timeMapsNoDispersal <- function(spp) {
     
     #Lists current binary raster files 
     modernData <- list.files(path = spp, pattern = paste0("binary", rastertype, "$"), full.names = TRUE)
+    modernData <- paste0(result_dir, "/", modernData)
     directories <- list.dirs(path = spp)
     correctDirectories <- c()
     
@@ -138,7 +139,11 @@ timeMapsNoDispersal <- function(spp) {
           minY <- max(extent(raster(results[1, 1]))[3], extent(raster(results[2, 1]))[3])
           maxY <- min(extent(raster(results[1, 1]))[4], extent(raster(results[2, 1]))[4])
           Extent2 <- rbind(c(minX, maxX), c(minY, maxY))
-          assign(Scenarios[i], stack(crop(raster(results[j, i]), Extent2), get(Scenarios[i])))
+          if (j == 1) {
+            assign(Scenarios[i], crop(raster(results[j, i]), Extent2))
+          } else {
+            assign(Scenarios[i], stack(get(Scenarios[i]), crop(raster(results[j, i]), Extent2)))
+          }
         }
       }
     }
@@ -150,6 +155,10 @@ timeMapsNoDispersal <- function(spp) {
     
     allConsRasterNames <- c()
     ScenariosCalc <- c()
+    allRasterNames <- list()
+    for (i in 1:numScenario) {
+      ScenariosCalc[[i]] <- list()
+    }
     for(i in 1:numScenario) {
       #Defines variables
       rasterNames <- c()
@@ -198,8 +207,6 @@ timeMapsNoDispersal <- function(spp) {
         }
         
         allRasterNames <- c()
-        print("Working...")
-        print(name)
         
         #Creates a composite raster with the binary values of computedRaster
         PrintedRaster <- computedRaster
@@ -347,7 +354,13 @@ timeMapsNoDispersal <- function(spp) {
       
       #creates pdf of the Time Maps
       pdf(file = paste0(result_dir, "/", spp, "/TimeMaps/", Scenarios[i],"_TimeMap.pdf"))
-      plot(legend = FALSE, breaks = breakpoints, r, col = color, xlab = "", ylab = "", main = paste0(spp, " ", Scenarios[i]))
+      plot(legend = FALSE, 
+           breaks = breakpoints, 
+           r, 
+           col = color, 
+           xlab = "", 
+           ylab = "", 
+           main = paste0(spp, " ", Scenarios[i]))
       legend("bottomright", legend = rev(bin), fill = rev(color), cex = 0.6)
       dev.off()
       removeTempRasterFiles(filename(r))
@@ -420,7 +433,11 @@ timeMapsDispersal <- function(spp) {
           minY <- max(extent(raster(results[1, 1]))[3], extent(raster(results[2, 1]))[3])
           maxY <- min(extent(raster(results[1, 1]))[4], extent(raster(results[2, 1]))[4])
           Extent2 <- rbind(c(minX, maxX), c(minY, maxY))
-          assign(Scenarios[i], stack(crop(raster(results[j, i]), Extent2), get(Scenarios[i])))
+          if (j == 1) {
+            assign(Scenarios[i], crop(raster(results[j, i]), Extent2))
+          } else {
+            assign(Scenarios[i], stack(get(Scenarios[i]), crop(raster(results[j, i]), Extent2)))
+          }
         }
       }
     }
@@ -468,7 +485,7 @@ timeMapsDispersal <- function(spp) {
         }
         allRasterNames <- c()
         
-        #creates a mask of the overlapped raster
+        #creates a mask of the overlapped raster (removes areas that are state "0" for other times)
         for (k in 1:ncol(binary)) {
           if (binary[k] == 0) {
             computedRaster <- mask(computedRaster, allRasters[[k]], inverse = FALSE, maskvalue = 1, updatevalue = 0)
@@ -530,14 +547,14 @@ timeMapsDispersal <- function(spp) {
         }
       }
       
-      #write raster of time maps
+      #write the output raster
       writeRaster(FinalPrintRast,  
                   filename = paste0(result_dir, "/", spp,"/TimeMapRasters", "/binary", Scenarios[i], "_dispersal", rastertype),
                   overwrite = TRUE, 
                   format = format,
                   prj = TRUE)
       
-      #Creates breakpoints (used to delineate colors in the time maps)
+      #Creates breakpoints (used to delineate colors in the PDFs)
       breakpoints <- c(breakpoints, max(breakpoints) + 1)
       breakpoints <- unique(breakpoints)
       #Makes names for the legend

@@ -428,7 +428,7 @@ clusterEvalQ(clus, library(graphics))
 
 
 
-print("   Creating barplot pdfs in:")
-print(paste0("      ", result_dir, "/SPECIES_NAME"))
+print("    Creating outputs in:")
+print(paste0("        ", result_dir, "/SPECIES_NAME"))
 out <- parLapply(clus, ListSpp, function(x) run(x))
 stopCluster(clus)

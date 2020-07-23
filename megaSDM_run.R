@@ -1,7 +1,7 @@
 ####megaSDM_run.R####
 ##THIS IS THE MAIN PROGRAM SCRIPT (RUN THIS TO OBTAIN ALL RESULTS)
-#Initializations-------------------------------------
 
+#Initializations-------------------------------------
 #Sets the number of DLLs able to be loaded to 500
 Sys.setenv("R_MAX_NUM_DLLS" = 500)
 
@@ -9,31 +9,47 @@ Sys.setenv("R_MAX_NUM_DLLS" = 500)
 Sys.setlocale('LC_ALL','C')
 
 #Loads or installs necessary packages for megaSDM_run
-LoadPackage <- function(pkg) {
+LoadPackage <- function(pkg, vers) {
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)) {
-    install.packages(new.pkg, dependencies = TRUE)
+    install.packages(new.pkg, dependencies = TRUE, quiet = TRUE)
   }
-  sapply(pkg, require, character.only = TRUE)
+  sapply(pkg, require, quietly = TRUE, character.only = TRUE)
+  PVersions <- lapply(pkg, packageVersion)
+  #If the loaded packages are a different version than megaSDM was verified for, prints a warning
+  for (p in 1:length(pkg)) {
+    if (PVersions[[p]] != vers[p]) {
+      message(paste0("Package '", pkg[p], "' is a different version than the last tested version: full functionality cannot be guaranteed!"))
+    }
+  }
 }
 
-megaSDMPackages <- c("dplyr", "gtools", 
+megaSDMPackages <- c("dplyr", "gtools",
                      "plotfunctions", 
                      "raster", "rgbif", 
                      "rgdal", "rgeos", 
                      "parallel", "sampSurf")
 
-LoadPackage(megaSDMPackages)
+megaSDMVersions <- c("1.0.0", "3.8.2", "1.3", "3.1.5", "3.1.0", "1.4.8", "0.5.2", "4.0.2", "0.7.5")
+
+LoadPackage(megaSDMPackages, megaSDMVersions)
 
 #Set the working directory by navigating to and clicking on this file (or any other script file in the same directory)
-setwd(dirname(file.choose()))
+WorkingDirectory <- dirname(file.choose())
 
+#Running megaSDM--------------------------------------
+{
+#Part 1: Variable and Directory Creation------------------------------------
+setwd(WorkingDirectory)
+#If directory does not have "format.R" in it, print an error
+if (length(grep("format.R", list.files(getwd()))) == 0) {
+  stop("File 'format.R' not found in the selected location! Ensuring that the selected file is within the scripts folder and re-run")
+}  
+  
 #Reads and formats the "config.txt" file (creates "df" dataframe)
 source("format.R")
 
-#Variable Creation------------------------------------
 #Loads the necessary variables from "df"
-
 scripts <- df[, "scripts"]
 test <- df[, "test"]
 occurrences <- df[, "occurrences"]
@@ -52,7 +68,6 @@ dispersalStep <- df[, "dispersalStep"]
 UrbanAnalysis <- df[, "UrbanAnalysis"]
 ProtectedAnalysis <- df[, "ProtectedAnalysis"]
 RichnessStep <- df[, "RichnessStep"]
-
 #Loads variables for data directories
 buff_dir <- df[, "buff_dir"]
 samples <- "samples"
@@ -80,13 +95,12 @@ if (UrbanAnalysis == "Y") {
 }
 rastertype <- df[, "rastertype"]
 
-#Raster Management------------------------------------
+#Part 2: Raster Management------------------------------------
 #This only needs to be run once, as long as study area and coordinate reference system remain constant
 #Runs envlayerprojection.R if necessary: IF ALL OF THE DATA ARE NOT IN THE SAME PROJECTION OR NOT IN THE DESIRED PROJECTION,THIS SHOULD BE "Y"
 #When examining another study area with the same training area and species, 
   #replace climate files in the "studyarea" directory and re-run projection (if needed) and clip
 
-{
 #If the units of meters are not specified in the desired projection, reformats desired projection to have units of meters  
 projcond <- length(grep("\\+units *= *m", df[, "desiredCRS"])) == 0
 unitscond <- length(grep("\\+units", df[, "desiredCRS"])) == 0
@@ -100,10 +114,14 @@ if (projcond && unitscond) {
   CoordinateProjectionStep <- "Y"
 }
 
-#If no training rasters are found, prints a warning
-trainingEnv <- list.files(path = trainingarea, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
-if (length(trainingEnv) == 0) {
+#If no training rasters are found, prints an error
+trainingFiles <- list.files(path = trainingarea, full.names = TRUE)
+if (length(trainingFiles) == 0) {
   stop("No training area rasters found! Check file paths in config.txt")
+} else if (length(grep(pattern = paste0("\\", rastertype, "$"), trainingFiles)) == 0) {
+  stop ("No ", rastertype, " files found in Training Area Directory: add files or change rastertype")
+} else {
+  trainingEnv <- list.files(path = trainingarea, full.names = TRUE, pattern = paste0("\\", rastertype, "$"))
 }
 
 #Ensures that all training environmental rasters are in the same projection
@@ -114,19 +132,14 @@ for (i in 1:length(trainingEnv)) {
 
 ProjUnique <- unique(ProjEnv)
 if (length(ProjUnique) > 1) {
-  stop(message ("Error! Not all of the training environmental rasters are in the same projection!"))
-}
-
-#Ensures that the raster-type is correct
-setwd(trainingarea)
-trainstack <- stack(list.files(path = trainingarea, pattern = paste0(rastertype, "$")))
-if (length (trainstack) == 0) {
-  stop(message(paste0("No ", rastertype, " files found in Training Area Directory: add files or change rastertype")))
+  stop("Not all of the training environmental rasters are in the same projection")
 }
 
 #Ensures that the rasters have some sort of projection system already
+setwd(trainingarea)
+trainstack <- stack(list.files(trainingarea, pattern = paste0(rastertype, "$")))
 if (is.na(crs(trainstack))) {
-  stop(message("crs = NA: Define a Coordinate Reference System for all raster layers"))
+  stop("training raster crs = NA: make sure all raster layers have a defined coordinate projection")
 }
 
 #Forces all input rasters to be in ".bil" form
@@ -151,12 +164,15 @@ if (CoordinateProjectionStep == "Y") {
   }
   
   #Defines the desired coordinate reference system as the CRS of the copied (or already projected) rasters
-  df[, "desiredCRS"] <- as.character(crs(raster(dir(projtrain)[1])))
+  if (df[, "desiredCRS"] != as.character(crs(raster(dir(projtrain)[1])))) {
+    df[, "desiredCRS"] <- as.character(crs(raster(dir(projtrain)[1])))
+  }
+  
   print(paste0("desired CRS is:", df[, "desiredCRS"], ""))
   
   #If the directories for projected study area rasters are empty, copies over the original study area rasters 
   setwd(sa)
-  if (length(dir(projsa)) == 0) {
+  if (length(dir(projsa, pattern = paste0(rastertype, "$"))) == 0) {
     for (i in 1:length(dir(sa))) {
       file.copy(from = dir(sa)[i], to = paste0(projsa, "/", dir(sa)[i]))
     }
@@ -165,9 +181,10 @@ if (CoordinateProjectionStep == "Y") {
   #If the directories for projected future (or past) rasters are empty, copies over the original rasters
   if (df[, "numScenario"] > 0) {
     setwd(predictenv)
-    if (length(dir(projpredictenv)) == 0) {
-      for (i in 1:length(dir(predictenv))) {
-        file.copy(from = dir(predictenv)[i], to = paste0(projpredictenv, "/", dir(predictenv)[i]))
+    if (length(dir(projpredictenv, recursive = TRUE, pattern = paste0(rastertype, "$"))) == 0) {
+      for (i in 1:length(dir(predictenv, recursive = TRUE))) {
+        file.copy(from = dir(predictenv, recursive = TRUE)[i], 
+                  to = paste0(projpredictenv, "/", dir(predictenv, recursive = TRUE)[i]))
       }
     }
   }
@@ -206,12 +223,28 @@ if (ClipEnvDataStep == "Y") {
   source("clip.R")
   print("Clip complete!")
 } else {
+  #Ensures that all study environmental rasters are in the same projection
   setwd(projsa)
-  
-  #Defines a standard raster to which the other rasters will be resampled
   env_files <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
-  resample_raster <- raster(env_files[1])
+  ProjEnv <- rep(NA, len = length(env_files))
+  for (i in 1:length(trainingEnv)) {
+    ProjEnv[i] <- as.character(crs(raster(env_files[[i]])))
+  }
+  ProjUnique <- unique(ProjEnv)
   
+  if (length(ProjUnique) > 1) {
+    stop("Not all of the study area environmental rasters are in the same projection")
+  } 
+  
+  ProjStack <- stack(env_files)
+  if (is.na(crs(ProjStack))) {
+    stop("study raster crs = NA: make sure all raster layers have a defined coordinate projection")
+  }
+  rm(ProjStack)
+  
+  #Defines a standard (study area) raster to which the other rasters will be resampled
+  resample_raster <- raster(env_files[1])
+
   #Resample forecasted/hindcasted rasters to standard resolution
   if (df[, "numScenario"] > 0) {
     setwd(projpredictenv)
@@ -225,10 +258,32 @@ if (ClipEnvDataStep == "Y") {
         setwd(correctDir)
         future <- list.files(path = getwd(), pattern = paste0("\\.bil$"), full.names = TRUE)
         
+        if (length(future) == 0) {
+          stop(paste0("Forecasted/hindcasted climate rasters not found or not in ", rastertype, " format!", "\n", 
+                      "  Ensure that all predicted climate rasters are in the corrrect locations"))
+        } else if (length(future) != length(env_files)) {
+          stop(paste0("Number of forecasted/hindcasted climate rasters does not equal number of current cliamte variables", "\n",
+                      "  Ensure that every predicted climate raster is in the correct location"))
+        }
+        
+        #Ensures that all environmental rasters are in the same projection
+        ProjEnv <- rep(NA, len = length(future))
+        for (i in 1:length(future)) {
+          ProjEnv[i] <- as.character(crs(raster(future[[i]])))
+        }
+        
+        ProjUnique <- unique(ProjEnv)
+        if (length(ProjUnique) > 1) {
+          stop("Not all of the forecasted/hindcasted environmental rasters are in the same projection")
+        }
+        
         #Resamples to the environmental layer raster
         future_res <- c()
         for (i in 1:length(future)) {
           future_raster <- raster(future[[i]])
+          if(is.na(crs(future_raster))) {
+            stop("forecasted/hindcasted crs = NA: make sure all raster layers have a defined coordinate projection")
+          }
           if ((future_raster@extent != resample_raster@extent) | (future_raster@ncols != resample_raster@ncols)){
             future_res <- c(future_res, resample(future_raster, resample_raster, method = "ngb"))
           }
@@ -274,9 +329,9 @@ if (ClipEnvDataStep == "Y") {
   }
   gc()
 }
-}
 
-#Occurrence Data Management----------------------------
+
+#Part 3: Occurrence Data Management----------------------------
 #Downloads occurrence data if necessary
 #Formats occurrence data for use in subsequent steps
 
@@ -287,18 +342,29 @@ if (gbifstep == "Y") {
 } else {
   #Copies maxent.jar from the data directory to the "test" folder
   setwd(test)
-  file.copy(paste0(occurrences, "/maxent.jar"), test, overwrite = TRUE)
+  if (!file.exists(paste0(test, "/maxent.jar"))) {
+    if (file.exists(paste0(occurrences, "/maxent.jar"))) {
+      file.copy(paste0(occurrences, "/maxent.jar"), test, overwrite = TRUE)
+    } else {
+      stop("'maxent.jar' file not found! Ensure that the file is in the 'occurrences' subfolder")
+    }
+  }
   
   #Creates a list of occurrence CSV files found, copies them into "test" folder 
   setwd(occurrences)
   ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = TRUE)
+  if (length(ListSpp) == 0) {
+    stop("No occurrence data found: Ensure that occurrence csv files are in the correct folder or set gbifstep = 'Y'")
+  }
   nspp <- length(ListSpp)
   for(j in 1:nspp) {
     file.copy(paste0(ListSpp[j]), test, overwrite = TRUE)
   }
   
   setwd(test)
-  dir.create("species")
+  if (!dir.exists(paste0(test, "/species"))) {
+    dir.create("species")
+  }
   ListSpp <- list.files(path = getwd(), pattern = '\\.csv', full.names = FALSE)
   ListSpp <- ListSpp[1:length(ListSpp)]
   
@@ -323,7 +389,7 @@ if (gbifstep == "Y") {
       SpeciesName <- substr(FocusSpecies, 1, (nchar(FocusSpecies) - 4))
       if (length(grep(SpeciesName, CurSpp[1, ])) == 0) {
         message(paste0("Warning! Species ", SpeciesName, " has no column with scientific name in it"))
-        message("    Creating new species name column...")
+        message("    Creating new species name column")
         CurSpp$Species <- rep(SpeciesName, len = nrow(CurSpp))
       } else {
         names(CurSpp)[grep(SpeciesName, CurSpp[1, ])[1]] <- "Species"
@@ -337,7 +403,7 @@ if (gbifstep == "Y") {
     
     #Locates the columns with the coordinates of the provided occurrence data
     names(CurSpp)[c(grep("lon", tolower(names(CurSpp))), grep("^x$", tolower(names(CurSpp))))] <- "Longitude"
-    names(CurSpp)[c(grep("lat",tolower(names(CurSpp))), grep("^y$", tolower(names(CurSpp))))] <- "Latitude"
+    names(CurSpp)[c(grep("lat", tolower(names(CurSpp))), grep("^y$", tolower(names(CurSpp))))] <- "Latitude"
     CurSpp <- CurSpp[, c("Species", "Longitude", "Latitude")]
     s <- as.character(CurSpp$Species[1])
     s <- gsub(" ", "_" , s)
@@ -376,7 +442,7 @@ print("The following species will be evaluated:")
 for (i in 1:nrow(spplist)) {
   cur <- spplist[i, 2]
   row <- (grep(paste0(gsub(" ", "_", cur), ".csv$"), all1))
-  rowCount <- (grep(paste0(gsub(" ", "_", cur), "$"), counts$Species))
+  rowCount <- (grep(paste0(gsub(" ", "_", cur), "$"), gsub(" ", "_", counts$Scientific.Name)))
   if (length(row) > 0) {
     #If species has < 3 occurrences, remove from analysis
     #If species has < 20 occurrences print a warning
@@ -401,7 +467,7 @@ for (i in 1:nrow(spplist)) {
 spp_total <- spp_total[order(spp_counts, decreasing = FALSE)]
 all_spp <- matrix(spp_total, nrow = as.numeric(df[, "ncores"]), byrow = FALSE)
 
-#Occurrence/Background Point Subsampling--------------------------------------------
+#Part 4: Occurrence/Background Point Subsampling--------------------------------------------
 #Generates background points and subsamples occurrence/background point data
 
 #Generates background points (if consistent number/region of background points is requested)
@@ -418,7 +484,7 @@ if (backgroundPointsStep == "Y") {
 #Subsamples occurrence points and creates background points within buffers
 #Runs each species batch separately
 for (speciesBatchIndex in 1:ncol(all_spp)) { 
-  print(Sys.time())
+  print("")
   spp_batch <- all_spp[, speciesBatchIndex]
   df[,"ncores"] <- nrow(all_spp)
   
@@ -439,14 +505,19 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   print(paste0("Currently running species set ", speciesBatchIndex, " of ", ncol(all_spp), ":"))
   df[, "dispersalRan"] <- "N"
   for (z in 1:length(unique(spp_batch))) {
-    print(paste0("   ", unique(spp_batch)[z]))
+    print(paste0("    ", unique(spp_batch)[z]))
   }
   
   #Creates a results folder for each species
   for (j in 1:length(spp_batch)) {
     curspec <- substr(spp_batch[j], 1, nchar(spp_batch[j]) - 4)
-    dir.create(paste0(result_dir, "/", curspec))
+    if (!dir.exists(paste0(result_dir, "/", curspec))) {
+      dir.create(paste0(result_dir, "/", curspec))
+    }
   }
+  
+  #Prints time
+  print(paste0("    ", Sys.time()))
   
   #If occurrences were recently generated, extracts the environmental variables 
   if (gbifstep == "Y") {
@@ -470,7 +541,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       file.rename(OccurrenceFiles[o], OccurrenceRename[o])
     }
   }
-  print(Sys.time())
+  print(paste0("    ", Sys.time()))
   gc()
   
   #Environmentally subsamples occurrence data (Varela et al. 2014)
@@ -487,8 +558,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       spp.list <- c(spp.list, list.files(path = samples, full.names = TRUE, pattern = speciesWorked[s]))
     }
     spp.list <- unique(spp.list)
-    print("   Will evaluate species:")
-    print(spp.list)
+    print("   Evaluating:")
     
     #For each species, copies all occurrence points to the directories used for subsequent steps
     for (cur in 1:length(spp.list)) {
@@ -504,6 +574,11 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       } else {
         s <- c(unlist(strsplit(as.character(cur2$Species[1]), " ")))[1]
       }
+      
+      #Rename column headings
+      names(cur2)[grep("Longitude", names(cur2))] <- "x"
+      names(cur2)[grep("Latitude", names(cur2))] <- "y"
+      
       curdir <- paste0(samples, "/", s, sep = "")
       if (!dir.exists(curdir)) {
         dir.create(curdir)
@@ -514,7 +589,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       }
     }
   }
-  print(Sys.time()) 
+  print(paste0("    ", Sys.time())) 
   gc()
   
   #Creates buffer rasters for background sampling
@@ -527,7 +602,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       setwd(scripts)
       print("Running createBackgroundBuffers.R...")
       source("createBackgroundBuffers.R") 
-      print(Sys.time())
+      print(paste0("    ", Sys.time()))
     }
   }
   
@@ -544,7 +619,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     setwd(scripts)
     print("Running backgroundPoints2.R...")
     source("backgroundPoints2.R")
-    print(Sys.time())
+    print(paste0("    ", Sys.time()))
   } else if (backgroundPointsStep == "Y") {
     #Uses background points generated in the first step
     for (s in 1:length(spp_batch)) {
@@ -561,7 +636,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     setwd(scripts)
     print("Running subsampleOccur_bg.R...")
     source("subsampleOccur_bg.R")
-    print(Sys.time())
+    print(paste0("    ", Sys.time()))
   } else {
     #Uses background points provided by user 
     setwd(paste0(test, "/backgrounds/"))
@@ -569,10 +644,12 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     #Finds and copies background point files to the correct directories
     for (s in 1:length(spp_batch)) {
       currentspec <- substr(spp_batch[s], 1, nchar(spp_batch[s]) - 4)
-      SpecIndex <- grep(currentspec, BackgroundFiles)
       if (!dir.exists(paste0(test, "/backgrounds/", currentspec))) {
         dir.create(paste0(test, "/backgrounds/", currentspec))
-      }  
+        SpecIndex <- grep(currentspec, BackgroundFiles)
+      } else {
+        SpecIndex <- grep(paste0(currentspec, "/", currentspec), BackgroundFiles)
+      }
       FocusBGFiles <- BackgroundFiles[SpecIndex]
       if (length(FocusBGFiles) != nsubsamp) {
         message("Warning! the number of background files does not match the requested number of subsamples")
@@ -586,6 +663,9 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
         if (length(grep(Inf, Full_BGPoints)) > 0) {	
           Full_BGPoints <- Full_BGPoints[-grep(Inf, Full_BGPoints[, grep(Inf, Full_BGPoints)]),]	
         }
+        
+        names(Full_BGPoints)[grep("Longitude", names(Full_BGPoints))] <- "x"
+        names(Full_BGPoints)[grep("Latitude", names(Full_BGPoints))] <- "y"
         write.csv(Full_BGPoints, file = paste0(getwd(), "/", currentspec,"_background_", i, ".csv"), row.names = FALSE)
       }
     }
@@ -596,15 +676,15 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     setwd(scripts)
     print("Running variableEnvStep.R...")
     source("variableEnv.R")
-    print(Sys.time())
+    print(paste0("    ", Sys.time()))
   }
 }
 
-#Modelling and Results------------------------------------------------
+#Part 5: Modelling and Results------------------------------------------------
 #Conducts all species distribution modelling/forecasting/hindcasting, including statistics, dispersal rate, and species richness
 #Runs MaxEnt, creates SDMs and calculates statistics
 for (speciesBatchIndex in 1:ncol(all_spp)) {
-  print(Sys.time())
+  print("")
   spp_batch <- all_spp[, speciesBatchIndex]
   df[, "ncores"] <- nrow(all_spp)
   
@@ -632,7 +712,9 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   
   for (j in 1:length(spp_batch)) {
     curspec <- substr(spp_batch[j], 1, nchar(spp_batch[j]) - 4)
-    dir.create(paste0(result_dir, "/", curspec))
+    if (!dir.exists(paste0(result_dir, "/", curspec))) {
+      dir.create(paste0(result_dir, "/", curspec))  
+    }
   }
   
   #Creates SDMs using MaxEnt with statistics and output map displays
@@ -649,6 +731,13 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   }
   gc()
   
+  #Define a function to create directories (if megaSDM hasn't already been run)
+  CreateDirs <- function(path) {
+    if(!dir.exists(path)) {
+      dir.create(path)
+    }
+  }
+  
   #Copies species files from "test" to "results" once modelling is completed
   copySpeciesFiles <- function(originalSpp) {
     setwd(test)
@@ -657,19 +746,21 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       newspp[b] <- substr(newspp[b], 1, (nchar(newspp[b]) - 4))
     }
     
+    print("Copying results for species:")
+    
     #Iterates through each species batch analysed
     for (j in 1:length(newspp)) {
       spp.name <- newspp[j]
       #Creates directories in %result_dir%
-      print(paste0("Copying results for species ", gsub("_", " ", spp.name), " into:"))
-      print(paste0(" ", result_dir, "/", spp.name))
-      dir.create(paste0(result_dir, "/", spp.name, "/lambdas"))
-      dir.create(paste0(result_dir, "/", spp.name, "/samples"))
-      dir.create(paste0(result_dir, "/", spp.name, "/backgrounds"))
-      dir.create(paste0(result_dir, "/", spp.name, "/logs"))
-      dir.create(paste0(result_dir, "/", spp.name, "/outputs"))
+      print(paste0("    ",  gsub("_", " ", spp.name), " into:"))
+      print(paste0("    ", result_dir, "/", spp.name))
+      CreateDirs(paste0(result_dir, "/", spp.name, "/lambdas"))
+      CreateDirs(paste0(result_dir, "/", spp.name, "/samples"))
+      CreateDirs(paste0(result_dir, "/", spp.name, "/backgrounds"))
+      CreateDirs(paste0(result_dir, "/", spp.name, "/logs"))
+      CreateDirs(paste0(result_dir, "/", spp.name, "/outputs"))
       if (numScenario > 0) {
-        dir.create(paste0(result_dir, "/", spp.name, "/projections"))
+        CreateDirs(paste0(result_dir, "/", spp.name, "/projections"))
       }
       fol <- list.files(path = paste0(test, "/outputs/", spp.name), full.names = TRUE)
       allresults <- c()
@@ -792,7 +883,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
       }
       
       write.csv(AnalysedSppList, paste0(result_dir, "/AnalysedSpecies.csv"), row.names = FALSE)
-      print(paste0(" Writing CSV file of fully analysed species to: ", result_dir,"/AnalysedSpecies.csv"))
+      print(paste0("Writing CSV file of fully analysed species to: ", result_dir,"/AnalysedSpecies.csv"))
     }
   }
   
@@ -804,21 +895,21 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     df[, "ncores"] <- length(unique(spp_batch))
   }
   
-  print(Sys.time())
+  print(paste0("    ", Sys.time()))
     
   #Conducts additional species distribution/range shift statistics
   setwd(scripts)
   print("Running additionalStats.R...")
   source("additionalStats.R")
 
-  print(Sys.time())
+  print(paste0("    ", Sys.time()))
   
   #Creates maps that show intermediate range dynamics
   if (numScenario > 0) {
     setwd(scripts)
     print("Running createTimeMaps.R...")
     source("createTimeMaps.R")
-    print(Sys.time())
+    print(paste0("    ", Sys.time()))
   }
 
   gc()
@@ -841,7 +932,7 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
     setwd(scripts)
     print("Running createTimeMaps.R...")
     source("createTimeMaps.R")
-    print(Sys.time())
+    print(paste0("    ", Sys.time()))
   }
   
   gc()
@@ -856,9 +947,9 @@ for (speciesBatchIndex in 1:ncol(all_spp)) {
   #Moves all files in "test" to "results" directories, clears test directory
   copySpeciesFiles(unique(spp_orig))
   
-  print(Sys.time())
+  print(paste0("    ", Sys.time()))
   rm(spp_batch)
-  gc(full = TRUE)
+  gc()
 }
 
 #Resets number of cores
@@ -867,9 +958,10 @@ df[,"ncores"] <- nrow(all_spp)
 #Creates Rasters and PDF Maps of Species Richness
 if (RichnessStep == "Y") {
   setwd(scripts)
+  print("Running createRichnessMaps.R")
   source("createRichnessMaps.R")
 }
-
+}
 #Finalizations----------------------------------------
 #OPTIONAL: removes all outputs from test-folder (makes it easier to re-run analyses)
 #unlink(test, recursive = TRUE)

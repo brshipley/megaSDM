@@ -2,7 +2,6 @@
 ##Creates buffers to spatially weight the background points near the occurrences
 #Initializations---------------------------
 #Loads the necessary packages
-library(maptools)
 library(parallel)
 library(raster)
 library(rgdal)
@@ -32,8 +31,8 @@ for (i in 1:length(speciesWorked)) {
 }
 
 spp.list <- unique(spp.list)
-print("   Will evaluate species:")
-print(spp.list)
+print("   Building Buffers For:")
+print(paste0("        ", paste0(spp_batch)))
 
 #Functions------------------------
 BuffFiles <- function(CurSpp) {
@@ -93,7 +92,7 @@ BuffFiles <- function(CurSpp) {
   #Write shapefile out of the buffer
   setwd(buff_dir)
   sp_poly_df <- SpatialPolygonsDataFrame(combinedPolygon, data = data.frame(ID = 1), match.ID = FALSE)
-  writeOGR(sp_poly_df, dsn = buff_dir, layer = paste0(name), overwrite_layer = TRUE, driver = "ESRI Shapefile")
+  writeOGR(sp_poly_df, dsn = paste0(buff_dir, "/", name, ".shp"), layer = paste0(name), overwrite_layer = TRUE, driver = "ESRI Shapefile")
   rm(combinedPolygon, sp_poly_df)
   gc()
   
