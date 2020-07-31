@@ -212,8 +212,9 @@ if (TrainingAreaClip == "Y") {
                 filename = paste0(names(bioclim_t[[k]]), ".bil", sep = ""),
                 bylayer = TRUE,
                 overwrite = TRUE,
-                format = "EHdr",
-                prj = TRUE)
+                format = "EHdr"
+                #, prj = TRUE
+                )
   }
   print("Clipping Rasters (Training Area)")
   rm(bioclim_t, bioclim)
@@ -221,15 +222,18 @@ if (TrainingAreaClip == "Y") {
 } else {
   #Writes and stores training area layers in a temporary directory
   bioclim_t2 <- stack(bioclim)
-  dir.create(paste0(DataDirectory, "/TEMP"))
+  if (!dir.exists(paste0(DataDirectory, "/TEMP"))) {
+    dir.create(paste0(DataDirectory, "/TEMP"))
+  }
   setwd(paste0(DataDirectory, "/TEMP")) 
   for (k in 1:nlayers(bioclim_t2)) {
-    writeRaster(bioclim_t2[[k]], 
-                filename = paste0(names(bioclim_t2[[k]]), ".bil"), 
+    TempTrain <- bioclim_t2[[k]]
+    writeRaster(TempTrain, 
+                filename = paste0(names(TempTrain), ".bil"), 
                 overwrite = TRUE, 
-                bylayer = TRUE, 
-                format = "EHdr",
-                prj = TRUE)
+                format = "EHdr"
+                #, prj = TRUE
+                )
   }
   print("Clipping Rasters (Training Area)")
   #Clips study area to desired extent

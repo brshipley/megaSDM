@@ -181,7 +181,7 @@ df <- data.frame(df, nbg, stringsAsFactors = FALSE)
 
 #Determine the threshold required for binary conversion
 threshold <- config["threshold",]
-if (!is.na(as.numeric(threshold))){
+if (is.numeric(threshold)){
   threshold <- as.numeric(threshold)
   df <- data.frame(df, threshold, stringsAsFactors = FALSE)
 } else {

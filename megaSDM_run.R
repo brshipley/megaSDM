@@ -30,7 +30,7 @@ megaSDMPackages <- c("dplyr", "gtools",
                      "rgdal", "rgeos", 
                      "parallel", "sampSurf")
 
-megaSDMVersions <- c("1.0.0", "3.8.2", "1.3", "3.1.5", "3.1.0", "1.4.8", "0.5.2", "4.0.2", "0.7.5")
+megaSDMVersions <- c("1.0.0", "3.8.2", "1.4", "3.3.13", "3.2.0", "1.5.12", "0.5.3", "4.0.2", "0.7.5")
 
 LoadPackage(megaSDMPackages, megaSDMVersions)
 
@@ -102,16 +102,10 @@ rastertype <- df[, "rastertype"]
   #replace climate files in the "studyarea" directory and re-run projection (if needed) and clip
 
 #If the units of meters are not specified in the desired projection, reformats desired projection to have units of meters  
-projcond <- length(grep("\\+units *= *m", df[, "desiredCRS"])) == 0
-unitscond <- length(grep("\\+units", df[, "desiredCRS"])) == 0
+userunits <- length(grep("\\+units", df[, "desiredCRS"])) > 0
 
-if (projcond && unitscond) {
-  df[, "desiredCRS"] <- paste(df[, "desiredCRS"], " +units=m")
-  CoordinateProjectionStep <- "Y"
-} else if (projcond){
-  df[, "desiredCRS"] <- sub("\\+units.*\\+","", df[, "desiredCRS"])
-  df[, "desiredCRS"] <- paste(df[, "desiredCRS"], " +units=m")
-  CoordinateProjectionStep <- "Y"
+if (userunits) {
+  message("Warning! the projection has user-defined units, rasters may not be written out")
 }
 
 #If no training rasters are found, prints an error
