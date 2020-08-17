@@ -30,7 +30,7 @@ megaSDMPackages <- c("dplyr", "gtools",
                      "rgdal", "rgeos", 
                      "parallel", "sampSurf")
 
-megaSDMVersions <- c("1.0.0", "3.8.2", "1.4", "3.3.13", "3.2.0", "1.5.12", "0.5.3", "4.0.2", "0.7.5")
+megaSDMVersions <- c("1.0.1", "3.8.2", "1.4", "3.3.13", "3.2.0", "1.5.16", "0.5.3", "4.0.2", "0.7.5")
 
 LoadPackage(megaSDMPackages, megaSDMVersions)
 

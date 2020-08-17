@@ -72,7 +72,7 @@ rastertype = ".bil"
 
 ############# 3. GIS Layer Projection #######################------------------------------------
 
-CoordinateProjectionStep = "N"	    
+CoordinateProjectionStep = "Y"	    
   #This step projects all of the data layers into a desired map coordinate system	
     #Set this to "Y" if any environmental, protection, and urbanized data are in different coordinate systems
     #or if these data are not in the desired projection
@@ -93,13 +93,13 @@ proj_studyarea = "/proj_studyarea"
   #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/OverviewCoordinateReferenceSystems.pdf
   #More in-depth documentation may be found here: https://proj4.org/
 
-desiredCRS = "+proj=cea +datum=WGS84 +ellps=WGS84 +units=m +no_defs"
+desiredCRS = "+proj=cea +datum=WGS84 +ellps=WGS84 +no_defs"
   #The coordinate system to project all spatial data into. If dispersal rate is being calculated or a buffer is generated, units must be in meters
   #Note: because MaxEnt assumes each pixel is the same area (Elith et al. 2010), choosing an equal area projection may give more accurate results
   #Note: if the study area crosses the anti-meridian (180/-180), redefine the origin of your CRS (+lon_0=X, where X =/= 0).
   
   #If the study area crosses one of the poles (90 or -90), redefine the origin of your CRS (+lat_0=X, where X =/= 0).
-  #Recommended CRS: "+proj=cea +datum=WGS84 +ellps=WGS84 +units=m +no_defs"
+  #Recommended CRS: "+proj=cea +datum=WGS84 +ellps=WGS84 +no_defs"
   
 defaultCRS = "+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"
   #The original coordinate system of the occurrence data (usually +proj=longlat if occurence data are in decimal degrees)
@@ -107,7 +107,7 @@ defaultCRS = "+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"
 
 ############# 5. Raster Clipping and Resampling #############------------------------------------
 
-ClipEnvDataStep = "N"
+ClipEnvDataStep = "Y"
   #This step clips the environmental rasters, urbanized data, and protected area data to the desired geographic regions
     #Set this to "Y" if these data do not have the same extent, or if the extent is different than desired
     #Set this to "Y" if these data are not the same resolution
@@ -228,7 +228,6 @@ ncores = 2
   #Number of computer cores running in parallel (can be any integer up to the number of cores the computer has, but 1 fewer is recommended)
 
 nrep = 2
-  
   #Number of replications within MaxEnt, i.e. the number of times MaxEnt will model the same data.
 
 reptype = "Subsample"
@@ -269,7 +268,6 @@ threshold = "Maximum.test.sensitivity.plus.specificity"
 
 AllOutputs = "Y"
   #Should secondary outputs from MaxEnt be generated (Y/N)? Including:    
-    
     #1: A raster showing the spatial distribution of clamping for each run
     #2: A multidimensional environmental similarity surface (MESS) showing novel climates
     #3: Files containing the parameters used to make the response curves
