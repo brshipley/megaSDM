@@ -20,7 +20,7 @@ Bistra Dilkina
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
 #### R version 3.6 or greater (last tested with v. 4.0.2)
 ### R Package (Version Number of Last Tested)
-dplyr	(1.0.0)
+dplyr	(1.0.1)
 
 gtools	(3.8.2)
 
@@ -30,7 +30,7 @@ raster	(3.3.13)
 
 rgbif	(3.2.0)
 
-rgdal	(1.5.12)
+rgdal	(1.5.16)
 
 rgeos	(0.5.3)
 
