@@ -259,26 +259,26 @@ FinalDispersal <- function(spp) {
           setwd(curdir)
           RasterList <- list.files(path = curdir, pattern = paste0(rastertype, "$"))
            
-           #
-#          Creates an ensembled raster that incorporates dispersal rate
-#          Calculates the ensembled dispersal probability * habitat suitability
-#          EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled", rastertype), RasterList)
-#          EnsembleSD <- raster(RasterList[EnsembleNum])
-#          if (extent(SppDispProb) != extent(EnsembleSD) | ncol(SppDispProb) != ncol(EnsembleSD)) {
-#            message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
-#            SppDispProb <- intersect(SppDispProb, EnsembleSD)
-#            SppDispProb <- resample(SppDispProb, EnsembleSD, method = "bilinear")
-#          }
+          #Creates an ensembled raster that incorporates dispersal rate
+          #Calculates the ensembled dispersal probability * habitat suitability to make "invadable suitability"
           
-#          Ensemble_Dispersal <- SppDispProb * EnsembleSD
-#          #Writes the ensembled dispersal rate raster
-#          writeRaster(Ensemble_Dispersal,
-#                      filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate", rastertype),
-#                      overwrite = TRUE, 
-#                      format = format,
-#                      prj = TRUE)
+          EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled", rastertype), RasterList)
+          EnsembleSD <- raster(RasterList[EnsembleNum])
+          if (extent(SppDispProb) != extent(EnsembleSD) | ncol(SppDispProb) != ncol(EnsembleSD)) {
+            message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
+            SppDispProb <- intersect(SppDispProb, EnsembleSD)
+            SppDispProb <- resample(SppDispProb, EnsembleSD, method = "bilinear")
+          }
           
-#          DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
+          Ensemble_Dispersal <- SppDispProb * EnsembleSD
+          #Writes the ensembled dispersal rate raster
+          writeRaster(Ensemble_Dispersal,
+                      filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate", rastertype),
+                      overwrite = TRUE, 
+                      format = format,
+                      prj = TRUE)
+          
+          DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
           
           #Creates a binary raster from the ensembled raster
           BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary", rastertype), RasterList)
