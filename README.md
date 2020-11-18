@@ -16,11 +16,11 @@ Jenny McGuire
 
 Bistra Dilkina
 
-## Dependencies *(updated 31 July 2020)*
+## Dependencies *(updated 18 November 2020)*
 #### maxent.jar file (may be downloaded at https://github.com/mrmaxent/Maxent)
 #### R version 3.6 or greater (last tested with v. 4.0.2)
 ### R Package (Version Number of Last Tested)
-dplyr	(1.0.1)
+dplyr	(1.0.2)
 
 gtools	(3.8.2)
 
@@ -28,18 +28,17 @@ plotfunctions	(1.4)
 
 raster	(3.3.13)
 
-rgbif	(3.2.0)
+rgbif	(3.3.0)
 
-rgdal	(1.5.16)
+rgdal	(1.5.18)
 
-rgeos	(0.5.3)
+rgeos	(0.5.5)
 
 sampSurf	(0.7.5)
 
-## Installation Instructions
-Refer to the provided setup guide (https://github.com/brshipley/megaSDM/blob/master/megaSDM_Setup.pdf) for detailed instructions on the setup and configuration of this program.
-## Usage Example
-We have provided an example (https://github.com/brshipley/megaSDM/blob/master/EXAMPLE.zip) using occurrence data from GBIF for 6 North American mammal species. Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/), and data on dispersal rate (in km/year) were collected by HS. Note that the specific file paths described in the configuration file within the .zip folder may need to be modified once downloaded. A streamlined setup guide for running the example is provided inside the ".zip" file (Example_Setup.docx).
+sp (1.4.2)
 
-## Stand-Alone Functions
-In addition to the main workflow, this repository includes several stand-alone functions that reproduce some aspects of the primary scripts without the need for the configuration file or prior file management. A README file describing each function may be found at (https://github.com/brshipley/megaSDM/blob/master/Stand-Alone/README.md), along with the scripts of the functions.
+## Installation Instructions
+Refer to the provided worked example (https://github.com/brshipley/megaSDM/blob/master/EXAMPLE/WorkedExample.R) for detailed instructions on the setup and configuration of this program.
+## Usage Example
+We have provided an example (https://github.com/brshipley/megaSDM/blob/master/EXAMPLE) using occurrence data from GBIF for 6 North American mammal species. Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/), and data on dispersal rate (in km/year) were collected by HS. Note that the specific file paths described in the configuration file within the .zip folder may need to be modified once downloaded. A streamlined setup guide for running the example is provided inside the ".zip" file (Example_Setup.docx).
