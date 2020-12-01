@@ -36,9 +36,9 @@
 
 dispersalRate <- function(result_dir, dispersaldata, time_periods,
                           scenarios, ncores) {
-  library(gtools)
-  library(parallel)
-  library(raster)
+  suppressPackageStartupMessages(library(gtools))
+  suppressPackageStartupMessages(library(parallel))
+  suppressPackageStartupMessages(library(raster))
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
