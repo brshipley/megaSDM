@@ -28,8 +28,10 @@
 #'  Default is "Subsample"
 #'  @param test_percent (numeric): number between 0 and 100: percentage of points "held back" for
 #'  crossvalidation, Test AUC validation, etc. Default is 20.
-#'  @param hinge (logical \code{TRUE} or \code{FALSE}). Should hinge features be used while
-#'  modelling? If there are few occurrence points, hinge features are discouraged Default is TRUE.
+#'  @param features (optional): a vector of the features for MaxEnt to model the species-
+#'  environment relationships with. Options are one or more of \code{"linear", "quadratic", "product",
+#'  "threshold", "hinge"}. Refer to the MaxEnt help page for more information about each feature class
+#'  If there are few occurrence points, hinge features are discouraged. Default is all feature classes.
 #'  @param testsamples (optional) If cross-validation with a new set of occurrence points is required,
 #'  this should be a list of .csv files corresponding to the occurrence points for each species.
 #'  This will take presidence over the random test percentage given in \code{test_percent}.
@@ -47,14 +49,31 @@
 MaxEntModel <- function(occlist, bglist, model_output,
                         ncores = 1, nrep = 1, categorical = NA,
                         alloutputs = TRUE, reptype = "Subsample",
-                        test_percent = 20, hinge = TRUE,
+                        test_percent = 20, features = c("linear", "quadratic", "product", "threshold", "hinge"),
                         testsamples = FALSE, regularization = 1) {
-  library(parallel)
-  library(raster)
+
+  suppressPackageStartupMessages(library(parallel))
+  suppressPackageStartupMessages(library(raster))
 
   ListSpp <- matrix(data = occlist, ncol = ncores)
 
-  hinge <- tolower(hinge)
+  if (!hasArg(features)) {
+    linear <- "true"
+    quadratic <- "true"
+    product <- "true"
+    threshold <- "true"
+    hinge <- "true"
+  } else {
+    featuretypes <- c("linear", "quadratic", "product", "threshold", "hinge")
+    for (i in 1:length(featuretypes)) {
+      if (length(grep(featuretypes[i], features)) > 0) {
+        assign(featuretypes[i], "true")
+      } else {
+        assign(featuretypes[i], "false")
+      }
+    }
+  }
+
   alloutputs <- tolower(alloutputs)
 
   checkError <- function(result, spp.name, failed_runs, run) {
@@ -97,7 +116,8 @@ MaxEntModel <- function(occlist, bglist, model_output,
                       test_percent, " replicates=", nrep, " betamultiplier=", regularization,
                       " writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
-                      reptype, " hinge=", hinge, " togglelayertype=", categorical))
+                      reptype, " linear=", linear, " quadratic=", quadratic, " product=", product,
+                      " threshold=", threshold, " hinge=", hinge, " togglelayertype=", categorical))
       }, error = function(err) {
         print(paste("MY_ERROR: ", spp.name, " ", err))
         return(paste0("error: ", err))
@@ -111,7 +131,8 @@ MaxEntModel <- function(occlist, bglist, model_output,
                       test_percent, " replicates=", 1, " betamultiplier=", regularization,
                       " testsamplesfile=", TestFile," writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
-                      reptype, " hinge=", hinge, " togglelayertype=", categorical))
+                      reptype, " linear=", linear, " -q=", quadratic, " product=", product,
+                      " threshold=", threshold, " hinge=", hinge, " togglelayertype=", categorical))
       }, error = function(err) {
         print(paste("MY_ERROR: ", spp.name, " ", err))
         return(paste0("error: ", err))
@@ -129,7 +150,8 @@ MaxEntModel <- function(occlist, bglist, model_output,
 
   parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
                                             "nrep", "categorical", "alloutputs", "model_output",
-                                            "reptype","test_percent", "regularization", "hinge",
+                                            "reptype","test_percent", "regularization", "linear",
+                                            "quadratic", "product", "threshold", "hinge",
                                             "testsamples", "ListSpp"), envir = environment())
 
   parallel::clusterEvalQ(clus, library(raster))
