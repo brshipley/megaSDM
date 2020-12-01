@@ -34,9 +34,10 @@
 
 createTimeMaps <- function(result_dir, time_periods, scenarios,
                            dispersal, dispersaldata, ncores) {
-  library(parallel)
-  library(raster)
-  library(gtools)
+
+  suppressPackageStartupMessages(library(parallel))
+  suppressPackageStartupMessages(library(raster))
+  suppressPackageStartupMessages(library(gtools))
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
