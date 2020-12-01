@@ -48,9 +48,10 @@
 MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_dirs,
                         output, ThreshMethod = "Maximum.test.sensitivity.plus.specificity",
                         aucval = NA, ncores = 1) {
-  library(parallel)
-  library(gtools)
-  library(raster)
+
+  suppressPackageStartupMessages(library(parallel))
+  suppressPackageStartupMessages(library(gtools))
+  suppressPackageStartupMessages(library(raster))
 
   if(!dir.exists(output)) {
     dir.create(output)
