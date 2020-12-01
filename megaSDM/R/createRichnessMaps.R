@@ -38,9 +38,10 @@
 
 createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
                                dispersal = FALSE, taxonlist = FALSE) {
-  library(gtools)
-  library(plotfunctions)
-  library(raster)
+
+  suppressPackageStartupMessages(library(gtools))
+  suppressPackageStartupMessages(library(plotfunctions))
+  suppressPackageStartupMessages(library(raster))
 
   if (is.na(scenarios[1])) {
     numscenario <- 0
