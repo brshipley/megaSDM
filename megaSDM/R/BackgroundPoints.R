@@ -45,10 +45,11 @@ BackgroundPoints <- function(spplist, envdata, output,
                              method = "Varela",
                              PCA = "Y",
                              ncores = 1) {
-  library(raster)
-  library(sp)
-  library(dplyr)
-  library(parallel)
+
+  suppressPackageStartupMessages(library(raster))
+  suppressPackageStartupMessages(library(sp))
+  suppressPackageStartupMessages(library(dplyr))
+  suppressPackageStartupMessages(library(parallel))
 
   if(!dir.exists(output)) {
     dir.create(output)
