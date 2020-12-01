@@ -43,9 +43,9 @@ OccurrenceManagement <- function(occlist,
                                  nbins = 25,
                                  PCA = "Y") {
 
-  library(raster)
-  library(sp)
-  library(dplyr)
+  suppressPackageStartupMessages(library(raster))
+  suppressPackageStartupMessages(library(sp))
+  suppressPackageStartupMessages(library(dplyr))
 
   if(!dir.exists(output)) {
     dir.create(output)
