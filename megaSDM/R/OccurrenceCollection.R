@@ -6,7 +6,8 @@
 #' renaming or merging taxa if necessary. Furthermore, this function vets the occurrence data, removing
 #' occurrence points that are of insufficient quality for species distribution modelling. Finally, \code{OccurrenceCollection()}
 #' provides the number of occurrences found within given training and study areas. For a full list of
-#' issues removed by this package, refer to <_____papername_______>. Further vetting may be done by hand.
+#' issues removed by this package, refer to the supplementary information in <_____papername_______>.
+#' Further vetting may be done by hand.
 #'
 #' @param spplist a vector of scientific names, using GBIF taxonomy. Names can be species or subspecies.
 #' @param output A directory name where the downloaded species occurrences will be written to.
@@ -22,8 +23,6 @@
 #' another .csv file is written out in the same folder with the names of the species that failed. In addition,
 #' a dataframe is returned by the function that contains the high taxonomy of each species and the nubmer of
 #' occurrences found within the \code{trainingarea} and, optionally, the \code{studyarea}.
-#'
-
 
 OccurrenceCollection <- function(spplist,
                                  output,
