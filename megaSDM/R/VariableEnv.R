@@ -22,7 +22,8 @@
 #' @return Writes .csv files of species occurrences to the sub-directory \code{occ_output}
 #' and .csv fiels of background points to the sub-directory \code{bg_output}.
 
-VariableEnv <- function(occlist, bglist, env_vars, occ_output, bg_output) {
+VariableEnv <- function(occlist, bglist, env_vars,
+                        occ_output, bg_output) {
 
   #Create sub-directories for background points and occurrence points
   if (!dir.exists(occ_output)) {
