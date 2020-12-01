@@ -33,5 +33,6 @@ number of species. It also checks the taxonomy of the given species list against
 renaming or merging taxa if necessary. Furthermore, this function vets the occurrence data, removing
 occurrence points that are of insufficient quality for species distribution modelling. Finally, \code{OccurrenceCollection()}
 provides the number of occurrences found within given training and study areas. For a full list of
-issues removed by this package, refer to <\emph{\strong{\strong{papername}}}__>. Further vetting may be done by hand.
+issues removed by this package, refer to the supplementary information in <\emph{\strong{\strong{papername}}}__>.
+Further vetting may be done by hand.
 }
