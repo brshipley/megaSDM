@@ -29,9 +29,12 @@
 #' @export
 #' @return Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period
 
-PredictEnv <- function(studylayers, futurelayers, time_periods, output = NA, scenario_name = NA) {
+PredictEnv <- function(studylayers, futurelayers,
+                       time_periods, output = NA,
+                       scenario_name = NA) {
 
-  library(raster)
+  suppressPackageStartupMessages(library(raster))
+
   if (class(studylayers) != "RasterStack") {
 
     #Ensure that all study area rasters have the same projection and extent
