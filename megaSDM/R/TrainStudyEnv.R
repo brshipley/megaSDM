@@ -31,8 +31,8 @@
 TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
                           resolution = NA, clipTrain = NA,
                           clipStudy = NA, output = NA) {
-  library(raster)
-  library(rgdal)
+  suppressPackageStartupMessages(library(raster))
+  suppressPackageStartupMessages(library(rgdal))
 
   #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
   if (class(input_TA) != "RasterStack") {
