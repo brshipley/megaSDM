@@ -14,7 +14,7 @@ MaxEntModel(
   alloutputs = TRUE,
   reptype = "Subsample",
   test_percent = 20,
-  hinge = TRUE,
+  features = c("linear", "quadratic", "product", "threshold", "hinge"),
   testsamples = FALSE,
   regularization = 1
 )
@@ -50,8 +50,10 @@ The final set of arguments are optional and used for tuning the maxent model and
 Default is "Subsample"
 @param test_percent (numeric): number between 0 and 100: percentage of points "held back" for
 crossvalidation, Test AUC validation, etc. Default is 20.
-@param hinge (logical \code{TRUE} or \code{FALSE}). Should hinge features be used while
-modelling? If there are few occurrence points, hinge features are discouraged Default is TRUE.
+@param features (optional): a vector of the features for MaxEnt to model the species-
+environment relationships with. Options are one or more of \code{"linear", "quadratic", "product",
+ "threshold", "hinge"}. Refer to the MaxEnt help page for more information about each feature class
+If there are few occurrence points, hinge features are discouraged. Default is all feature classes.
 @param testsamples (optional) If cross-validation with a new set of occurrence points is required,
 this should be a list of .csv files corresponding to the occurrence points for each species.
 This will take presidence over the random test percentage given in \code{test_percent}.
