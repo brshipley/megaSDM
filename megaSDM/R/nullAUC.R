@@ -11,7 +11,7 @@
 #'
 #' @param envdata a RasterStack or list of raster files corresponding to the
 #' area the model will be trained on.
-#' @param replicates How many times should the null model be run to get a distribution
+#' @param replicates how many times should the null model be run to get a distribution
 #' of AUC values? Default is 50 replicates.
 #' @param bufflist (optional) if background points were spatially-constrained, provide
 #' the paths to the buffer files (.shp) used.

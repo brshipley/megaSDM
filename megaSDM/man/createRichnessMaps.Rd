@@ -19,7 +19,7 @@ binary maps should be placed into directories like so: Species/Scenario/Time.
 If \code{projectSuit} was used to make these maps, this is probably the same
 as the \code{output} argument in that function.}
 
-\item{time_periods}{a vector of the years in which the projection will occurwith the first element
+\item{time_periods}{a vector of the years in which the projection will occur with the first element
 as the original year (the year in which the model was generated). If no precise years
 are available for future/past time periods (e.g., using data from the Last Glacial Maximum),
 order the remaining time periods from most current to least current (farthest into the future/past)
@@ -27,31 +27,33 @@ and give character strings for the years (e.g., "LGM").}
 
 \item{scenarios}{a vector of character strings detailing the different climate models
 used in the forecasted/hindcasted species distribution models. If no projection is
-needed, set to NA (defualt).}
+needed, set to NA (default).}
 
 \item{dispersal}{(logical \code{TRUE} or \code{FALSE}) Are dispersal rate analyses
-needed? If dispersal rate. If these analysis are not needed, or if the \code{megaSDM::dispersalRate}
-function has yet to be run, this should be set to \code{FALSE} (the default).}
+needed? If set to \code{TRUE}, this function constructs dispersal-constrained richness
+maps for all time periods/scenarios given, and compares those maps to the non-dispersal
+constrained maps. If these analysis are not needed, or if the \code{megaSDM::dispersalRate}
+function has yet to be run, this should be set to \code{FALSE} (default).}
 
 \item{taxonlist}{(optional) data.frame or .csv file path name.
 If taxon-specific species richness maps are required, this should correspond to
-a list of all species modelled (Column 1) and a selected high taxon
+a list of all species modelled (Column 1) and a selected higher taxon
 (Column 2; e.g., Order, Class) to split the richness maps on. If taxon-specific
 richness maps are not required, \code{taxonlist} should be set to \code{FALSE} (default).}
 }
 \value{
 writes .pdf files and rasters (.bil) of species richness for all given
 taxa, time periods, and scenarios and dispersal constraints to the directory
-\code{result_dir}/RichnessMaps.
+"\code{result_dir}/RichnessMaps".
 }
 \description{
 This function stacks binary (presence/absence) species distribution maps to
-create richness maps for a list of species. If higher taxa are provided \code{taxonlist != FALSE},
-separate richness for each higher taxon will be created in addition to the
-full species richness maps. Given hindcasted/forecasted binary maps, future/past
-species richness will also be calculated. Rasters and .pdf files of each are
-generated, and the legend is standardizes across all .pdf maps for effective
-comparisons. Finally, provided distribution maps that are constrained by dispersal
-rate, this function compares between the dispersal-constrained and regular richness
-maps.
+create richness maps for a list of species. If higher taxa are provided
+(i.e., mammals), separate richness maps for each higher taxon will be created
+in addition to the full species richness maps. Given hindcasted/forecasted
+binary maps, future/past species richness will also be calculated. Rasters
+and .pdf files of each are generated, and the legend is standardized across
+all .pdf maps for effective comparisons. Finally, provided distribution maps
+that are constrained by dispersal rate, this function compares between the
+dispersal-constrained and regular richness maps.
 }

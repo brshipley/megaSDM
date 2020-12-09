@@ -1,7 +1,7 @@
 #' Manage and environmentally filter occurrence points
 #'
 #' This function takes a set of occurrence points (whether downloaded from
-#' GBIF using \code{OccurrenceCollection} or constructed in a different way)
+#' GBIF using \code{OccurrenceCollection} or provided by the user),
 #' standardizes the column headings for effective use in species distribution
 #' modelling, and, if requested, extracts the values of each environmental
 #' variable used in the modelling for each point and environmentally subsamples
@@ -15,7 +15,7 @@
 #' @param envextract (logical (\code{TRUE} or \code{FALSE})) should the
 #' environments at each occurrence point be extracted?
 #' @param envsample (logical (\code{TRUE} or \code{FALSE})) should
-#' envrionmental (Varela) subsampling be conducted on the occurrence points?
+#' environmental (Varela) subsampling be conducted on the occurrence points?
 #' @param envdata a RasterStack or list of raster files
 #' corresponding to the area the model will be trained on. All environmental
 #' variables should be provided.
@@ -30,7 +30,7 @@
 #' run (for use when there are categorical variables, for instance).
 #' @export
 #' @return a set of .csv files of occurrence points in the directory indicated by
-#' \code{output} with columns relating to the species name, the coordinates
+#' the \code{output} argument with columns relating to the species name, the coordinates
 #' (in the projection of the training area rasters), and the value of each
 #' environmental layer at each point.
 

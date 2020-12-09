@@ -15,7 +15,7 @@ PredictEnv(
 \arguments{
 \item{studylayers}{A single RasterStack or list of raster files that constitute all environmental
 variables and parameters (e.g., extent, resolution) used for projecting the modelled relationship
-(see \code{$study} in \code{megaSDM::TrainStudyEnv})}
+(see \code{$study} in \code{megaSDM::TrainStudyEnv}).}
 
 \item{futurelayers}{A list of rasterstacks or vectors of file-names corresponding to the environmental
 variables at the different time periods the model will be forecasted/hindcasted to.}
@@ -27,9 +27,9 @@ given in the same order as the list given in \code{futurelayers}. If no precise 
 current (farthest into the future/past) and give character strings for the years (e.g., "LGM"). If
 running dispersal analyses, \code{time_periods} must be numeric (e.g., -21000 instead of "LGM").}
 
-\item{output}{If the rasters are to be written to the computer, the full path of thedirectory where
+\item{output}{If the rasters are to be written to the computer, the full path of the directory where
 they will be written out to. If there are multiple climate scenarios wanted in this SDM analysis,
-give the output directory the name of the climate scenario (e.g., "./output/RCP4.5) If set to \code{NA}
+give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5). If set to \code{NA}
 (the default), the rasters will not be written out and will be returned as the value of this function.}
 
 \item{scenario_name}{(optional) If the rasters are to be written to the disk, a character string with the
@@ -38,7 +38,7 @@ be placed in there. If only one distinct climate scenario is needed, still give 
 in other functions within \code{megaSDM}.}
 }
 \value{
-Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period
+Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period.
 }
 \description{
 This function takes lists of RasterStacks that correspond to future or past time periods

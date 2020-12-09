@@ -4,13 +4,13 @@
 #' for information on the different replicates the function provides), by calculating the
 #' median habitat suitability for each pixel across all replicates. Next, the function generates
 #' binary presence/absence maps by applying a given threshold to the data. These processes are
-#' repeated for each scenario/time period combination provided, to give information on predict
-#' past or future species distributions.
+#' repeated for each scenario/time period combination provided, to predict past or future
+#' species distributions.
 #'
 #' @param input the full path name of the directory holding all model runs and outputs.
 #' Outputs should be divided into sub-directories based on the species, named with the species
-#' name ("e.g." "./Results/Canis_lupus/"). The maxent.jar file should also be in this
-#' directory (gets copied over if \code{MaxEntModel} is run)
+#' name (e.g. "./Results/Canis_lupus/"). The maxent.jar file should also be in this
+#' directory (gets copied over if \code{MaxEntModel} is run).
 #' @param time_periods a vector of the years in which the projection will occur. The first
 #' element of this vector should be the original year (the year in which the model was
 #' generated). If no precise years are available (e.g., using data from the Last Glacial Maximum),
@@ -23,13 +23,14 @@
 #' @param study_dir The directory where all of the current/modern study area environmental rasters
 #' are (should be the the same time period that the model was trained on).
 #' @param predict_dirs A list of vectors: Each vector should include the directories of
-#' the environmental rasters for all TIME PERIODS in a single CLIMATE SCENARIO.
+#' the environmental rasters for all __time periods__ in a single __climate scenario__.
 #' For example:
 #' \code{list(Scenario1 = c(Time1, Time2), Scenario2 = c(Time1, Time2))}.
+#'
 #' If there is only one climate scenario, still create the list before the vector:
-#' \code{list(Scenario1 = c(Time1,Time2))}
+#' \code{list(Scenario1 = c(Time1,Time2))}.
 #' @param ThreshMethod Which threshold to use for binary mapping; see MAXENT manual for details.
-#'  Default is "Maximum.test.sensitivity.plus.specificity"
+#'  Default is "Maximum.test.sensitivity.plus.specificity".
 #' @param aucval (numeric or vector) Minimum AUC value necessary for each run to be counted.
 #' AUC values estimate the predictive ability of a model, usually ranging from 0.5 (random)
 #' to 1 (perfect). Can be a single number (same AUC threshold applied to all species) or
@@ -42,8 +43,8 @@
 #' @export
 #' @return Returns binary (presence/absence) and ensembled distribution maps for all given species,
 #' time periods, and climate scenarios provided. Each projected replicate of the maxent model is
-#' placed in a newly-created folder \code{projections} within the directory given by the \code{input}
-#' argument. The ensembled and binary maps are placed in the directory given by \code{output}.
+#' placed in a newly-created folder (provided by the \code{projections} argument) within the directory given by the \code{input}
+#' argument. The ensembled and binary maps are placed in the directory given by the \code{output} argument.
 
 MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_dirs,
                         output, ThreshMethod = "Maximum.test.sensitivity.plus.specificity",

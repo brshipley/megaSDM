@@ -16,11 +16,11 @@
 #' strings separated by commas. For example, \code{c("Bio1,Bio3", "Bio1,Bio12")}.
 #' Like above, this vector should be in the same order as the lists of
 #' species/background points.
-#' @param occ_output the directory where output occurrence files will be placed
-#' @param bg_output the directory where output background files will be placed
+#' @param occ_output the directory where output occurrence files will be placed.
+#' @param bg_output the directory where output background files will be placed.
 #' @export
-#' @return Writes .csv files of species occurrences to the sub-directory \code{occ_output}
-#' and .csv fiels of background points to the sub-directory \code{bg_output}.
+#' @return Writes .csv files of species occurrences to the sub-directory given by the \code{occ_output} argument
+#' and .csv files of background points to the sub-directory given by the \code{bg_output} argument.
 
 VariableEnv <- function(occlist, bglist, env_vars,
                         occ_output, bg_output) {

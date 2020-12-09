@@ -18,19 +18,22 @@
 #' for the years (e.g., "LGM").
 #' @param scenarios a vector of character strings detailing the different climate models
 #' used in the forecasted/hindcasted species distribution models.
-#' @param dispersal (logical \code{TRUE} or \code{FALSE}) Are the binary maps given
+#' @param dispersal (logical \code{TRUE} or \code{FALSE}). Are the binary maps given
 #' dispersal-constrained maps or non-dispersal-constrained maps? If dispersal rate
-#' analysis are not needed, or if the \code{megaSDM::dispersalRate} function has yet
-#' to be run, this should be set to \code{FALSE} (the default). NOTE: if \code{dispersal = TRUE},
-#' then \code{time_periods} have to be numeric.
+#' analyses are not needed, or if the \code{megaSDM::dispersalRate} function has yet
+#' to be run, this should be set to \code{FALSE} (the default).
+#'
+#' NOTE: if \code{dispersal = TRUE}, then \code{time_periods} have to be numeric.
 #' @param dispersaldata either a dataframe or the complete path name of a .csv file with two columns:
-#'   Column 1: species name (same as the name used for modelling)
+#'
+#'   Column 1: species name (same as the name used for modelling).
+#'
 #'   Column 2: average dispersal rate of species in kilometers/year.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
 #' @export
 #' @return writes both rasters and pdfs of the maps showing the expansion and contraction
-#' of each species range across all time-steps for each cliamte scenario.
+#' of each species range across all time-steps for each climate scenario.
 
 createTimeMaps <- function(result_dir, time_periods, scenarios,
                            dispersal, dispersaldata, ncores) {

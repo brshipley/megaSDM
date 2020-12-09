@@ -10,40 +10,44 @@
 #' @param bglist a list of .csv files corresponding to the background points
 #' provided for each taxon. This list of files should be ordered in the same
 #' way as the files given by \code{occlist}.
-#' @param model_output the directory where all output files will be placed. THIS IS ALSO
-#' WHERE THE MAXENT.JAR FILE SHOULD BE PLACED!
+#' @param model_output the directory where all output files will be placed.
+#' NOTE: This is also where the maxent.jar file shoudl be placed!
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
-#' @param nrep (integer) the number of replicates to run each species through
+#' @param nrep (integer) the number of replicates to run each species through.
 #' @param categorical (character). If categorical variables are used for modelling (e.g., soil type),
 #' they should be distinguished from the continuous data by a prefix (e.g., "C_soiltype.bil"). Provide
 #' the distinguishing prefix here so that MaxEnt can distinguish bewteen categorical and continuous
-#' environmental layers
+#' environmental layers.
 #' @param alloutputs Should secondary outputs from MaxEnt be generated \code{TRUE/FALSE}? Including:
-#'    1: A raster showing the spatial distribution of clamping for each run
-#'    2: A multidimensional environmental similarity surface (MESS) showing novel climates
-#'    3: Files containing the parameters used to make the response curves
+#'
+#'    1: A raster showing the spatial distribution of clamping for each run.
+#'
+#'    2: A multidimensional environmental similarity surface (MESS) showing novel climates.
+#'
+#'    3: Files containing the parameters used to make the response curves.
+#'
 #' The final set of arguments are optional and used for tuning the maxent model and cross-validation:
-#'  @param reptype Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
-#'  Default is "Subsample"
-#'  @param test_percent (numeric): number between 0 and 100: percentage of points "held back" for
-#'  crossvalidation, Test AUC validation, etc. Default is 20.
-#'  @param features (optional): a vector of the features for MaxEnt to model the species-
-#'  environment relationships with. Options are one or more of \code{"linear", "quadratic", "product",
-#'  "threshold", "hinge"}. Refer to the MaxEnt help page for more information about each feature class
-#'  If there are few occurrence points, hinge features are discouraged. Default is all feature classes.
-#'  @param testsamples (optional) If cross-validation with a new set of occurrence points is required,
-#'  this should be a list of .csv files corresponding to the occurrence points for each species.
-#'  This will take presidence over the random test percentage given in \code{test_percent}.
-#'  NOTE: if using null AUC validation, testsamples must be given!
-#'  @param regularization (numeric) regularization parameter (penalizes complex models). A higher
-#'  regularization means more weight given to simpler models. Default is 1
+#' @param reptype Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
+#' Default is "Subsample".
+#' @param test_percent (numeric): number between 0 and 100: percentage of points "held back" for
+#' crossvalidation, Test AUC validation, etc. Default is 20.
+#' @param features (optional): a vector of the features for MaxEnt to model the species-
+#' environment relationships with. Options are one or more of \code{"linear", "quadratic", "product",
+#' "threshold", "hinge"}. Refer to the MaxEnt help page for more information about each feature class
+#' If there are few occurrence points, hinge features are discouraged. Default is all feature classes.
+#' @param testsamples (optional) If cross-validation with a new set of occurrence points is required,
+#' this should be a list of .csv files corresponding to the occurrence points for each species.
+#' This will take presidence over the random test percentage given in \code{test_percent}.
+#' NOTE: if using null AUC validation, testsamples must be given!
+#' @param regularization (numeric) regularization parameter (penalizes complex models). A higher
+#' regularization means more weight given to simpler models. Default is 1.
 #' @export
 #' @return Provides the trained model for each replicate and species (.lambdas file), a summary of
 #' the outputs provided by the maxent.jar executable, a .csv file containing information on the
 #' AUC values, threshold values, variable importance, etc., and (as requested) all of the outputs
 #' given in the \code{alloutputs} description. A full summary of the output maxent.jar provides
-#' can be found the MAXENT manual.
+#' can be found the MaxEnt manual.
 
 
 MaxEntModel <- function(occlist, bglist, model_output,

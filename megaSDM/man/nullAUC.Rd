@@ -10,7 +10,7 @@ nullAUC(envdata, replicates = 50, bufflist = NA, modelpar)
 \item{envdata}{a RasterStack or list of raster files corresponding to the
 area the model will be trained on.}
 
-\item{replicates}{How many times should the null model be run to get a distribution
+\item{replicates}{how many times should the null model be run to get a distribution
 of AUC values? Default is 50 replicates.}
 
 \item{bufflist}{(optional) if background points were spatially-constrained, provide

@@ -19,8 +19,8 @@ MaxEntProj(
 \arguments{
 \item{input}{the full path name of the directory holding all model runs and outputs.
 Outputs should be divided into sub-directories based on the species, named with the species
-name ("e.g." "./Results/Canis_lupus/"). The maxent.jar file should also be in this
-directory (gets copied over if \code{MaxEntModel} is run)}
+name (e.g. "./Results/Canis_lupus/"). The maxent.jar file should also be in this
+directory (gets copied over if \code{MaxEntModel} is run).}
 
 \item{time_periods}{a vector of the years in which the projection will occur. The first
 element of this vector should be the original year (the year in which the model was
@@ -37,17 +37,18 @@ needed, set to NA (default).}
 are (should be the the same time period that the model was trained on).}
 
 \item{predict_dirs}{A list of vectors: Each vector should include the directories of
-the environmental rasters for all TIME PERIODS in a single CLIMATE SCENARIO.
+the environmental rasters for all \strong{time periods} in a single \strong{climate scenario}.
 For example:
 \code{list(Scenario1 = c(Time1, Time2), Scenario2 = c(Time1, Time2))}.
+
 If there is only one climate scenario, still create the list before the vector:
-\code{list(Scenario1 = c(Time1,Time2))}}
+\code{list(Scenario1 = c(Time1,Time2))}.}
 
 \item{output}{The directory name where the outputs of the ensemble modelling and prediction
 will be placed.}
 
 \item{ThreshMethod}{Which threshold to use for binary mapping; see MAXENT manual for details.
-Default is "Maximum.test.sensitivity.plus.specificity"}
+Default is "Maximum.test.sensitivity.plus.specificity".}
 
 \item{aucval}{(numeric or vector) Minimum AUC value necessary for each run to be counted.
 AUC values estimate the predictive ability of a model, usually ranging from 0.5 (random)
@@ -61,14 +62,14 @@ Default is 1; Using one fewer core than the computer has is usually optimal.}
 \value{
 Returns binary (presence/absence) and ensembled distribution maps for all given species,
 time periods, and climate scenarios provided. Each projected replicate of the maxent model is
-placed in a newly-created folder \code{projections} within the directory given by the \code{input}
-argument. The ensembled and binary maps are placed in the directory given by \code{output}.
+placed in a newly-created folder (provided by the \code{projections} argument) within the directory given by the \code{input}
+argument. The ensembled and binary maps are placed in the directory given by the \code{output} argument.
 }
 \description{
 This function conducts ensemble modelling on all replicates of the maxent model (see \code{MaxEntModel}
 for information on the different replicates the function provides), by calculating the
 median habitat suitability for each pixel across all replicates. Next, the function generates
 binary presence/absence maps by applying a given threshold to the data. These processes are
-repeated for each scenario/time period combination provided, to give information on predict
-past or future species distributions.
+repeated for each scenario/time period combination provided, to predict past or future
+species distributions.
 }

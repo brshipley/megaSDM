@@ -18,21 +18,24 @@
 #' @param output the full path to the directory where the buffer shapefiles will be written
 #' out to. It is recommended that this is a unique directory from the one background
 #' points will be written to.
-#' @param buff_distance How wide should the buffers be around the occurrence points? If a single
+#' @param buff_distance how wide should the buffers be around the occurrence points? If a single
 #' number is given, buffers for all species will have a radius of that number in the crs units.
 #' if a vector of the same length as \code{occlist} is given, the buffer radius for each species
 #' will correspond to the matching value in the vector. Finally, if set to \code{NA} (default),
-#' 2 * the 95% quantile of the minimum distance between each point is taken as the radius.
+#' 2*the 95% quantile of the minimum distance between each point is taken as the radius.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
 #' @export
 #' @return shapefiles (.shp) that are buffers around the occurrence points of each species
-#' are written out to the directory indicated by \code{output}. Also prints a .csv file for each
-#' species containing the width of the buffer in the projection units
+#' are written out to the directory indicated by the \code{output} argument. Also prints a .csv file for each
+#' species containing the width of the buffer in the projection units.
+#'
 
-
-BackgroundBuffers <- function(occlist, envdata, output,
-                              buff_distance = NA, ncores = 1) {
+BackgroundBuffers <- function(occlist,
+                              envdata,
+                              output,
+                              buff_distance = NA,
+                              ncores = 1) {
   library(parallel)
   library(raster)
   library(rgdal)

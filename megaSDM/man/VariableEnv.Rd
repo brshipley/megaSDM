@@ -21,13 +21,13 @@ strings separated by commas. For example, \code{c("Bio1,Bio3", "Bio1,Bio12")}.
 Like above, this vector should be in the same order as the lists of
 species/background points.}
 
-\item{occ_output}{the directory where output occurrence files will be placed}
+\item{occ_output}{the directory where output occurrence files will be placed.}
 
-\item{bg_output}{the directory where output background files will be placed}
+\item{bg_output}{the directory where output background files will be placed.}
 }
 \value{
-Writes .csv files of species occurrences to the sub-directory \code{occ_output}
-and .csv fiels of background points to the sub-directory \code{bg_output}.
+Writes .csv files of species occurrences to the sub-directory given by the \code{occ_output} argument
+and .csv files of background points to the sub-directory given by the \code{bg_output} argument.
 }
 \description{
 Using different sets of environmental variables to model species

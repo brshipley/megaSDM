@@ -6,9 +6,9 @@
 #' distribution, and summed together to create a probability of dispersal for the
 #' intervals between each provided time step. Dispersal-constrained binary (presence
 #' and absence) maps are generated, as well as continuous maps of "invadable suitability"
-#' (see ______TODO_papername______.)
+#' (see ______TODO_papername______).
 #'
-#' NOTE: dispersal rate analysis are only informative for predicting species
+#' NOTE: dispersal rate analyses are only informative for predicting species
 #' distributions into the future (forecasting) rather than predicting past
 #' distributions (hindcasting), as range contractions and extirpations are not
 #' limited by dispersal rate.
@@ -20,7 +20,9 @@
 #' as the \code{output} argument in that function.
 #' @param dispersaldata either a dataframe or the complete path name of a
 #' .csv file with two columns:
-#'   Column 1: species name (same as the name used for modelling)
+#'
+#'   Column 1: species name (same as the name used for modelling).
+#'
 #'   Column 2: average dispersal rate of species in kilometers/year.
 #' @param time_periods a vector of the years in which the projection will occur. The first
 #' element should be the original year (the year in which the model was generated).

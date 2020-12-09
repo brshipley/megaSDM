@@ -20,11 +20,12 @@ form \code{c(xmin, xmax,ymin, ymax)}. Given in latlong coordinates. If provided,
 points found within this study region will be calculated.}
 }
 \value{
-Writes .csv files of GBIF occurrences to a directory provided by \code{output}. If any species failed
-(for example, the scientific name was not found in the search or no occurrences exist within a provided \code{trainingarea}),
-another .csv file is written out in the same folder with the names of the species that failed. In addition,
-a dataframe is returned by the function that contains the high taxonomy of each species and the nubmer of
-occurrences found within the \code{trainingarea} and, optionally, the \code{studyarea}.
+Writes .csv files of GBIF occurrences to a directory provided by the \code{output} argument.
+If any species failed (for example, the scientific name was not found in the search or no occurrences
+exist within a provided \code{trainingarea}), another .csv file is written out in the same folder with
+the names of the species that failed. In addition, a dataframe is returned by the function that contains
+the higher taxonomy of each species and the number of occurrences found within the \code{trainingarea}
+and, optionally, the \code{studyarea}.
 }
 \description{
 Takes a list of species and collects occurrence data from GBIF (Global Biodiversity Information Facility).
@@ -33,6 +34,6 @@ number of species. It also checks the taxonomy of the given species list against
 renaming or merging taxa if necessary. Furthermore, this function vets the occurrence data, removing
 occurrence points that are of insufficient quality for species distribution modelling. Finally, \code{OccurrenceCollection()}
 provides the number of occurrences found within given training and study areas. For a full list of
-issues removed by this package, refer to the supplementary information in <\emph{\strong{\strong{papername}}}__>.
+issues removed by this package, refer to the supplementary information in \emph{\strong{\strong{TODO:papername}}}__.
 Further vetting may be done by hand.
 }

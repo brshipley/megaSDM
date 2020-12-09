@@ -15,31 +15,32 @@ TrainStudyEnv(
 )
 }
 \arguments{
-\item{input_TA}{RasterStack or a list of raster files for the training area (full directory path)}
+\item{input_TA}{RasterStack or a list of raster files for the training area (full directory path).}
 
 \item{input_SA}{(optional) RasterStack or a list of raster files for the study area. Provide if
-the study area cannot be clipped from the trainingarea. Defaults to NA (same list of raster files)}
+the study area cannot be clipped from the trainingarea. Defaults to NA (same list of raster files).}
 
 \item{desiredCRS}{The coordinate system to project training/test data into given in PROJ4 notation.
 Defaults to NA (no projection).}
 
-\item{resolution}{The desired resolution of the raster data in the units of the TARGET PROJECTION
-Note: if CRS is NA, but resolution has a value, the rasters will be resampled to the given resolution}
+\item{resolution}{The desired resolution of the raster data in the units of the \strong{target projection}.
+
+NOTE: if CRS is NA, but resolution has a value, the rasters will be resampled to the given resolution.}
 
 \item{clipTrain}{Extent object or vector of desired training extent in form c(xmin, xmax, ymin, ymax).
-The extent should be given in latlong coordinates}
+The extent should be given in latlong coordinates.}
 
 \item{clipStudy}{Extent object or vector of desired study extent in form c(xmin, xmax, ymin, ymax).
 The extent should be given in latlong coordinates. Alternatively, if \code{clipStudy = "train"}, the
-training area extent will be used}
+training area extent will be used.}
 
-\item{output}{If the rasters are to be written to the computer, the full path of thedirectory where
+\item{output}{If the rasters are to be written to the computer, the full path of the directory where
 they will be written out to. If set to \code{NA} (the default), the rasters will not be written out
 and will be returned as the value of this function.}
 }
 \value{
-Returns a list of two rasterStacks: training (\code{$training}) and study area (\code{$study})
-environmental layers. if \cide{output != NA}, the rasters will also be written out as ".bil" files.
+Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
+environmental layers. if \code{output != NA}, the rasters will also be written out as ".bil" files.
 }
 \description{
 This function manages environmental layers for the training and study areas of an SDM analysis.

@@ -8,7 +8,7 @@
 #'
 #' @param studylayers A single RasterStack or list of raster files that constitute all environmental
 #' variables and parameters (e.g., extent, resolution) used for projecting the modelled relationship
-#' (see \code{$study} in \code{megaSDM::TrainStudyEnv})
+#' (see \code{$study} in \code{megaSDM::TrainStudyEnv}).
 #' @param futurelayers A list of rasterstacks or vectors of file-names corresponding to the environmental
 #' variables at the different time periods the model will be forecasted/hindcasted to.
 #' @param time_periods a vector of the time periods the models will be projected to, with the first element
@@ -17,9 +17,9 @@
 #' (e.g., using data from the Last Glacial Maximum), order the \code{futurelayers} from current to least
 #' current (farthest into the future/past) and give character strings for the years (e.g., "LGM"). If
 #' running dispersal analyses, \code{time_periods} must be numeric (e.g., -21000 instead of "LGM").
-#' @param output If the rasters are to be written to the computer, the full path of thedirectory where
+#' @param output If the rasters are to be written to the computer, the full path of the directory where
 #' they will be written out to. If there are multiple climate scenarios wanted in this SDM analysis,
-#' give the output directory the name of the climate scenario (e.g., "./output/RCP4.5) If set to \code{NA}
+#' give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5). If set to \code{NA}
 #' (the default), the rasters will not be written out and will be returned as the value of this function.
 #' @param scenario_name (optional) If the rasters are to be written to the disk, a character string with the
 #' name of the climate model/scenario. A sub-directory will be created within \code{output} and files will
@@ -27,7 +27,7 @@
 #' in other functions within \code{megaSDM}.
 #'
 #' @export
-#' @return Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period
+#' @return Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period.
 
 PredictEnv <- function(studylayers, futurelayers,
                        time_periods, output = NA,
