@@ -45,7 +45,8 @@ OccurrenceCollection <- function(spplist,
                                 StudyArea_Occur = rep(0, nspp),
                                 Keys = as.numeric(rep(NA, times = nspp)),
                                 Family = rep(NA, times = nspp),
-                                Genus = rep(NA, times = nspp))
+                                Genus = rep(NA, times = nspp),
+                                stringsAsFactors = FALSE)
 
   #Matches species to GBIF taxonomy and determines if names need to be changed and/or merged
   for (f in 1:nspp) {
@@ -160,7 +161,7 @@ OccurrenceCollection <- function(spplist,
                           hasCoordinate = TRUE,
                           limit = 99999,
                           fields = c('species',
-                                     'infraspecificEpithet', 'decimalLatitude',
+                                     'decimalLatitude',
                                      'decimalLongitude', 'basisOfRecord',
                                      'issues','locality', 'elevation',
                                      'elevationAccuracy', 'continent',
@@ -169,7 +170,7 @@ OccurrenceCollection <- function(spplist,
                                      'references', 'license', 'geodeticDatum',
                                      'gbifID', 'type', 'preparations',
                                      'catalogNumber', 'occurrenceStatus'))$data
-
+        # Got rid of 'infraspecificEpithet' because it only exists for subspecies
         if(is.null(Occ)) {
           message("No occurrences found within study area! Check species name or study area extent")
           FailedSpecies <- c(FailedSpecies, s)
