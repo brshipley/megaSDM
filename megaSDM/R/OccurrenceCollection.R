@@ -6,11 +6,11 @@
 #' renaming or merging taxa if necessary. Furthermore, this function vets the occurrence data, removing
 #' occurrence points that are of insufficient quality for species distribution modelling. Finally, \code{OccurrenceCollection()}
 #' provides the number of occurrences found within given training and study areas. For a full list of
-#' issues removed by this package, refer to the supplementary information in _____TODO:papername_______.
+#' issues removed by this package, refer to the supplementary information in <_____papername_______>.
 #' Further vetting may be done by hand.
 #'
 #' @param spplist a vector of scientific names, using GBIF taxonomy. Names can be species or subspecies.
-#' @param output A directory name where the downloaded species occurrences will be written to.
+#' @param output A full directory name where the downloaded species occurrences will be written to.
 #' @param trainingarea Extent object, or vector of desired training extent in form \code{c(xmin, xmax, ymin, ymax)}.
 #' Given in latlong coordinates. If set to "NA" (the default), all occurrence points will be
 #' downloaded (up to 99,999 points), regardless of their location.
@@ -18,12 +18,11 @@
 #' form \code{c(xmin, xmax,ymin, ymax)}. Given in latlong coordinates. If provided, the number of occurrence
 #' points found within this study region will be calculated.
 #' @export
-#' @return Writes .csv files of GBIF occurrences to a directory provided by the \code{output} argument.
-#' If any species failed (for example, the scientific name was not found in the search or no occurrences
-#' exist within a provided \code{trainingarea}), another .csv file is written out in the same folder with
-#' the names of the species that failed. In addition, a dataframe is returned by the function that contains
-#' the higher taxonomy of each species and the number of occurrences found within the \code{trainingarea}
-#' and, optionally, the \code{studyarea}.
+#' @return Writes .csv files of GBIF occurrences to a directory provided by \code{output}. If any species failed
+#' (for example, the scientific name was not found in the search or no occurrences exist within a provided \code{trainingarea}),
+#' another .csv file is written out in the same folder with the names of the species that failed. In addition,
+#' a dataframe is returned by the function that contains the high taxonomy of each species and the nubmer of
+#' occurrences found within the \code{trainingarea} and, optionally, the \code{studyarea}.
 
 OccurrenceCollection <- function(spplist,
                                  output,
@@ -39,14 +38,14 @@ OccurrenceCollection <- function(spplist,
 
   #Creates new data frame with taxonomy, number of occurrences, etc.
   nspp <- length(spplist)
-  OurSpp <- as.data.frame(cbind(SpeciesSearched = rep(NA, times = nspp),
+  OurSpp <- data.frame(SpeciesSearched = rep(NA, times = nspp),
                                 Scientific.Name = as.character(sub("_", " ", spplist)),
                                 OrigOccurrences = rep(0, times = nspp),
                                 Occurrences = rep(0, times = nspp),
                                 StudyArea_Occur = rep(0, nspp),
-                                Keys = rep(NA, times = nspp),
+                                Keys = as.numeric(rep(NA, times = nspp)),
                                 Family = rep(NA, times = nspp),
-                                Genus = rep(NA, times = nspp)))
+                                Genus = rep(NA, times = nspp))
 
   #Matches species to GBIF taxonomy and determines if names need to be changed and/or merged
   for (f in 1:nspp) {
