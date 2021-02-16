@@ -43,9 +43,6 @@ OccurrenceManagement <- function(occlist,
                                  nbins = 25,
                                  PCA = "Y") {
 
-  suppressPackageStartupMessages(library(raster))
-  suppressPackageStartupMessages(library(sp))
-  suppressPackageStartupMessages(library(dplyr))
 
   if(!dir.exists(output)) {
     dir.create(output)
@@ -92,7 +89,7 @@ OccurrenceManagement <- function(occlist,
 
     VarelaSample <- function (occurrences, env, no_bins, PCA, PCAxes) {
 
-      occurrences <- sp::SpatialPoints(occurrences, proj4string = crs(env))
+      occurrences <- sp::SpatialPoints(occurrences, proj4string = raster::crs(env))
 
       EnvOccur <- raster::extract(env, occurrences)
       EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
@@ -227,7 +224,7 @@ OccurrenceManagement <- function(occlist,
     #If required, extracts environmental data from rasters. Otherwise, adds environmental data back
     #to the projected occurrence points
     if (envextract == "FALSE") {
-      for (l in 1:nlayers(envdata)) {
+      for (l in 1:raster::nlayers(envdata)) {
         env_var <- names(envdata)[l]
         EnvCol <- grep(paste0("^", env_var, "$"), names(SpeciesOcc))
         if (length(EnvCol) == 0) {

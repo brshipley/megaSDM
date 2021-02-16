@@ -38,10 +38,6 @@
 createTimeMaps <- function(result_dir, time_periods, scenarios,
                            dispersal, dispersaldata, ncores) {
 
-  suppressPackageStartupMessages(library(parallel))
-  suppressPackageStartupMessages(library(raster))
-  suppressPackageStartupMessages(library(gtools))
-
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
 
@@ -74,7 +70,9 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     ListSpp <- spp.list
     dispersaldata <- NA
   }
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #Lists Scenarios and time_periods
@@ -108,7 +106,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
   #Overlaps two rasters
   overlap <- function(t1, t2) {
-    return(mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
+    return(raster::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
   }
 
   #Removes some temporary raster files for disk management
@@ -143,7 +141,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
   #Sets the values of the binary (0, 1) raster to the values of the given state (e.g.: 101)
   setbinary <- function(r, val) {
-    return (calc(r, fun = function(x) {x * val}))
+    return (raster::calc(r, fun = function(x) {x * val}))
   }
 
   #Converts binary numbers to decimal numbers
@@ -153,29 +151,23 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
   run <- function(CurSpp) {
     #Creates new directories for the Time Maps
-    setwd(result_dir)
-    setwd(CurSpp)
-
-    if (!dir.exists("TimeMapRasters")) {
-      dir.create("TimeMapRasters")
+    if (!dir.exists(file.path(result_dir, CurSpp, "TimeMapRasters"))) {
+      dir.create(file.path(result_dir, CurSpp, "TimeMapRasters"))
     }
 
-    if (!dir.exists("TimeMaps")) {
-      dir.create("TimeMaps")
+    if (!dir.exists(file.path(result_dir, CurSpp, "TimeMaps"))) {
+      dir.create(file.path(result_dir, CurSpp, "TimeMaps"))
     }
-
-    setwd(result_dir)
 
     #Lists current binary raster files
-    modernData <- list.files(path = CurSpp, pattern = paste0("binary.bil$"), full.names = TRUE)
-    modernData <- paste0(result_dir, "/", modernData)
+    modernData <- list.files(path = file.path(result_dir, CurSpp), pattern = paste0("binary.bil$"), full.names = TRUE)
     rasterCRS <- raster::crs(raster::raster(modernData[1]))
-    directories <- list.dirs(path = CurSpp)
+    directories <- list.dirs(path = file.path(result_dir, CurSpp))
     correctDirectories <- c()
 
     #Gets only the forecasted/hindcasted file folders
     for (w in 1:length(scenarios)) {
-      cordir <- grep(paste0("^", CurSpp, "/", scenarios[w], "$"), directories, perl = TRUE)
+      cordir <- grep(paste0("^", result_dir, "/", CurSpp, "/", scenarios[w], "$"), directories, perl = TRUE)
       if(length(cordir) == 1) {
         correctDirectories <- c(correctDirectories, directories[cordir])
       } else {
@@ -190,7 +182,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     #Creates a matrix with the correct file paths to the current and future rasters
-    collength <- length(list.files(path = paste0(result_dir, "/", correctDirectories[1]),
+    collength <- length(list.files(path = file.path(correctDirectories[1]),
                                    pattern = paste0(filepattern),
                                    full.names = TRUE))
 
@@ -207,7 +199,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     for(i in 1:length(correctDirectories)) {
-      files <- list.files(path = paste0(result_dir, "/", correctDirectories[i]),
+      files <- list.files(path = file.path(correctDirectories[i]),
                           pattern = paste0(filepattern),
                           full.names = TRUE)
 
@@ -350,13 +342,13 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       #write the output raster
       if (dispersal == TRUE){
         raster::writeRaster(FinalPrintRast,
-                    filename = paste0(result_dir, "/", CurSpp, "/TimeMapRasters", "/binary", scenarios[i], "_dispersal.bil"),
+                    filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], "_dispersal.bil")),
                     overwrite = TRUE,
                     format = "EHdr",
                     prj = TRUE)
       } else {
         raster::writeRaster(FinalPrintRast,
-                            filename = paste0(result_dir, "/", CurSpp, "/TimeMapRasters", "/binary", scenarios[i], ".bil"),
+                            filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], ".bil")),
                             overwrite = TRUE,
                             format = "EHdr",
                             prj = TRUE)
@@ -451,7 +443,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
       if (dispersal == TRUE) {
         #creates pdf of the Time Maps
-        pdf(file = paste0(result_dir, "/",  CurSpp, "/TimeMaps/", scenarios[i], "_dispersalRate_TimeMap.pdf"))
+        pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
         raster::plot(legend = FALSE,
              breaks = breakpoints,
              r,
@@ -463,7 +455,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         dev.off()
       } else {
         #creates pdf of the Time Maps
-        pdf(file = paste0(result_dir, "/",  CurSpp, "/TimeMaps/", scenarios[i], "_TimeMap.pdf"))
+        pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_TimeMap.pdf")))
         raster::plot(legend = FALSE,
              breaks = breakpoints,
              r,
@@ -479,7 +471,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       rm(r)
       gc()
     }
-    removeTmpFiles(h = 0)
+    raster::removeTmpFiles(h = 0)
     rm(ScenariosCalc)
     gc()
   }

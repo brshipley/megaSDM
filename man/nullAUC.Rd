@@ -18,7 +18,9 @@ the paths to the buffer files (.shp) used.}
 
 \item{modelpar}{a list of the arguments passed from the \code{MaxEntModel} function.
 These arguments should be exactly the same as the actual model generation for effective
-comparison.}
+comparison. For the method described by Bohl et al. (2019), a list of test-samples must
+be given (evaluate models on the real data). Otherwise, the null distribution will be
+evaluated on a subset of the random samples (see Raes & ter Steege (2007))}
 }
 \value{
 A .csv file (NullModel_AUC.csv) with the Test AUC values for each replicate

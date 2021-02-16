@@ -38,9 +38,6 @@
 
 dispersalRate <- function(result_dir, dispersaldata, time_periods,
                           scenarios, ncores) {
-  suppressPackageStartupMessages(library(gtools))
-  suppressPackageStartupMessages(library(parallel))
-  suppressPackageStartupMessages(library(raster))
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
@@ -71,7 +68,9 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       ListSpp <- c(ListSpp, spp.list[w])
     }
   }
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #Functions-------------------
@@ -98,16 +97,16 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     CurrentPresence <- raster::reclassify(CurrentBinary, c(0, 0, NA), include.lowest = TRUE)
     #Trims the time map as an extent template for faster calculations
     TimeMap2 <- TimeMap
-    TimeMap2[which(values(TimeMap2) == 0)] <- NA
+    TimeMap2[which(raster::values(TimeMap2) == 0)] <- NA
     TimeMap2 <- raster::trim(TimeMap2)
-    TimeMap2[is.na(values(TimeMap2))] <- 0
+    TimeMap2[is.na(raster::values(TimeMap2))] <- 0
     #Trims "CurrentPresence" to the extent of the time maps
-    CurrentPresence <- raster::crop(CurrentPresence, extent(TimeMap2))
+    CurrentPresence <- raster::crop(CurrentPresence, raster::extent(TimeMap2))
     #Calculates the distances from each pixel to the nearest presence
     CurrDist <- raster::distance(CurrentPresence, doEdge = TRUE)
     #Extends the raster back out to full study area extent
-    CurrDist <- raster::extend(CurrDist, raster::extent(CurrentBinary), value = max(values(CurrDist), na.rm = TRUE) + 1)
-    CurrDist[is.na(values(CurrDist))] <- max(raster::values(CurrDist), na.rm = TRUE) + 1
+    CurrDist <- raster::extend(CurrDist, raster::extent(CurrentBinary), value = max(raster::values(CurrDist), na.rm = TRUE) + 1)
+    CurrDist[is.na(raster::values(CurrDist))] <- max(raster::values(CurrDist), na.rm = TRUE) + 1
     DistFinal <- raster::mask(CurrDist, CurrentBinary)
     #Converts distance (in meters) to kilometers (for dispersal rate)
     DistFinal <- DistFinal / 1000
@@ -160,6 +159,9 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       #Finds species-specific dispersal rate
       dispRateColumn <- which(unlist(lapply(dispersal, is.numeric)))
       dispersal_rate <- dispersal[grep(paste0(speciesName, "\\s*$"), dispersal[, 1]), dispRateColumn]
+      if (length(dispersal_rate) > 1) {
+        stop(paste0("More than one dispersal rate found for ", speciesName))
+      }
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
         CurrentBinary <- raster::raster(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.bil"))
@@ -176,22 +178,21 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
         #Creates dispersal rasters and PDFs for each Scenario + time
         for (s in 1:length(scenarios)) {
           CurScen <- scenarios[s]
-          curdir <- paste0(result_dir, "/", CurSpp, "/", CurScen)
-          setwd(curdir)
+          curdir <- file.path(result_dir, CurSpp, CurScen)
           DispersalNames <- c()
-          TimeMap <- raster::raster(paste0(result_dir, "/", CurSpp, "/TimeMapRasters/binary", CurScen, ".bil"))
+          TimeMap <- raster::raster(file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", CurScen, ".bil")))
           for (y in 2:length(time_periods)) {
             CurYear <- time_periods[y]
 
             #Calculates distance from current distribution
             if (y == 2) {
-              DistanceRastersExist <- list.files(path = paste0(result_dir, "/", CurSpp),
+              DistanceRastersExist <- list.files(path = file.path(result_dir, CurSpp),
                                                  pattern = paste0("distance_", time_periods[1], "_Current.bil$"))
               if (length(DistanceRastersExist) == 0) {
                 SppDistance <- DistanceRaster(CurSpp, CurrentTime, "Current", CurrentBinary, TimeMap)
                 OriginalDistance <- SppDistance
               } else {
-                OriginalDistance <- raster::raster(paste0(result_dir, "/", CurSpp, "/", DistanceRastersExist))
+                OriginalDistance <- raster::raster(file.path(result_dir, CurSpp, DistanceRastersExist))
                 SppDistance <- OriginalDistance
               }
             } else {
@@ -226,14 +227,13 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             #Calculates the dispersal probability for the given time step
             TimeDiff <- abs(CurYear - time_periods[y - 1])
             SppDispProb <- DispersalProbRaster(dispersal_rate, SppDistance, TimeDiff)
-            setwd(curdir)
             RasterList <- list.files(path = curdir, pattern = paste0(".bil$"))
 
             #Creates an ensembled raster that incorporates dispersal rate
             #Calculates the ensembled dispersal probability * habitat suitability to make "invadable suitability"
 
             EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.bil"), RasterList)
-            EnsembleSD <- raster(RasterList[EnsembleNum])
+            EnsembleSD <- raster::raster(file.path(curdir, RasterList[EnsembleNum]))
             if ((raster::extent(SppDispProb) != raster::extent(EnsembleSD)) | (raster::ncell(SppDispProb) != raster::ncell(EnsembleSD))) {
               message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
               SppDispProb <- raster::intersect(SppDispProb, EnsembleSD)
@@ -241,13 +241,13 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             }
 
             Ensemble_Dispersal <- SppDispProb * EnsembleSD
-            if (!is.na(crs(EnsembleSD))) {
+            if (!is.na(raster::crs(EnsembleSD))) {
               raster::crs(Ensemble_Dispersal) <- raster::crs(EnsembleSD)
             }
 
             #Writes the ensembled dispersal rate raster
-            writeRaster(Ensemble_Dispersal,
-                        filename = paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.bil"),
+            raster::writeRaster(Ensemble_Dispersal,
+                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.bil")),
                         overwrite = TRUE,
                         format = "EHdr",
                         prj = TRUE)
@@ -256,18 +256,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
             #Creates a binary raster from the ensembled raster
             BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.bil"), RasterList)
-            BinarySD <- raster::raster(RasterList[BinaryNum])
+            BinarySD <- raster::raster(file.path(curdir, RasterList[BinaryNum]))
             Binary_Dispersal <- (SppDispProb * BinarySD)
             Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
             Binary_Dispersal[Binary_Dispersal < 0.5] <- 0
 
-            if (!is.na(crs(EnsembleSD))) {
+            if (!is.na(raster::crs(EnsembleSD))) {
               raster::crs(Binary_Dispersal) <- raster::crs(EnsembleSD)
             }
 
             #Writes the binary raster
-            writeRaster(Binary_Dispersal,
-                        filename = paste0(CurYear, "_", CurScen, "_binary_dispersalRate.bil"),
+            raster::writeRaster(Binary_Dispersal,
+                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.bil")),
                         overwrite = TRUE,
                         format = "EHdr",
                         prj = TRUE)
@@ -289,19 +289,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.bil$"), full.names = TRUE)
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
-          setwd(paste0(result_dir, "/", CurSpp))
-          dir.create("map_pdfs")
-          setwd("map_pdfs")
+
+          dir.create(file.path(result_dir, CurSpp, "map_pdfs"))
           for (d in 1:length(DispersalRasters)) {
             if (grepl("binary", DispersalRasters[d])) {
               title <- DispersalNames[d]
-              pdf(file = paste0(CurSpp, "_", DispersalNames[d], ".pdf"))
+              pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
               raster::plot(raster::raster(DispersalRasters[d], native = TRUE), legend = FALSE, main = title)
               legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
               dev.off()
             } else {
               title <- DispersalNames[d]
-              pdf(file = paste0(CurSpp, "_", DispersalNames[d], ".pdf"))
+              pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
               raster::plot(raster::raster(DispersalRasters[d], native = TRUE), main = title)
               dev.off()
             }
@@ -313,7 +312,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
                        T2notT1, Overlap, CentroidX, CentroidY)
 
         stats <- as.data.frame(stats)
-        write.csv(stats, file = (paste0(result_dir, "/", CurSpp, "/Results_Dispersal.csv")))
+        write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
         rm(CurrentBinary)
         gc()
       } else {
@@ -345,5 +344,5 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) FinalDispersal(x))
     gc()
   }
-  stopCluster(clus)
+  parallel::stopCluster(clus)
 }

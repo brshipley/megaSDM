@@ -32,8 +32,6 @@
 TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
                           resolution = NA, clipTrain = NA,
                           clipStudy = NA, output = NA) {
-  suppressPackageStartupMessages(library(raster))
-  suppressPackageStartupMessages(library(rgdal))
 
   #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
   if (class(input_TA) != "RasterStack") {
@@ -94,13 +92,13 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     }
 
   } else if (!is.na(resolution)) {
-    envstack <- raster::projectRaster(envstack, crs = crs(envstack), res = resolution, method = "bilinear")
+    envstack <- raster::projectRaster(envstack, crs = raster::crs(envstack), res = resolution, method = "bilinear")
   }
 
   if (class(clipTrain) != "logical") {
     clipTrain <- raster::extent(clipTrain)
     ExtentTA <- sp::SpatialPoints(clipTrain, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjTA <- sp::spTransform(ExtentTA, crs(envstack))
+    ExtentProjTA <- sp::spTransform(ExtentTA, raster::crs(envstack))
 
     NewExtentTA <-raster::extent(ExtentProjTA@coords)
 
@@ -109,15 +107,15 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
     }
 
-    if (NewExtentTA > extent(envstack)) {
+    if (NewExtentTA > raster::extent(envstack)) {
       message("Warning: the desired training extent is larger than the original raster")
       message("Only the intersection of the two extents will be used")
     }
 
-    envstack <- raster::crop(envstack, extent(max(NewExtentTA[1], extent(envstack)[1]),
-                                              min(NewExtentTA[2], extent(envstack)[2]),
-                                              max(NewExtentTA[3], extent(envstack)[3]),
-                                              min(NewExtentTA[4], extent(envstack)[4])))
+    envstack <- raster::crop(envstack, raster::extent(max(NewExtentTA[1], raster::extent(envstack)[1]),
+                                              min(NewExtentTA[2], raster::extent(envstack)[2]),
+                                              max(NewExtentTA[3], raster::extent(envstack)[3]),
+                                              min(NewExtentTA[4], raster::extent(envstack)[4])))
     print("Training area complete!")
   }
 
@@ -127,11 +125,11 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   if (class(clipStudy) != "logical") {
     clipStudy <- raster::extent(clipStudy)
     ExtentSA <- sp::SpatialPoints(clipStudy, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjSA <- sp::spTransform(ExtentSA, crs(envstack))
+    ExtentProjSA <- sp::spTransform(ExtentSA, raster::crs(envstack))
 
     NewExtentSA <- raster::extent(ExtentProjSA@coords)
 
-    if (NewExtentSA > extent(studystack)) {
+    if (NewExtentSA > raster::extent(studystack)) {
       message("Warning: the desired study extent is larger than the study rasters")
       message("Only the intersection of the two extents will be used")
     }
@@ -141,10 +139,10 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
     }
 
-    studystack <- raster::crop(envstack, extent(max(NewExtentSA[1], extent(studystack)[1]),
-                                              min(NewExtentSA[2], extent(studystack)[2]),
-                                              max(NewExtentSA[3], extent(studystack)[3]),
-                                              min(NewExtentSA[4], extent(studystack)[4])))
+    studystack <- raster::crop(envstack, raster::extent(max(NewExtentSA[1], raster::extent(studystack)[1]),
+                                              min(NewExtentSA[2], raster::extent(studystack)[2]),
+                                              max(NewExtentSA[3], raster::extent(studystack)[3]),
+                                              min(NewExtentSA[4], raster::extent(studystack)[4])))
     print("Study area complete!")
   }
 
@@ -153,7 +151,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   }
   envstack <- raster::trim(envstack)
   studystack <- raster::trim(studystack)
-  EnvRasters <- list("training" = stack(envstack), "study" = stack(studystack))
+  EnvRasters <- list("training" = raster::stack(envstack), "study" = raster::stack(studystack))
 
   if (!is.na(output)) {
     if (!dir.exists(paste0(output, "/trainingarea"))) {

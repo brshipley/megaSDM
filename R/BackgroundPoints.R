@@ -46,11 +46,6 @@ BackgroundPoints <- function(spplist, envdata, output,
                              PCA = "Y",
                              ncores = 1) {
 
-  suppressPackageStartupMessages(library(raster))
-  suppressPackageStartupMessages(library(sp))
-  suppressPackageStartupMessages(library(dplyr))
-  suppressPackageStartupMessages(library(parallel))
-
   if(!dir.exists(output)) {
     dir.create(output)
   }
@@ -110,7 +105,7 @@ BackgroundPoints <- function(spplist, envdata, output,
     #Function for Varela sampling
     VarelaSample <- function (occurrences, env, no_bins, PCA, PCAxes) {
 
-      occurrences <- sp::SpatialPoints(occurrences, proj4string = crs(env))
+      occurrences <- sp::SpatialPoints(occurrences, proj4string = raster::crs(env))
 
       EnvOccur <- raster::extract(env, occurrences)
       EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
@@ -207,17 +202,21 @@ BackgroundPoints <- function(spplist, envdata, output,
     VarelaSample <- NA
   }
 
+  if (length(spplist) < ncores) {
+    ncores <- length(spplist)
+  }
+
   ListSpp <- matrix(data = spplist, ncol = ncores)
 
   run <- function(CurSpp) {
     s <- grep(CurSpp, spplist)
 
     #If the number of background points wanted is more than the number of cells, prints warning, sets nbg-->ncells
-    if (nbg[s] > ncell(envstack)) {
-      nbg[s] <- ncell(envstack)
+    if (nbg[s] > raster::ncell(envstack)) {
+      nbg[s] <- raster::ncell(envstack)
       message(paste0("Warning: the number of background points wanted for ", spplist[s],
                      " is more than the number of unique cells in the environmental raster"))
-      message(paste0("    Changing the number of background points to ", ncell(envstack)))
+      message(paste0("    Changing the number of background points to ", raster::ncell(envstack)))
 
     }
 
@@ -230,8 +229,8 @@ BackgroundPoints <- function(spplist, envdata, output,
 
         if (is.numeric(PCA)) {
           PCAxes <- as.numeric(PCA)
-          if (PCAxes > nlayers(envstack)) {
-            PCAxes <- nlayers(envstack)
+          if (PCAxes > raster::nlayers(envstack)) {
+            PCAxes <- raster::nlayers(envstack)
             message(paste0("Setting Number of PC Axes to Number of Layers: ", PCAxes))
           }
         } else if (!is.na(PCA)) {
@@ -301,7 +300,7 @@ BackgroundPoints <- function(spplist, envdata, output,
         FullPointsEnv <- FullPointsEnv[complete.cases(FullPointsEnv), ]
 
       } else if (method == "random") {
-        FullPointsEnv <- sampleRandom(envstack, nbgFull, na.rm = TRUE, xy = TRUE)
+        FullPointsEnv <- raster::sampleRandom(envstack, nbgFull, na.rm = TRUE, xy = TRUE)
       }
 
       if (spatial_weights == 0) {
@@ -338,8 +337,8 @@ BackgroundPoints <- function(spplist, envdata, output,
 
       if (is.numeric(PCA)) {
         PCAxes <- as.numeric(PCA)
-        if (PCAxes > nlayers(envstack)) {
-          PCAxes <- nlayers(envstack)
+        if (PCAxes > raster::nlayers(envstack)) {
+          PCAxes <- raster::nlayers(envstack)
           message(paste0("Setting Number of PC Axes to Number of Layers: ", PCAxes))
         }
       } else if (!is.na(PCA)) {
@@ -450,5 +449,5 @@ BackgroundPoints <- function(spplist, envdata, output,
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
   }
 
-  stopCluster(clus)
+  parallel::stopCluster(clus)
 }

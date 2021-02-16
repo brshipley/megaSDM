@@ -25,7 +25,7 @@
 #' calculated for the dispersal-constrained distribution maps? If dispersal rate
 #' analysis are not needed, or if the \code{megaSDM::dispersalRate} function has yet
 #' to be run, this should be set to \code{FALSE} (the default).
-#' @param disperaldata A dataframe or the full file path to a .csv file with two columns:
+#' @param dispersaldata A dataframe or the full file path to a .csv file with two columns:
 #'   1. Species.
 #'   2. Dispersal Rate in km/yr.
 #'   See the function \code{megaSDM::dispersalRate} for more details.
@@ -42,8 +42,6 @@
 additionalStats <- function(result_dir, time_periods, scenarios,
                             dispersal = FALSE, dispersaldata = NA,
                             ncores = 1) {
-  library(graphics)
-  library(parallel)
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
@@ -76,7 +74,9 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   } else {
     ListSpp <- spp.list
   }
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #Get the nubmer of years and scenarios
@@ -93,8 +93,8 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   #Creates a bar-graph of the number of cells at all time periods for all scenarios
   getCellsGraph <- function(spp, stats, dispersalApplied) {
 
-    #If dispersal has been applies, prints out a new graph
-    if (dispersal == "TRUE") {
+    #If dispersal has been applied, prints out a new graph
+    if (dispersalApplied == "TRUE") {
       pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells.pdf"))
     } else {
       pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells.pdf"))
@@ -122,7 +122,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   getDiffScenariosGraph <- function(spp, stats, dispersalApplied) {
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersal == "TRUE") {
+    if (dispersalApplied == "TRUE") {
       pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells", numScenario, "Graphs.pdf"))
     } else {
       pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells", numScenario, "Graphs.pdf"))
@@ -170,7 +170,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     rownames(PercentChange) <- stats$Projection
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersal == "TRUE") {
+    if (dispersalApplied == "TRUE") {
       pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange.pdf"))
     } else {
       pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/CellChange.pdf"))
@@ -225,7 +225,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     }
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersal == "TRUE") {
+    if (dispersalApplied == "TRUE") {
       pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells.pdf"))
     } else {
       pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/AvgNumberCells.pdf"))
@@ -250,12 +250,10 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   }
 
   DispersalCompare <- function(spp, stats) {
-    setwd(result_dir)
     spp.name <- spp
-    setwd(paste0(result_dir, "/", spp.name))
 
     #Reads in the results data frame (not dispersal-constrained)
-    statsNoDisp <- read.csv("Results.csv")
+    statsNoDisp <- read.csv(file.path(result_dir, spp.name, "Results.csv"))
     statsNoDisp <- statsNoDisp
     nstatsNoDisp <- nrow(statsNoDisp)
 
@@ -273,8 +271,8 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
       #Name the output pdf
       rownames(DispComp) <- c("No Dispersal", "Dispersal")
-      pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/",
-                        scenarios[scen], "_DispersalCompare.pdf"))
+      pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
+                        paste0(scenarios[scen], "_DispersalCompare.pdf")))
 
       #graphical parameters and barplot
       par(mfrow = c(1, 1), mar = c(5, 5, 4, 8))
@@ -292,33 +290,31 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
   run <- function(CurSpp) {
     spp.name <- CurSpp
-    setwd(paste0(result_dir, "/", spp.name))
 
     if (dispersal == "TRUE") {
-      dir.create("Dispersal Applied Additional Stats")
-      stats <- read.csv("Results_Dispersal.csv")
+      dir.create(file.path(result_dir, spp.name, "Dispersal Applied Additional Stats"))
+      stats <- read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
       stats <- stats
       nstats <- nrow(stats)
     } else {
-      dir.create("Additional Stats")
-      stats <- read.csv("Results.csv")
+      dir.create(file.path(result_dir, spp.name, "Additional Stats"))
+      stats <- read.csv(file.path(result_dir, spp.name, "Results.csv"))
       stats <- stats
       nstats <- nrow(stats)
     }
 
     #construct graphs of area changes
-    getCellsGraph(spp.name, stats, dispersalRan)
-    getDiffScenariosGraph(spp.name, stats, dispersalRan)
-    getpercentDiffGraphs(spp.name, stats, dispersalRan)
+    getCellsGraph(spp.name, stats, dispersal)
+    getDiffScenariosGraph(spp.name, stats, dispersal)
+    getpercentDiffGraphs(spp.name, stats, dispersal)
 
     if (numScenario > 0) {
-      getMinMaxGraphs(spp.name, stats, dispersalRan)
+      getMinMaxGraphs(spp.name, stats, dispersal)
     }
 
     if (dispersal == "TRUE") {
       DispersalCompare(spp.name, stats)
     }
-
   }
 
   clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
@@ -337,3 +333,4 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   }
   parallel::stopCluster(clus)
 }
+

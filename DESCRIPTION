@@ -26,20 +26,21 @@ Description: This package can efficiently create and project species distributio
              points, train the model and project it to different times (incorporating dispersal rate
              of each species and intermediate range fluctuations), and create species richness maps for
              each time period and taxon.
-License: use_mit_license()
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Imports: 
+    dplyr,
+    gtools,
+    methods,
     parallel,
+    plotfunctions,
     raster,
+    rgbif,
     rgdal,
     rgeos,
-    gtools,
-    dplyr,
-    plotfunctions,
-    rgbif,
     sampSurf,
     sp
 Suggests: 

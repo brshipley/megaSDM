@@ -50,10 +50,6 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                         output, ThreshMethod = "Maximum.test.sensitivity.plus.specificity",
                         aucval = NA, ncores = 1) {
 
-  suppressPackageStartupMessages(library(parallel))
-  suppressPackageStartupMessages(library(gtools))
-  suppressPackageStartupMessages(library(raster))
-
   if(!dir.exists(output)) {
     dir.create(output)
   }
@@ -113,7 +109,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   if (length(ListSpp) == 0) {
     stop(paste0("No species have AUC values higher than ", aucval))
   }
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(data = ListSpp, ncol = ncores)
 
   #Gets the date of the current year, the number of years and scenarios, and the total number of
@@ -138,11 +136,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   #Creates binary rasters out of ensembled MaxEnt outputs
   threshold <- function(path, rasters, replicates, Scenario, time) {
     rasters <- matrix(rasters, nrow = nrep)
-    setwd(input)
     rasterNames <-  c()
 
     ensemble.stack <- c()
-    curmodel <- paste0(input, "/", path)
+    curmodel <- file.path(input, path)
 
     #Reads in the results file for each of the runs
     results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
@@ -167,7 +164,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             temp <- raster::raster(rasters[j])
             temp[temp >= thresh] <- 1
             temp[temp < thresh] <- 0
-            rasterNames <- c(rasterNames, filename(temp))
+            rasterNames <- c(rasterNames, raster::filename(temp))
             #Creates a stack of output runs to be ensembled
             ensemble.stack <- raster::stack(c(ensemble.stack, temp))
           }
@@ -179,7 +176,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         temp <- raster::raster(rasters[j])
         temp[temp >= thresh] <- 1
         temp[temp < thresh] <- 0
-        rasterNames <- c(rasterNames, filename(temp))
+        rasterNames <- c(rasterNames, raster::filename(temp))
         #Creates a stack of output runs to be ensembled
         ensemble.stack <- raster::stack(c(ensemble.stack, temp))
       }
@@ -189,42 +186,40 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       #Takes the mean of the binary rasters
       #If the mean is >= 0.5 (more than half of the replicates show presence), set to 1
       ensemble.calc <- (raster::mean(ensemble.stack))
-      rasterNames <- c(rasterNames, filename(ensemble.calc))
+      rasterNames <- c(rasterNames, raster::filename(ensemble.calc))
       ensemble.calc[ensemble.calc >= 0.5] <- 1
       ensemble.calc[ensemble.calc < 0.5] <- 0
       raster::crs(ensemble.calc) <- desiredCRS
       #Writes out binary rasters
-      setwd(output)
 
-      if (!dir.exists(paste0(path, "/map_pdfs"))) {
-        dir.create(paste0(path, "/map_pdfs"))
+      if (!dir.exists(file.path(output, path, "map_pdfs"))) {
+        dir.create(file.path(output, path, "map_pdfs"))
       }
 
       if (time == currentYear) {
         raster::crs(ensemble.calc) <- desiredCRS
         raster::writeRaster(ensemble.calc,
-                    filename = paste0(path, "/", time, "_binary.bil"),
+                    filename = file.path(output, path, paste0(time, "_binary.bil")),
                     overwrite = TRUE,
                     format = "EHdr",
                     prj = TRUE)
-        pdf(file = paste0(path, "/map_pdfs/", time, "_binary.pdf"))
+        pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
         dev.off()
       } else {
-        if (!dir.exists(paste0(path, "/", Scenario))) {
-          dir.create(paste0(path, "/", Scenario))
+        if (!dir.exists(file.path(output, path, Scenario))) {
+          dir.create(file.path(output, path, Scenario))
         }
         raster::crs(ensemble.calc) <- desiredCRS
         raster::writeRaster(ensemble.calc,
-                    filename = paste0(path, "/", Scenario,"/", time, "_", Scenario, "_binary.bil"),
+                    filename = file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.bil")),
                     overwrite = TRUE,
                     format = "EHdr",
                     prj = TRUE)
-        pdf(file = paste0(path, "/map_pdfs/", time, "_", Scenario, "_binary.pdf"))
+        pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
         dev.off()
       }
-      setwd(input)
       return(ensemble.calc)
     } else {
       message(paste0("No replicates of ", path, " had a test AUC value above ", aucval))
@@ -235,7 +230,6 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   medianensemble <- function(path, rasters, replicates, Scenario, decade) {
     rasters <- matrix(rasters, nrow = nrep)
-    setwd(input)
     #Lists all of the folders within "outputs"
     message("starting median ensemble")
     curmodel <- paste0(input, "/", path)
@@ -265,25 +259,24 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     }
     #Calculates the median of the stacked rasters
     ensemble.calc <- raster::calc(ensemble.stack, median, na.rm = TRUE)
-    setwd(output)
     if (decade == currentYear) {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
-                  filename = paste0(path, "/", decade, "_ensembled.bil"),
+                  filename = file.path(output, path, paste0(decade, "_ensembled.bil")),
                   overwrite = TRUE,
                   format = "EHdr",
                   prj = TRUE)
-      pdf(file = paste0(path, "/map_pdfs/", decade, "_ensembled.pdf"))
+      pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade))
       dev.off()
     } else {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
-                  filename = paste0(path, "/", Scenario, "/", decade, "_", Scenario, "_ensembled.bil"),
+                  filename = file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.bil")),
                   overwrite = TRUE,
                   format = "EHdr",
                   prj = TRUE)
-      pdf(file = paste0(path, "/map_pdfs/", decade, "_", Scenario, "_ensembled.pdf"))
+      pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
       dev.off()
     }
@@ -293,7 +286,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   getSize <- function(raster) {
-    return(freq(raster, digits = 0, value = 1, useNA = 'no', progress = ''))
+    return(raster::freq(raster, digits = 0, value = 1, useNA = 'no', progress = ''))
   }
 
   t1nott2 <- function(t1, t2) {
@@ -345,9 +338,8 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   run <- function(CurSpp) {
     spp.name <- CurSpp
-    setwd(output)
-    if(!dir.exists(spp.name)) {
-      dir.create(spp.name)
+    if(!dir.exists(file.path(output, spp.name))) {
+      dir.create(file.path(output, spp.name))
     }
 
     #Creates a stats table to be filled in & passed to next scripts
@@ -361,29 +353,28 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                                  CentroidY = rep(0, times = nproj)))
 
     #Gets modern data stats first to use for comparison
-    dir.create(paste0(output, "/", spp.name, "/projections"))
-    dir.create(paste0(output, "/", spp.name, "/projections/", time_periods[1]))
+    dir.create(file.path(output, spp.name, "projections"))
+    dir.create(file.path(output, spp.name, "projections", time_periods[1]))
     for (g in 1:nrep) {
       #If there is more than 1 replicate, the lambdas file is named differently
       if (nrep == 1) {
-        LambdaFile <- paste0(input, "/", spp.name, "/", spp.name, ".lambdas")
+        LambdaFile <- file.path(input, , spp.name, paste0(spp.name, ".lambdas"))
       } else {
-        LambdaFile <- paste0(input, "/", spp.name, "/", spp.name, "_", g-1, ".lambdas")
+        LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
       }
       #THIS IS THE PROJECTIONS COMMAND>>
-      setwd(input)
       system(paste0("java -mx900m -cp maxent.jar density.Project ",
                     # location of lambdas file
-                    LambdaFile, " ",
+                    file.path(LambdaFile), " ",
                     #location of folder with map rasters
-                    study_dir, " ",
+                    file.path(study_dir), " ",
                     # where to output files (Run#)
-                    output, "/", spp.name, "/projections/", time_periods[1], "/RUN_", g-1,
+                    file.path(output, spp.name, "projections", time_periods[1], paste0("RUN_", g-1)),
                     " noaskoverwrite nowarnings -a"))
     }
 
     modern.rasters <- c()
-    r <- list.files(path = paste0(output, "/", spp.name, "/projections/", time_periods[1]),
+    r <- list.files(path = file.path(output, spp.name, "projections", time_periods[1]),
                     pattern = paste0(".asc$"),
                     full.names = TRUE)
 
@@ -414,11 +405,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
       #Generates projections for hindcasted/forecasted climate layers
       if (numScenario > 0) {
-        setwd(output)
         for (ScenIndex in 1:numScenario) {
-          dir.create(paste0(spp.name, "/projections/", scenarios[ScenIndex]))
+          dir.create(file.path(output, spp.name, "projections", scenarios[ScenIndex]))
           for (YearIndex in 2:numYear) {
-            dir.create(paste0(spp.name, "/projections/", scenarios[ScenIndex], "/", time_periods[YearIndex]))
+            dir.create(file.path(output, spp.name, "projections", scenarios[ScenIndex], time_periods[YearIndex]))
           }
         }
 
@@ -432,12 +422,11 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             for (g in 1:nrep) {
               #If there is more than 1 replicate, the lambdas file is named differently
               if (nrep == 1) {
-                LambdaFile <- paste0(input, "/", spp.name, "/", spp.name, ".lambdas")
+                LambdaFile <- file.path(input, spp.name, paste0(spp.name, ".lambdas"))
               } else {
-                LambdaFile <- paste0(input, "/", spp.name, "/", spp.name, "_", g-1, ".lambdas")
+                LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
               }
               #THIS IS THE PROJECTIONS COMMAND>>
-              setwd(input)
               system(paste0("java -mx900m -cp maxent.jar density.Project ",
                             # location of lambdas file
                             LambdaFile, " ",
@@ -450,9 +439,8 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             }
 
             #Makes a list of the projections files to use for threshold/ensemble functions
-            setwd(input)
-            cur.rasters <- list.files(path = paste0(output, "/", spp.name, "/projections/",
-                                                    focusScen, "/", focusDate),
+            cur.rasters <- list.files(path = file.path(output, spp.name, "projections",
+                                                    focusScen, focusDate),
                                       pattern = paste0('\\.asc$'),
                                       full.names = TRUE)
             cur.proj <- c()
@@ -468,15 +456,14 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             cur.median <- medianensemble(spp.name, cur.proj, nrep, focusScen, focusDate)
             gc()
             #Fills in the stats table for the projected rasters
-            stats <- getStats(paste0(focusScen, "_", focusDate), statsrow, futdate, cur.binary,
+            stats <- getStats(paste0(focusScen, "_", focusDate), statsrow, focusDate, cur.binary,
                               stats, modern.size, modern.binary)
             gc()
           }
         }
       }
-      setwd(paste0(output, "/", spp.name))
       #Writes the stats table to be used later
-      write.csv(stats, file = "Results.csv")
+      write.csv(stats, file = file.path(output, spp.name, "Results.csv"))
     } else {
       message(paste0("Removing ", spp.name, " from further analysis"))
     }
@@ -494,7 +481,6 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   parallel::clusterEvalQ(clus, library(gtools))
   parallel::clusterEvalQ(clus, library(raster))
-
   for (i in 1:nrow(ListSpp)) {
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     gc()

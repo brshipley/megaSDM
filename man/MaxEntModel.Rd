@@ -28,8 +28,7 @@ of interest (e.g.,: ".../Canis_lupus.csv").}
 provided for each taxon. This list of files should be ordered in the same
 way as the files given by \code{occlist}.}
 
-\item{model_output}{the directory where all output files will be placed.
-NOTE: This is also where the maxent.jar file shoudl be placed!}
+\item{model_output}{the directory where all output files will be placed.}
 
 \item{ncores}{the number of computer cores to parallelize the background point generation on.
 Default is 1; Using one fewer core than the computer has is usually optimal.}

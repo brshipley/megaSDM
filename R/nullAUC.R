@@ -17,22 +17,23 @@
 #' the paths to the buffer files (.shp) used.
 #' @param modelpar a list of the arguments passed from the \code{MaxEntModel} function.
 #' These arguments should be exactly the same as the actual model generation for effective
-#' comparison.
+#' comparison. For the method described by Bohl et al. (2019), a list of test-samples must
+#' be given (evaluate models on the real data). Otherwise, the null distribution will be
+#' evaluated on a subset of the random samples (see Raes & ter Steege (2007))
 #' @export
 #' @return A .csv file (NullModel_AUC.csv) with the Test AUC values for each replicate
 #' of the null model.
 
 nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
 
-  library(parallel)
-  library(raster)
-
   NullMaxent <- function(occlist, bglist, model_output,
                           ncores = 1, nrep = 1, categorical = NA,
                           alloutputs = TRUE, reptype = "Subsample",
                           test_percent = 20, hinge = TRUE,
                           testsamples = FALSE, regularization = 1) {
-
+    if (length(occlist) < ncores) {
+      ncores <- length(occlist)
+    }
     ListSpp <- matrix(data = occlist, ncol = ncores)
 
     hinge <- tolower(hinge)
@@ -59,17 +60,14 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       spp.name <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
                          nchar(SpeciesSplit[length(SpeciesSplit)]) - 4)
 
-      #Creates sub-directory for outputs, if it doesn't already exist
-      setwd(model_output)
-
       #Creates sub-directory for the given species
-      if (!dir.exists(paste0(model_output, "/", spp.name))) {
-        dir.create(paste0(model_output, "/", spp.name))
+      if (!dir.exists(file.path(model_output, spp.name))) {
+        dir.create(file.path(model_output, spp.name))
       }
 
       failed_runs <- c()
 
-      dir.create(paste0(model_output, "/", spp.name, "/NullModels"))
+      dir.create(file.path(model_output, spp.name, "NullModels"))
       NullAUCVals <- c()
       if (!is.na(bufflist)) {
         BufferFile <- raster::shapefile(bufflist[s])
@@ -77,26 +75,31 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       NOcc <- nrow(read.csv(OccurrenceFile))
       for (i in 1:replicates) {
         if(!is.na(bufflist)) {
-          RandomSP <- spsample(BufferFile, NOcc, type = "random")
-          RandomOcc <- extract(stack(envdata), RandomSP)
+          RandomSP <- sp::spsample(BufferFile, NOcc, type = "random")
+          RandomOcc <- raster::extract(raster::stack(envdata), RandomSP)
           RandomOcc <- data.frame(RandomSP@coords, RandomOcc)
-          RandomOcc <- RandomOcc[complete.cases(RandomOcc),]
+          RandomOcc <- data.frame(RandomOcc[complete.cases(RandomOcc),])
         } else {
-          RandomOcc <- raster::sampleRandom(stack(envdata), size = NOcc, na.rm = TRUE, xy = TRUE)
+          RandomOcc <- raster::sampleRandom(raster::stack(envdata), size = NOcc, na.rm = TRUE, xy = TRUE)
         }
-
         RandomOcc <- data.frame(Species = rep(spp.name, nrow(RandomOcc)), RandomOcc)
-        write.csv(RandomOcc, paste0(model_output, "/", spp.name, "/NullModels/RandomOcc.csv"),
+        BGFile <- read.csv(BackgroundFile)
+        BCol <- c()
+        for (b in 1:ncol(BGFile)) {
+          BCol <- c(BCol, grep(paste0("^", names(BGFile)[b], "$"), names(RandomOcc)))
+        }
+        RandomOcc <- RandomOcc[, c(BCol)]
+        write.csv(RandomOcc, file.path(model_output, spp.name, "NullModels", "RandomOcc.csv"),
                   row.names = FALSE)
         model.out <- tryCatch({
           #can turn off a lot of output writing for the final experiment
           #(jackknifing, write plot pngs) press help in maxent for details
           system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ",
                         paste0(model_output, "/", spp.name, "/NullModels/RandomOcc.csv"),
-                        " -J -o ", paste0(model_output, "/", spp.name, "/NullModels"),
+                        " -J -o ", file.path(model_output, spp.name, "NullModels"),
                         " noaskoverwrite logistic threshold -X ",
                         test_percent, " replicates=", 1, " betamultiplier=", regularization,
-                        " -T ", TestFile," writeclampgrid=false", " writemess=false",
+                        " testsamplesfile=", TestFile," writeclampgrid=false", " writemess=false",
                         " nowarnings writeplotdata=false", " -a ",
                         reptype, " hinge=", hinge, " togglelayertype=", categorical))
         }, error = function(err) {
@@ -108,10 +111,10 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
         if (!is.null(failed_runs)) {
           message(failed_runs)
         }
-        MaxEntResults <- read.csv(paste0(model_output, "/", spp.name, "/NullModels/maxentResults.csv"))
+        MaxEntResults <- read.csv(file.path(model_output, spp.name, "NullModels/maxentResults.csv"))
         NullAUCVals <- c(NullAUCVals, MaxEntResults$Test.AUC[1])
       }
-      write.csv(NullAUCVals, paste0(model_output, "/", spp.name, "/NullModel_AUC.csv"), row.names = FALSE)
+      write.csv(NullAUCVals, file.path(model_output, spp.name, "NullModel_AUC.csv"), row.names = FALSE)
       file.remove(model_output, "/", spp.name, "/NullModels")
     }
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
@@ -127,7 +130,7 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     }
 
-    stopCluster(clus)
+    parallel::stopCluster(clus)
   }
 
   do.call(NullMaxent, modelpar)

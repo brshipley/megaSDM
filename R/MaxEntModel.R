@@ -11,7 +11,6 @@
 #' provided for each taxon. This list of files should be ordered in the same
 #' way as the files given by \code{occlist}.
 #' @param model_output the directory where all output files will be placed.
-#' NOTE: This is also where the maxent.jar file shoudl be placed!
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
 #' @param nrep (integer) the number of replicates to run each species through.
@@ -37,8 +36,8 @@
 #' "threshold", "hinge"}. Refer to the MaxEnt help page for more information about each feature class
 #' If there are few occurrence points, hinge features are discouraged. Default is all feature classes.
 #' @param testsamples (optional) If cross-validation with a new set of occurrence points is required,
-#' this should be a list of .csv files corresponding to the occurrence points for each species.
-#' This will take presidence over the random test percentage given in \code{test_percent}.
+#' this should be a list of full file paths corresponding to the validation occurrence points for each
+#' species. This will take presidence over the random test percentage given in \code{test_percent}.
 #' NOTE: if using null AUC validation, testsamples must be given!
 #' @param regularization (numeric) regularization parameter (penalizes complex models). A higher
 #' regularization means more weight given to simpler models. Default is 1.
@@ -56,9 +55,9 @@ MaxEntModel <- function(occlist, bglist, model_output,
                         test_percent = 20, features = c("linear", "quadratic", "product", "threshold", "hinge"),
                         testsamples = FALSE, regularization = 1) {
 
-  suppressPackageStartupMessages(library(parallel))
-  suppressPackageStartupMessages(library(raster))
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(data = occlist, ncol = ncores)
 
   if (!hasArg(features)) {
@@ -103,11 +102,11 @@ MaxEntModel <- function(occlist, bglist, model_output,
     spp.name <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
                           nchar(SpeciesSplit[length(SpeciesSplit)]) - 4)
 
-    #Creates sub-directory for outputs, if it doesn't already exist
-    setwd(model_output)
-
     #Creates sub-directory for the given species
-    dir.create(paste0(model_output, "/", spp.name))
+    if(!dir.exists(model_output)) {
+      dir.create(model_output)
+    }
+    dir.create(file.path(model_output, spp.name))
     failed_runs <- c()
 
     if (is.logical(testsamples)) {
@@ -116,7 +115,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
         #can turn off a lot of output writing for the final experiment
         #(jackknifing, write plot pngs) press help in maxent for details
         system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ", OccurrenceFile,
-                      " -J -o ", spp.name, " noaskoverwrite logistic threshold -X ",
+                      " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", nrep, " betamultiplier=", regularization,
                       " writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
@@ -131,11 +130,11 @@ MaxEntModel <- function(occlist, bglist, model_output,
         #can turn off a lot of output writing for the final experiment
         #(jackknifing, write plot pngs) press help in maxent for details
         system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ", OccurrenceFile,
-                      " -J -o ", spp.name, " noaskoverwrite logistic threshold -X ",
+                      " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", 1, " betamultiplier=", regularization,
-                      " testsamplesfile=", TestFile," writeclampgrid=", alloutputs, " writemess=", alloutputs,
+                      " testsamplesfile=", file.path(TestFile)," writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
-                      reptype, " linear=", linear, " -q=", quadratic, " product=", product,
+                      reptype, " linear=", linear, " quadratic=", quadratic, " product=", product,
                       " threshold=", threshold, " hinge=", hinge, " togglelayertype=", categorical))
       }, error = function(err) {
         print(paste("MY_ERROR: ", spp.name, " ", err))
@@ -164,5 +163,5 @@ MaxEntModel <- function(occlist, bglist, model_output,
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
   }
 
-  stopCluster(clus)
+  parallel::stopCluster(clus)
 }

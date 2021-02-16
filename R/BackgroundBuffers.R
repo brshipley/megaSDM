@@ -36,11 +36,6 @@ BackgroundBuffers <- function(occlist,
                               output,
                               buff_distance = NA,
                               ncores = 1) {
-  library(parallel)
-  library(raster)
-  library(rgdal)
-  library(rgeos)
-  library(sampSurf)
 
   if(!dir.exists(output)) {
     dir.create(output)
@@ -54,7 +49,9 @@ BackgroundBuffers <- function(occlist,
                           nchar(SpeciesSplit[length(SpeciesSplit)]) - 4)
     ListSpp <- c(ListSpp, SpeciesName)
   }
-
+  if (length(ListSpp) < ncores) {
+    ncores <- length(ListSpp)
+  }
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
@@ -88,7 +85,7 @@ BackgroundBuffers <- function(occlist,
 
     #Converts species occurrence points into SpatialPoints with desiredCRS
     coordinates <- species[, c("x", "y")]
-    Coordinates2 <- sp::SpatialPoints(coordinates, proj4string = crs(envstack))
+    Coordinates2 <- sp::SpatialPoints(coordinates, proj4string = raster::crs(envstack))
 
     #Calculates a buffer width based on quantiled minimum distance among all occurrence points
     Locations <- as.data.frame(Coordinates2@coords)
@@ -122,12 +119,12 @@ BackgroundBuffers <- function(occlist,
     }
 
     #Makes a buffer (width dependent) around the first occurrence point
-    combinedPolygon <- sampSurf::spCircle(BufferWidth, spUnits = crs(envstack),
+    combinedPolygon <- sampSurf::spCircle(BufferWidth, spUnits = raster::crs(envstack),
                                 centerPoint = c(x = Locations[1, 1], y = Locations[1, 2]))$spCircle
 
     #Creates buffers aroudn the remaining points and combines them
     for (b in 2:nrow(Locations)) {
-      circle <- sampSurf::spCircle(BufferWidth, spUnits = crs(envstack), centerPoint = c(x = Locations[b, 1], y = Locations[b, 2]))
+      circle <- sampSurf::spCircle(BufferWidth, spUnits = raster::crs(envstack), centerPoint = c(x = Locations[b, 1], y = Locations[b, 2]))
       binded <- raster::bind(combinedPolygon, circle$spCircle)
       combinedPolygon <- rgeos::gUnaryUnion(binded)
     }
@@ -136,16 +133,15 @@ BackgroundBuffers <- function(occlist,
     sp::proj4string(combinedPolygon) <- raster::crs(envstack)
 
     #Write shapefile out of the buffer
-    setwd(output)
     sp_poly_df <- sp::SpatialPolygonsDataFrame(combinedPolygon, data = data.frame(ID = 1), match.ID = FALSE)
-    rgdal::writeOGR(sp_poly_df, dsn = paste0(output, "/", CurSpp, ".shp"), layer = paste0(CurSpp), overwrite_layer = TRUE, driver = "ESRI Shapefile")
+    rgdal::writeOGR(sp_poly_df, dsn = file.path(output, paste0(CurSpp, ".shp")), layer = paste0(CurSpp), overwrite_layer = TRUE, driver = "ESRI Shapefile")
     rm(combinedPolygon, sp_poly_df)
     gc()
 
     #Fill out background point stats table with information on the Buffer Width (m)
     BGPStats <- BufferWidth
-    dir.create(paste0(output, "/", CurSpp))
-    write.csv(BGPStats,file = paste0(output, "/", CurSpp, "/BackgroundPoints_stats.csv"))
+    dir.create(file.path(output, CurSpp))
+    write.csv(BGPStats, file = file.path(output, CurSpp, "BackgroundPoints_stats.csv"))
   }
 
 
@@ -164,5 +160,5 @@ BackgroundBuffers <- function(occlist,
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
   }
 
-  stopCluster(clus)
+  parallel::stopCluster(clus)
 }

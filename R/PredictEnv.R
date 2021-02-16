@@ -33,8 +33,6 @@ PredictEnv <- function(studylayers, futurelayers,
                        time_periods, output = NA,
                        scenario_name = NA) {
 
-  suppressPackageStartupMessages(library(raster))
-
   if (class(studylayers) != "RasterStack") {
 
     #Ensure that all study area rasters have the same projection and extent
