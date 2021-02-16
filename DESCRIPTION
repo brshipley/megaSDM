@@ -44,3 +44,6 @@ Imports:
     sampSurf,
     sp
 Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
