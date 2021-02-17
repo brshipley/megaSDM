@@ -15,10 +15,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(megaSDM)
-```
-
 This package can efficiently create and project species distribution models using the MaxEnt framework and parallel processing. It can find and download occurrence data for a list of species on GBIF (Global Biodiversity Information Facility), environmentally subsample the occurrences to mitigate spatial bias, generate background (pseudo-absence) points, train the model and project it to different times (incorporating dispersal rate of each species and intermediate range fluctuations), and create species richness maps for each time period and taxon.
 
 This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to _____________ and the documentation of each function. 
@@ -31,15 +27,20 @@ Double-click the "maxent.jar" file to ensure that it can open. If the maxent.jar
 Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out:
 
 ```{r}
-setwd("C:/Users/bshipley6/Desktop/EXAMPLE") 
+WD <- "C:/Users/bshipley6/Desktop/EXAMPLE" 
 #CHANGE TO OWN WORKING DIRECTORY
+setwd(WD)
 ```
 
+```{r setup, include = FALSE}
+library(megaSDM)
+knitr::opts_knit$set(root.dir = WD)
+```
 ## Environmental Data Management
 ### Training and Study Area Projection/Clipping
 Species distribution models use a training area and a study area. The training area is the area where the model will be trained on (i.e., where the occurrence and background points for the model generation are located). The study area is the region of interest (i.e., where the model will be projected and habitat suitability will be predicted for both the current time period and future/past time periods).
 
-The first function "megaSDM::TrainStudyEnv" creates and manages the environmental rasters of the current time period for the desired training and study areas.
+The first function `TrainStudyEnv` creates and manages the environmental rasters of the current time period for the desired training and study areas.
 
 First, make a list of environmental rasters that we will use to clip, resample, and reproject. In this example, the training area files are in _extdata/trainingarea_, which is downlaoded within the megaSDM package
 
@@ -68,9 +69,9 @@ TSEnv <- TrainStudyEnv(input_TA = input_TA,
 ```
 
 ### Forecasted or Hindcasted Environmental Projections
-After getting the training and study environmental layers for the current time period, the next function ("megaSDM::PredictEnv") clips, resamples, and reprojects the future/past environmental layers to match the study region rasters created by the TrainStudyEnv function.
+After getting the training and study environmental layers for the current time period, the next function `PredictEnv` clips, resamples, and reprojects the future/past environmental layers to match the study region rasters created by the `TrainStudyEnv` function.
 
-"PredictEnv" requires lists of the forecasted/hindcasted environmental files.In this example, the future climate layers are organized by scenario and then year. Rasters from two climate scenarios (RCP4.5, RCP8.5) and two future years (2050, 2070) are provided with the function. 
+`PredictEnv` requires lists of the forecasted/hindcasted environmental files.In this example, the future climate layers are organized by scenario and then year. Rasters from two climate scenarios (RCP4.5, RCP8.5) and two future years (2050, 2070) are provided with the function. 
 
 ```{r}
 Env2050_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2050", package = "megaSDM"), 
@@ -109,7 +110,7 @@ PredictEnv(studylayers = TSEnv$study,
 
 ## Occurrence File Generation
 ### Occurrence Collection
-The OccurrenceCollection function acts as a wrapper for gbif::occ_search, downloading occurrence points from the Global Biodiversity Information Facility (GBIF) from a defined extent. However, this function is more efficient than occ_search for a large number of taxa. It also checks the taxonomy of the given species list against the GBIF taxonomy, renaming or merging taxa if necessary.
+The `OccurrenceCollection` function acts as a wrapper for `gbif::occ_search`, downloading occurrence points from the Global Biodiversity Information Facility (GBIF) from a defined extent. However, this function is more efficient than `occ_search` for a large number of taxa. It also checks the taxonomy of the given species list against the GBIF taxonomy, renaming or merging taxa if necessary.
 
 ```{r}
 # This function only takes occurrences from the described trainingarea extent.
@@ -139,17 +140,15 @@ spplist <- Occurrences$Scientific.Name
 ```
 
 ### Occurrence Management
-After collecting the occurrences, they must be formatted so that they are consistent and able to be read within MaxEnt. The OccurrenceManagement function takes a list of occurrence files, extracts environmental data at each point, and, if requested, environmentally subsamples the dataset for more accurate modelling. The environmental subsampling method used in this function was developed by Varela et al. (2014), dividing the environmental data into a given number of bins and selecting one point from each unique combination of bins. This helps to mitigate environmental bias that is intrinsic to occurrence point datasets.
+After collecting the occurrences, they must be formatted so that they are consistent and able to be read within MaxEnt. The `OccurrenceManagement` function takes a list of occurrence files, extracts environmental data at each point, and, if requested, environmentally subsamples the dataset for more accurate modelling. The environmental subsampling method used in this function was developed by Varela et al. (2014), dividing the environmental data into a given number of bins and selecting one point from each unique combination of bins. This helps to mitigate environmental bias that is intrinsic to occurrence point datasets.
+
+In this example, we want to extract environmental data from each point (envextract = TRUE) using the environmental data we generated in the previous steps. We also want to environmentally subsample the data (envsample = TRUE), sing 25 bins for each environmental variable. Finally, we set the output to the same place as in the previous function so it will overwrite the original occurrence files.
+
 
 ```{r}
 # First, get the list of the occurrence files
 occlist <- list.files(occ_output, pattern = ".csv", full.names = TRUE)
 
-
-# In this example, we want to extract environmental data from each point (envextract = TRUE) using the environmental 
-# data we generated in the previous steps. 
-# We also want to environmentally subsample the data (envsample = TRUE), sing 25 bins for each environmental variable.
-# Finally, we set the output to the same place as in the previous function so it will overwrite the original occurrence files.
 OccurrenceManagement(occlist = occlist,
                      output = occ_output,
                      envextract = TRUE,
@@ -162,7 +161,7 @@ OccurrenceManagement(occlist = occlist,
 To model species distributions based on presence-only data, a set of "background points" describing the environmental conditions of the training area is needed.
 
 ### Background Buffers
-Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The BackgroundBuffers function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (gicen by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. 
+Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The `BackgroundBuffers` function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. 
 
 ```{r}
 # Get the list of occurrence files again (even if they were written out in the same folder as before)
@@ -179,22 +178,30 @@ BackgroundBuffers(occlist = occlist,
 ```
 
 ### Background Point Generation
-The BackgroundPoints function generates a set of background points for each species. This function offers flexibility in the number of background points generated, the degree of spatial bias, and whether or not the background poins should be environmentally subsampled.
+The `BackgroundPoints` function generates a set of background points for each species. This function offers flexibility in the number of background points generated, the degree of spatial bias, and whether or not the background poins should be environmentally subsampled.
 
 ```{r}
-# Set the parameters for the background point generation (how many points, and how spatially-constrained)
+# Set the parameters for the background point generation 
+# (how many points, and how spatially-constrained)
 
-nbg <- 1000  # How many background points should be generated per species?
-spatial_weights <- 0.5 # What proportion of the background points should be sampled from within the buffers?
-sampleMethod <- "Varela" # Should the background points be environmentally subsampled (Varela) or randomly distributed (random)?
+# How many background points should be generated per species?
+nbg <- 1000
 
-# Because we want a partial spatial constraint (50% of points within the buffer), we must make a list of the
-# buffer files to use in the creation of the background points. In the example, these files are created from the
-# BackgroundBuffers function, but they can also be generated outside of megaSDM and brought in here.
+# What proportion of the background points should be sampled from within the buffers?
+spatial_weights <- 0.5 
+
+# Should the background points be environmentally subsampled (Varela) or randomly distributed (random)?
+sampleMethod <- "Varela" 
+
+# Because we want a partial spatial constraint (50% of points within the buffer), we must make a 
+# list of the buffer files to use in the creation of the background points. In the example, 
+# these files are created from the BackgroundBuffers function, but they can also be generated
+# outside of megaSDM and brought in here.
 
 bufflist <- list.files(buff_output, pattern = ".shp$", full.names = TRUE)
 
-# Define the location where the background points will be printed out to (.shp) (will be created if it doesn't exist)
+# Define the location where the background points will be printed out to (.shp) 
+# (This directory will be created if it doesn't already exist)
 bg_output <- "TestRun/backgrounds"
 
 BackgroundPoints(spplist = spplist,
@@ -208,17 +215,18 @@ BackgroundPoints(spplist = spplist,
 ```
 
 ### Varying Environmental Sets by Species
-SDMs are generally better when a species-specific set of environmental variables are used (with biological relevance). The VariableEnv function can change the set of environmental variables used for each species to tailor the analysis to the habitat suitability of each species.
+SDMs are generally better when a species-specific set of environmental variables are used (with biological relevance). The `VariableEnv` function can change the set of environmental variables used for each species to tailor the analysis to the habitat suitability of each species.
 
 ```{r}
 # Define a list of the environmental variables to keep for each species
 # In this example, we simply want all of the species to have the same environmental variables.
 envvar <- rep("Bio1,Bio12,Bio14,Bio6,Bio9", length = length(occlist))
 
-# Define a list of the background point files (either created in the BackgroundPoints function or generated separately)
+# Define a list of the background point files 
+# (either created in the BackgroundPoints function or generated separately)
 bglist <- list.files(bg_output, pattern = ".csv", full.names = TRUE)
 
-# Like before, in this example, megaSDM overwrites the occurrence and background points,
+# In this example, megaSDM overwrites the occurrence and background points,
 # but they could be placed in a different folder if requested.
 VariableEnv(occlist = occlist,
            bglist = bglist,
@@ -230,7 +238,7 @@ VariableEnv(occlist = occlist,
 ## Distribution Modelling and Projection
 ### MaxEnt Modelling
 
-After the occurrence and background point management (if desired), megaSDM will model the habitat suitability using the MaxEnt algorithm. The MaxEntModel function generates the actual MaxEnt models for each species. The MaxEnt parameters (e.g., regualarization, feature types, crossvalidation method) can be manipluted within this function: see the documentation for a complete list of settings and defaults that can be changed.
+After the occurrence and background point management (if desired), megaSDM will model the habitat suitability using the MaxEnt algorithm. The `MaxEntModel` function generates the actual MaxEnt models for each species. The MaxEnt parameters (e.g., regualarization, feature types, crossvalidation method) can be manipluted within this function: see the documentation for a complete list of settings and defaults that can be changed.
 
 ```{r}
 # First, define a list of all background and occurrence point files
@@ -240,8 +248,8 @@ bglist <- list.files(bg_output, pattern = ".csv", full.names = TRUE)
 # Define where the results of the MaxEnt model runs will be printed out to (as .lambdas files)
 model_output <- "TestRun/models"
 
-# "nrep" is set to 4, meaning that the MaxEnt algorithm will run 4 times with different subsets of occurrence points
-# for a better representation of the habitat suitability.
+# "nrep" is set to 4, meaning that the MaxEnt algorithm will run 4 times with different
+# subsets of occurrence points for a better representation of the habitat suitability.
 MaxEntModel(occlist = occlist,
             bglist = bglist,
             model_output = model_output,
@@ -252,7 +260,7 @@ MaxEntModel(occlist = occlist,
 
 ### MaxEnt Projection
 
-After generating the model parameters (or using .lambas files generated in a different program), megaSDM takes the .lambdas files and projects them onto the current and forecasted/hindcasted environmental conditions in the study region. The MaxEntProj function takes the generated model parameters, projects them onto current and future environments, removes poorer models from the analyses, creates ensemble models from the multiple replicates conducted in the previous step, and generates binary presence/absence distribution maps.
+After generating the model parameters (or using .lambas files generated in a different program), megaSDM takes the .lambdas files and projects them onto the current and forecasted/hindcasted environmental conditions in the study region. The `MaxEntProj` function takes the generated model parameters, projects them onto current and future environments, removes poorer models from the analyses, creates ensemble models from the multiple replicates conducted in the previous step, and generates binary presence/absence distribution maps.
 
 ```{r}
 # First, create a list of the time periods and climate scenarios used in the analysis
@@ -268,7 +276,8 @@ study_dir <- "TestRun/studyarea"
 #    (generated from the PredictEnv function or brought in from a separate location)
 
 
-# Define a list of directories for the projected climate layers, separated into the different climate scenarios and years:
+# Define a list of directories for the projected climate layers, 
+# separated into the different climate scenarios and years:
 #    list(c(Scenario1Year1, Scenario1Year2), 
 #         c(Scenario2Year1, Scenario2Year2))
 
@@ -293,7 +302,7 @@ MaxEntProj(input = model_output,
 
 ## Analysis
 ### Time Maps
-The TimeMaps function uses the binary maps at each time period to create "time maps":  These maps detail the step-wise expansions and contractions of the species distribution through those time-steps, allowing for the visualization of both unidirectional range shifts (e.g., a range expansion across all time-steps) and more complex dynamics (e.g., a range expansion from 2010-2050 followed by a range contraction from 2050-2070).
+The `createTimeMaps` function uses the binary maps at each time period to create "time maps":  These maps detail the step-wise expansions and contractions of the species distribution through those time-steps, allowing for the visualization of both unidirectional range shifts (e.g., a range expansion across all time-steps) and more complex dynamics (e.g., a range expansion from 2010-2050 followed by a range contraction from 2050-2070).
 
 ```{r}
 # The time maps will be written out to the directory supplied in "result_dir"
@@ -307,7 +316,7 @@ createTimeMaps(result_dir = result_dir,
 ```
 
 ### Additional Statistics
-The additionalStats function generates statistics on species range sizes and changes through the multiple time steps and different scenarios. It also creates several graphs (written out to the directory provided by "result_dir") to visualize these changes.
+The `additionalStats` function generates statistics on species range sizes and changes through the multiple time steps and different scenarios. It also creates several graphs (written out to the directory provided by "result_dir") to visualize these changes.
 
 ```{r}
 additionalStats(result_dir = result_dir,
@@ -318,11 +327,11 @@ additionalStats(result_dir = result_dir,
 ```
 
 ## Dispersal Rate
-Incorporating dispersal limitations into SDMs can help to more accurately predict where a species could live in the future. The dispersalRate function uses data on the average yearly dispersal rate of a species (given in km/year) to constrain the continuous habitat suitability maps and the presence/absence maps by the dispersal ability of each species.
+Incorporating dispersal limitations into SDMs can help to more accurately predict where a species could live in the future. The `dispersalRate` function uses data on the average yearly dispersal rate of a species (given in km/year) to constrain the continuous habitat suitability maps and the presence/absence maps by the dispersal ability of each species.
 
 ```{r}
 # Add in dispersal data (normally you would read a .csv file with two columns, but in this example 
-# the data is jsut added in by hand here).
+# the data is just added in by hand here).
 dispersaldata <- data.frame(Species = spplist, Rate = c(48.92,
                                                         1.21,
                                                         6.07,
@@ -338,16 +347,27 @@ dispersalRate(result_dir = result_dir,
 
 # Repeat the time map and additional stats steps for the dispersal constrained data.
 # Set dispersal = TRUE this time.
-createTimeMaps(result_dir, time_periods, scenarios, dispersal = TRUE, dispersaldata = dispersaldata, ncores = 2)
+createTimeMaps(result_dir, 
+               time_periods, 
+               scenarios, 
+               dispersal = TRUE, 
+               dispersaldata = dispersaldata, 
+               ncores = 2)
 
-# The additional stats function will compare the species ranges between the dispersal constrained and the regular data.
-additionalStats(result_dir, time_periods, scenarios, dispersal = TRUE, dispersaldata = dispersaldata, ncores = 2)
+# The additional stats function will compare the species ranges between the 
+# dispersal-constrained and the regular data.
+additionalStats(result_dir, 
+                time_periods, 
+                scenarios, 
+                dispersal = TRUE, 
+                dispersaldata = dispersaldata, 
+                ncores = 2)
 
 ```
 
 ## Species Richness
 
-The SpeciesRichness function stacks the binary distribution maps to create species richness maps for the set of species examined across all time periods and scenarios. In addition, it compares the species richness of the dispersal-constrained analysis to the regular analysis.
+The `createRichnessMaps` function stacks the binary distribution maps to create species richness maps for the set of species examined across all time periods and scenarios. In addition, it compares the species richness of the dispersal-constrained analysis to the regular analysis.
 
 ```{r}
 createRichnessMaps(result_dir = result_dir,   #taken from previous steps
