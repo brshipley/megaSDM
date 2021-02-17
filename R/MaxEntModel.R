@@ -55,8 +55,8 @@ MaxEntModel <- function(occlist, bglist, model_output,
                         test_percent = 20, features = c("linear", "quadratic", "product", "threshold", "hinge"),
                         testsamples = FALSE, regularization = 1) {
 
-  if (length(ListSpp) < ncores) {
-    ncores <- length(ListSpp)
+  if (length(occlist) < ncores) {
+    ncores <- length(occlist)
   }
   ListSpp <- matrix(data = occlist, ncol = ncores)
 

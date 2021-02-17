@@ -155,10 +155,10 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
 
   if (!is.na(output)) {
     if (!dir.exists(paste0(output, "/trainingarea"))) {
-      dir.create(paste0(output, "/trainingarea"))
+      dir.create(paste0(output, "/trainingarea"), recursive = TRUE)
     }
     if (!dir.exists(paste0(output, "/studyarea"))) {
-      dir.create(paste0(output, "/studyarea"))
+      dir.create(paste0(output, "/studyarea"), recursive = TRUE)
     }
     raster::writeRaster(EnvRasters$training, paste0(output, "/trainingarea/", names(EnvRasters$training), ".bil"),
                         bylayer = TRUE, format = "EHdr", overwrite = TRUE)
