@@ -22,9 +22,10 @@ This example briefly demonstrates much of the functionality of megaSDM and can b
 ## Setup
 The modelling portion of megaSDM relies on the MaxEnt algorithm, so the "maxent.jar" file must be downloaded before modelling can occur. The "maxent.jar" file can be found at https://github.com/mrmaxent/Maxent or along with this package at https://github.com/brshipley/megaSDM.
 
-Double-click the "maxent.jar" file to ensure that it can open. If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running megaSDM (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
+If this is your first time running MaxEnt, double-click the "maxent.jar" file to ensure that it can open. If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running megaSDM (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
 
-Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out:
+Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out, and *place the maxent.jar file in it*
+This is necessary so that the jar file can properly interface with the computer.
 
 ```{r}
 WD <- "C:/Users/bshipley6/Desktop/EXAMPLE" 
@@ -50,7 +51,8 @@ First, make a list of environmental rasters that we will use to clip, resample, 
 input_TA <- list.files(system.file("extdata", "trainingarea", package = "megaSDM"),
                        pattern = ".bil$", 
                        full.names = TRUE)
-# If you have your own data, replace the system.file command with a pathway to the training area files.
+# If you have your own data, replace the system.file command with
+# a pathway to the training area files.
 ```
 
 Next, define "envoutput", which is where the training and study rasters will be printed out to (within the working directory). If the directory does not exist, megaSDM will create a new directory. In this example, we want the environmental layers to be output to the "TestRun" directory.
@@ -83,8 +85,8 @@ Env2070_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2070", packa
                           full.names = TRUE)
 Env4.5 <- list(Env2050_4.5, Env2070_4.5)
 
-# The "time_periods" argument contains the current time (the time of the training and study rasters)
-# first and then the time periods for the forecast/hindcast.
+# The "time_periods" argument contains the current time (the time of the training 
+# and study rasters) first and then the time periods for the forecast/hindcast.
 
 PredictEnv(studylayers = TSEnv$study,
            futurelayers = Env4.5,
@@ -165,7 +167,8 @@ To model species distributions based on presence-only data, a set of "background
 Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The `BackgroundBuffers` function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. 
 
 ```{r}
-# Get the list of occurrence files again (even if they were written out in the same folder as before)
+# Get the list of occurrence files again (even if they were written out 
+# in the same folder as before)
 occlist <- list.files(occ_output, pattern = ".csv", full.names = TRUE)
 
 # The location to print out the background buffers (.shp) (will be created if it doesn't exist)
@@ -191,7 +194,8 @@ nbg <- 1000
 # What proportion of the background points should be sampled from within the buffers?
 spatial_weights <- 0.5 
 
-# Should the background points be environmentally subsampled (Varela) or randomly distributed (random)?
+# Should the background points be environmentally subsampled (Varela) or 
+# randomly distributed (random)?
 sampleMethod <- "Varela" 
 
 # Because we want a partial spatial constraint (50% of points within the buffer), we must make a 
