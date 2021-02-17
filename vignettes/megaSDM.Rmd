@@ -20,15 +20,15 @@ This package can efficiently create and project species distribution models usin
 This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to _____________ and the documentation of each function. 
 
 ## Setup
-The modelling portion of megaSDM relies on the MaxEnt algorithm, so the "maxent.jar" file must be downloaded before modelling can occur. The "maxent.jar" file can be found at https://github.com/mrmaxent/Maxent or along with this package at https://github.com/brshipley/megaSDM.
+_First Time Users:_
+The modelling portion of megaSDM relies on the MaxEnt algorithm, using the "maxent.jar" executable file. This file is installed along with the megaSDM package, but if this is your first time running MaxEnt or megaSDM, you may want to download the "maxent.jar" file separately to ensure that it can open. The "maxent.jar" file can be found at https://github.com/mrmaxent/Maxent or along with this package at https://github.com/brshipley/megaSDM/inst/extdata/.
 
-If this is your first time running MaxEnt, double-click the "maxent.jar" file to ensure that it can open. If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running megaSDM (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
+Once downloaded, double-click the "maxent.jar" file: If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running the modelling functions that megaSDM provies (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
 
-Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out, and *place the maxent.jar file in it*
-This is necessary so that the jar file can properly interface with the computer.
+Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out.
 
 ```{r}
-WD <- "C:/Users/bshipley6/Desktop/EXAMPLE" 
+WD <- "F:/EXAMPLE" 
 #CHANGE TO OWN WORKING DIRECTORY
 setwd(WD)
 ```

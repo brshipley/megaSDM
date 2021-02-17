@@ -60,6 +60,18 @@ MaxEntModel <- function(occlist, bglist, model_output,
   }
   ListSpp <- matrix(data = occlist, ncol = ncores)
 
+  #Creates sub-directory for the given species
+  
+  if (!dir.exists(model_output)) {
+    dir.create(model_output)
+  }
+  
+  #Copies maxent.jar into the model_output folder
+  if (!file.exists(file.path(model_output, "maxent.jar"))) {
+    file.copy(from = system.file("extdata", "maxent.jar", package = "megaSDM"),
+              to = file.path(model_output, "maxent.jar"))
+  }
+  
   if (!hasArg(features)) {
     linear <- "true"
     quadratic <- "true"
@@ -102,10 +114,6 @@ MaxEntModel <- function(occlist, bglist, model_output,
     spp.name <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
                           nchar(SpeciesSplit[length(SpeciesSplit)]) - 4)
 
-    #Creates sub-directory for the given species
-    if(!dir.exists(model_output)) {
-      dir.create(model_output)
-    }
     dir.create(file.path(model_output, spp.name))
     failed_runs <- c()
 
@@ -114,7 +122,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
       model.out <- tryCatch({
         #can turn off a lot of output writing for the final experiment
         #(jackknifing, write plot pngs) press help in maxent for details
-        system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ", OccurrenceFile,
+        system(paste0("java -mx900m -jar ", file.path(model_output, "maxent.jar")," -e ", BackgroundFile, " -s ", OccurrenceFile,
                       " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", nrep, " betamultiplier=", regularization,
                       " writeclampgrid=", alloutputs, " writemess=", alloutputs,
@@ -129,7 +137,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
       model.out <- tryCatch({
         #can turn off a lot of output writing for the final experiment
         #(jackknifing, write plot pngs) press help in maxent for details
-        system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ", OccurrenceFile,
+        system(paste0("java -mx900m -jar ", file.path(model_output, "maxent.jar")," -e ", BackgroundFile, " -s ", OccurrenceFile,
                       " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", 1, " betamultiplier=", regularization,
                       " testsamplesfile=", file.path(TestFile)," writeclampgrid=", alloutputs, " writemess=", alloutputs,
