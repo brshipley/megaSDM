@@ -91,7 +91,6 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       results <- read.csv(paste0(input, "/", ListSpp[i], "/maxentResults.csv"))
       auc <- results$Test.AUC
       aucAbove <- which(auc > aucval[i])
-
       if (length(aucAbove) > 0){
         AUCRetain <- c(AUCRetain, i)
       } else {
@@ -113,24 +112,20 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     ncores <- length(ListSpp)
   }
   ListSpp <- matrix(data = ListSpp, ncol = ncores)
-
   #Gets the date of the current year, the number of years and scenarios, and the total number of
   #distinct projections
   currentYear <- time_periods[1]
   numYear <- length(time_periods)
-
-  if (!is.na(scenarios)) {
+  if (!is.na(scenarios)[1]) {
     numScenario <- length(scenarios)
   } else {
     numScenario <- 0
   }
   nproj <- 1 + (numScenario * (numYear - 1))
-
   #Renames threshold to add in "logistic.threshold" to the mix
   if(!grepl(".logistic.threshold", ThreshMethod)) {
     ThreshMethod <- paste0(ThreshMethod, ".logistic.threshold")
   }
-
 
   #Functions----------------------------
   #Creates binary rasters out of ensembled MaxEnt outputs
@@ -485,5 +480,6 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     gc()
   }
+  parallel::stopCluster(clus)
 }
 

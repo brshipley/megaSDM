@@ -492,5 +492,5 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
    gc()
   }
-
+  parallel::stopCluster(clus)
 }

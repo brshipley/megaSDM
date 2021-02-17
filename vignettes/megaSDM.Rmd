@@ -33,6 +33,7 @@ setwd(WD)
 ```
 
 ```{r setup, include = FALSE}
+#Hidden functions for running this vignette with rmarkdown (sets the working directory for all code chunks).
 library(megaSDM)
 knitr::opts_knit$set(root.dir = WD)
 ```
@@ -58,7 +59,7 @@ Next, define "envoutput", which is where the training and study rasters will be 
 envoutput <- "TestRun"
 ```
 
-For this example, our training and study areas will be exactly the same (corresponding roughly to the southeastern United States), and we don't need to reproject or resample (the rasters are in the same projection and resolution). By assigning this function call to the list "TSEnv", the rasters are saved within the R environment for use later in addition to being written to the "TestRun" directory.
+For this example, our training and study areas will be exactly the same (corresponding roughly to the southeastern United States), and we don't need to reproject or resample (the rasters are in the same projection and resolution). By assigning this function call to the list "TSEnv", the two rasters are saved within the R environment for use later in addition to being written to the "TestRun" directory.
 
 ```{r}
 # Here we define the extent of the training and study regions in c(xmin, xmax, ymin, ymax) form. 
@@ -111,7 +112,7 @@ PredictEnv(studylayers = TSEnv$study,
 ## Occurrence File Generation
 ### Occurrence Collection
 The `OccurrenceCollection` function acts as a wrapper for `gbif::occ_search`, downloading occurrence points from the Global Biodiversity Information Facility (GBIF) from a defined extent. However, this function is more efficient than `occ_search` for a large number of taxa. It also checks the taxonomy of the given species list against the GBIF taxonomy, renaming or merging taxa if necessary.
-
+_NOTE_: This step interfaces with the GBIF server and therefore requires an internet connection. Downloading large amounts of data (e.g., many species) on an unstable internet connection may lead to incomplete occurrence collection. 
 ```{r}
 # This function only takes occurrences from the described trainingarea extent.
 # The defined extent should be the same (or similar to) as the extent of the training area.
@@ -362,7 +363,6 @@ additionalStats(result_dir,
                 dispersal = TRUE, 
                 dispersaldata = dispersaldata, 
                 ncores = 2)
-
 ```
 
 ## Species Richness

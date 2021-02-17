@@ -133,7 +133,6 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
     #Relates distance raster to dispersal probability
     DistProb <- raster::calc(DistRaster, fun = function(x){GammaProbFun(x)})
-    print("Creating Dispersal Probability Raster")
     return(DistProb)
   }
 
@@ -275,7 +274,6 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
             #Fills out the stats table
             Projection <- c(Projection, paste0(CurScen, "_", CurYear))
-            print(Projection)
             NumberCells <- c(NumberCells, raster::cellStats(Binary_Dispersal, stat = sum))
             CellChange <- c(CellChange, NumberCells[length(NumberCells)] - NumberCells[1])
             T1notT2 <- c(T1notT2, raster::cellStats(t1nott2(CurrentBinary, Binary_Dispersal), stat = sum))
