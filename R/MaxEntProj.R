@@ -358,7 +358,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
       }
       #THIS IS THE PROJECTIONS COMMAND>>
-      system(paste0("java -mx900m -cp maxent.jar density.Project ",
+      system(paste0("java -mx900m -cp ", file.path(input, "maxent.jar"), " density.Project ",
                     # location of lambdas file
                     file.path(LambdaFile), " ",
                     #location of folder with map rasters
@@ -422,7 +422,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                 LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
               }
               #THIS IS THE PROJECTIONS COMMAND>>
-              system(paste0("java -mx900m -cp maxent.jar density.Project ",
+              system(paste0("java -mx900m -cp ", file.path(input, "maxent.jar"), " density.Project ",
                             # location of lambdas file
                             LambdaFile, " ",
                             #location of folder with map rasters

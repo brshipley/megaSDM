@@ -108,7 +108,6 @@ PredictEnv(studylayers = TSEnv$study,
            time_periods = c(2010, 2050, 2070),
            output = envoutput,
            scenario_name = "RCP8.5")
-
 ```
 
 ## Occurrence File Generation
