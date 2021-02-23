@@ -283,7 +283,7 @@ OccurrenceCollection <- function(spplist,
         }
 
 
-        #Uses species name from our SppList file as occurrence file name for the csv
+        #Uses species name from our spplist file as occurrence file name for the csv
         write.csv(Occ, file = file.path(output, paste0(gsub(" ", "_", s), ".csv")), row.names = FALSE)
         print(paste0("   Finishing species: ", Sys.time()))
       } else {
