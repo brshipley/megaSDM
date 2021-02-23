@@ -14,4 +14,4 @@ The DESCRIPTION file:
 \packageDESCRIPTION{megaSDM}
 }
 \packageAuthor{megaSDM}
-}
+
