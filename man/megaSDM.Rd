@@ -13,5 +13,9 @@
 The DESCRIPTION file:
 \packageDESCRIPTION{megaSDM}
 }
+
+\author{
 \packageAuthor{megaSDM}
 
+Maintainer: \packageMaintainer{megaSDM}
+}
