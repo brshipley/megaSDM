@@ -12,6 +12,9 @@
 
 The DESCRIPTION file:
 \packageDESCRIPTION{megaSDM}
-\packageIndices{megaSDM}
-~~ An overview of how to use the package, including the most important functions ~~
+\author{
+\packageAuthor{megaSDM}
+
+Maintainer: \packageMaintainer{megaSDM}
 }
+]
