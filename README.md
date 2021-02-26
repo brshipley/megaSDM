@@ -75,5 +75,5 @@ of results.
 
 In R, use `devtools::install_github("brshipley/megaSDM", build_vignettes
 = TRUE)` to install the package with the vignette (see above) included.
-To access the vignette itself, run `vignette(package = "megaSDM")`, and
-the vignette will be loaded.
+To access the vignette itself, run `??megaSDM_vignette`, and the
+vignette will be loaded in the HTML viewer.
