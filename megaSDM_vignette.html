@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Species Distribution Modelling with megaSDM</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Species Distribution Modelling with megaSDM</h1>
+
+
+
+<p>This package can efficiently create and project species distribution models using the MaxEnt framework and parallel processing. It can find and download occurrence data for a list of species on GBIF (Global Biodiversity Information Facility), environmentally subsample the occurrences to mitigate spatial bias, generate background (pseudo-absence) points, train the model and project it to different times (incorporating dispersal rate of each species and intermediate range fluctuations), and create species richness maps for each time period and taxon.</p>
+<p>This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to _____________ and the documentation of each function.</p>
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<p>The modelling portion of megaSDM relies on the MaxEnt algorithm, so the “maxent.jar” file must be downloaded before modelling can occur. The “maxent.jar” file can be found at <a href="https://github.com/mrmaxent/Maxent" class="uri">https://github.com/mrmaxent/Maxent</a> or along with this package at <a href="https://github.com/brshipley/megaSDM" class="uri">https://github.com/brshipley/megaSDM</a>.</p>
+<p>If this is your first time running MaxEnt, double-click the “maxent.jar” file to ensure that it can open. If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running megaSDM (<a href="https://www.oracle.com/java/technologies/javase-jre8-downloads.html" class="uri">https://www.oracle.com/java/technologies/javase-jre8-downloads.html</a>).</p>
+<p>Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out, and <em>place the maxent.jar file in it</em>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>WD &lt;-<span class="st"> &quot;C:/Users/bshipley6/Desktop/EXAMPLE&quot;</span> </span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="co">#CHANGE TO OWN WORKING DIRECTORY</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">setwd</span>(WD)</span></code></pre></div>
+</div>
+<div id="environmental-data-management" class="section level2">
+<h2>Environmental Data Management</h2>
+<div id="training-and-study-area-projectionclipping" class="section level3">
+<h3>Training and Study Area Projection/Clipping</h3>
+<p>Species distribution models use a training area and a study area. The training area is the area where the model will be trained on (i.e., where the occurrence and background points for the model generation are located). The study area is the region of interest (i.e., where the model will be projected and habitat suitability will be predicted for both the current time period and future/past time periods).</p>
+<p>The first function <code>TrainStudyEnv</code> creates and manages the environmental rasters of the current time period for the desired training and study areas.</p>
+<p>First, make a list of environmental rasters that we will use to clip, resample, and reproject. In this example, the training area files are in <em>extdata/trainingarea</em>, which is downlaoded within the megaSDM package</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>input_TA &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;trainingarea&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;megaSDM&quot;</span>),</span>
+<span id="cb2-2"><a href="#cb2-2"></a>                       <span class="dt">pattern =</span> <span class="st">&quot;.bil$&quot;</span>, </span>
+<span id="cb2-3"><a href="#cb2-3"></a>                       <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="co"># If you have your own data, replace the system.file command with</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="co"># a pathway to the training area files.</span></span></code></pre></div>
+<p>Next, define “envoutput”, which is where the training and study rasters will be printed out to (within the working directory). If the directory does not exist, megaSDM will create a new directory. In this example, we want the environmental layers to be output to the “TestRun” directory.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>envoutput &lt;-<span class="st"> &quot;TestRun&quot;</span></span></code></pre></div>
+<p>For this example, our training and study areas will be exactly the same (corresponding roughly to the southeastern United States), and we don’t need to reproject or resample (the rasters are in the same projection and resolution). By assigning this function call to the list “TSEnv”, the two rasters are saved within the R environment for use later in addition to being written to the “TestRun” directory.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="co"># Here we define the extent of the training and study regions in c(xmin, xmax, ymin, ymax) form. </span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>TSEnv &lt;-<span class="st"> </span><span class="kw">TrainStudyEnv</span>(<span class="dt">input_TA =</span> input_TA,</span>
+<span id="cb4-3"><a href="#cb4-3"></a>                       <span class="dt">output =</span> envoutput,</span>
+<span id="cb4-4"><a href="#cb4-4"></a>                       <span class="dt">clipTrain =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">91.5</span>, <span class="dv">-75</span>, <span class="fl">25.5</span>, <span class="dv">36</span>),</span>
+<span id="cb4-5"><a href="#cb4-5"></a>                       <span class="dt">clipStudy =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">91.5</span>, <span class="dv">-75</span>, <span class="fl">25.5</span>, <span class="dv">36</span>))</span></code></pre></div>
+</div>
+<div id="forecasted-or-hindcasted-environmental-projections" class="section level3">
+<h3>Forecasted or Hindcasted Environmental Projections</h3>
+<p>After getting the training and study environmental layers for the current time period, the next function <code>PredictEnv</code> clips, resamples, and reprojects the future/past environmental layers to match the study region rasters created by the <code>TrainStudyEnv</code> function.</p>
+<p><code>PredictEnv</code> requires lists of the forecasted/hindcasted environmental files.In this example, the future climate layers are organized by scenario and then year. Rasters from two climate scenarios (RCP4.5, RCP8.5) and two future years (2050, 2070) are provided with the function.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>Env2050_<span class="fl">4.5</span> &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;predictenv/RCP4.5/2050&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;megaSDM&quot;</span>), </span>
+<span id="cb5-2"><a href="#cb5-2"></a>                          <span class="dt">pattern =</span> <span class="st">&quot;.bil$&quot;</span>, </span>
+<span id="cb5-3"><a href="#cb5-3"></a>                          <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb5-4"><a href="#cb5-4"></a>Env2070_<span class="fl">4.5</span> &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;predictenv/RCP4.5/2070&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;megaSDM&quot;</span>), </span>
+<span id="cb5-5"><a href="#cb5-5"></a>                          <span class="dt">pattern =</span> <span class="st">&quot;.bil$&quot;</span>, </span>
+<span id="cb5-6"><a href="#cb5-6"></a>                          <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb5-7"><a href="#cb5-7"></a>Env4<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">list</span>(Env2050_<span class="fl">4.5</span>, Env2070_<span class="fl">4.5</span>)</span>
+<span id="cb5-8"><a href="#cb5-8"></a></span>
+<span id="cb5-9"><a href="#cb5-9"></a><span class="co"># The &quot;time_periods&quot; argument contains the current time (the time of the training </span></span>
+<span id="cb5-10"><a href="#cb5-10"></a><span class="co"># and study rasters) first and then the time periods for the forecast/hindcast.</span></span>
+<span id="cb5-11"><a href="#cb5-11"></a></span>
+<span id="cb5-12"><a href="#cb5-12"></a><span class="kw">PredictEnv</span>(<span class="dt">studylayers =</span> TSEnv<span class="op">$</span>study,</span>
+<span id="cb5-13"><a href="#cb5-13"></a>           <span class="dt">futurelayers =</span> Env4<span class="fl">.5</span>,</span>
+<span id="cb5-14"><a href="#cb5-14"></a>           <span class="dt">time_periods =</span> <span class="kw">c</span>(<span class="dv">2010</span>, <span class="dv">2050</span>, <span class="dv">2070</span>),</span>
+<span id="cb5-15"><a href="#cb5-15"></a>           <span class="dt">output =</span> envoutput,</span>
+<span id="cb5-16"><a href="#cb5-16"></a>           <span class="dt">scenario_name =</span> <span class="st">&quot;RCP4.5&quot;</span>)</span>
+<span id="cb5-17"><a href="#cb5-17"></a></span>
+<span id="cb5-18"><a href="#cb5-18"></a><span class="co">#Repeat with a different climate scenario (RCP8.5):</span></span>
+<span id="cb5-19"><a href="#cb5-19"></a>Env2050_<span class="fl">8.5</span> &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;predictenv/RCP8.5/2050&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;megaSDM&quot;</span>),</span>
+<span id="cb5-20"><a href="#cb5-20"></a>                          <span class="dt">pattern =</span> <span class="st">&quot;.bil$&quot;</span>, </span>
+<span id="cb5-21"><a href="#cb5-21"></a>                          <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb5-22"><a href="#cb5-22"></a>Env2070_<span class="fl">8.5</span> &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;predictenv/RCP8.5/2070&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;megaSDM&quot;</span>), </span>
+<span id="cb5-23"><a href="#cb5-23"></a>                          <span class="dt">pattern =</span> <span class="st">&quot;.bil$&quot;</span>, </span>
+<span id="cb5-24"><a href="#cb5-24"></a>                          <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb5-25"><a href="#cb5-25"></a></span>
+<span id="cb5-26"><a href="#cb5-26"></a>Env8<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">list</span>(Env2050_<span class="fl">8.5</span>, Env2070_<span class="fl">8.5</span>)</span>
+<span id="cb5-27"><a href="#cb5-27"></a><span class="kw">PredictEnv</span>(<span class="dt">studylayers =</span> TSEnv<span class="op">$</span>study,</span>
+<span id="cb5-28"><a href="#cb5-28"></a>           <span class="dt">futurelayers =</span> Env8<span class="fl">.5</span>,</span>
+<span id="cb5-29"><a href="#cb5-29"></a>           <span class="dt">time_periods =</span> <span class="kw">c</span>(<span class="dv">2010</span>, <span class="dv">2050</span>, <span class="dv">2070</span>),</span>
+<span id="cb5-30"><a href="#cb5-30"></a>           <span class="dt">output =</span> envoutput,</span>
+<span id="cb5-31"><a href="#cb5-31"></a>           <span class="dt">scenario_name =</span> <span class="st">&quot;RCP8.5&quot;</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="occurrence-file-generation" class="section level2">
+<h2>Occurrence File Generation</h2>
+<div id="occurrence-collection" class="section level3">
+<h3>Occurrence Collection</h3>
+<p>The <code>OccurrenceCollection</code> function acts as a wrapper for <code>gbif::occ_search</code>, downloading occurrence points from the Global Biodiversity Information Facility (GBIF) from a defined extent. However, this function is more efficient than <code>occ_search</code> for a large number of taxa. It also checks the taxonomy of the given species list against the GBIF taxonomy, renaming or merging taxa if necessary. <em>NOTE</em>: This step interfaces with the GBIF server and therefore requires an internet connection. Downloading large amounts of data (e.g., many species) on an unstable internet connection may lead to incomplete occurrence collection.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="co"># This function only takes occurrences from the described trainingarea extent.</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="co"># The defined extent should be the same (or similar to) as the extent of the training area.</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="co"># Given in latitude/longitude coordinates:</span></span>
+<span id="cb6-4"><a href="#cb6-4"></a>extent_occ &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="fl">91.5</span>, <span class="dv">-75</span>, <span class="fl">25.5</span>, <span class="dv">36</span>)</span>
+<span id="cb6-5"><a href="#cb6-5"></a></span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="co"># A list of southeastern mammals for this example</span></span>
+<span id="cb6-7"><a href="#cb6-7"></a>spplist &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Puma concolor coryi&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8"></a>             <span class="st">&quot;Podomys floridanus&quot;</span>,</span>
+<span id="cb6-9"><a href="#cb6-9"></a>             <span class="st">&quot;Sylvilagus aquaticus&quot;</span>,</span>
+<span id="cb6-10"><a href="#cb6-10"></a>             <span class="st">&quot;Sylvilagus palustris&quot;</span>,</span>
+<span id="cb6-11"><a href="#cb6-11"></a>             <span class="st">&quot;Geomys pinetis&quot;</span>,</span>
+<span id="cb6-12"><a href="#cb6-12"></a>             <span class="st">&quot;Neofiber alleni&quot;</span>)</span>
+<span id="cb6-13"><a href="#cb6-13"></a></span>
+<span id="cb6-14"><a href="#cb6-14"></a></span>
+<span id="cb6-15"><a href="#cb6-15"></a><span class="co"># Define the file folder where the occurrences will be written, within the working directory</span></span>
+<span id="cb6-16"><a href="#cb6-16"></a><span class="co"># (if this folder doesn&#39;t already exist, megaSDM will make it)</span></span>
+<span id="cb6-17"><a href="#cb6-17"></a>occ_output &lt;-<span class="st"> &quot;occurrences&quot;</span></span>
+<span id="cb6-18"><a href="#cb6-18"></a></span>
+<span id="cb6-19"><a href="#cb6-19"></a>Occurrences &lt;-<span class="st"> </span><span class="kw">OccurrenceCollection</span>(<span class="dt">spplist =</span> spplist,</span>
+<span id="cb6-20"><a href="#cb6-20"></a>                                    <span class="dt">output =</span> occ_output,</span>
+<span id="cb6-21"><a href="#cb6-21"></a>                                    <span class="dt">trainingarea =</span> extent_occ)</span>
+<span id="cb6-22"><a href="#cb6-22"></a></span>
+<span id="cb6-23"><a href="#cb6-23"></a><span class="co"># Because one species was renamed, rename species list to reflect taxonomy changes</span></span>
+<span id="cb6-24"><a href="#cb6-24"></a>spplist &lt;-<span class="st"> </span>Occurrences<span class="op">$</span>Scientific.Name</span></code></pre></div>
+</div>
+<div id="occurrence-management" class="section level3">
+<h3>Occurrence Management</h3>
+<p>After collecting the occurrences, they must be formatted so that they are consistent and able to be read within MaxEnt. The <code>OccurrenceManagement</code> function takes a list of occurrence files, extracts environmental data at each point, and, if requested, environmentally subsamples the dataset for more accurate modelling. The environmental subsampling method used in this function was developed by Varela et al. (2014), dividing the environmental data into a given number of bins and selecting one point from each unique combination of bins. This helps to mitigate environmental bias that is intrinsic to occurrence point datasets.</p>
+<p>In this example, we want to extract environmental data from each point (envextract = TRUE) using the environmental data we generated in the previous steps. We also want to environmentally subsample the data (envsample = TRUE), sing 25 bins for each environmental variable. Finally, we set the output to the same place as in the previous function so it will overwrite the original occurrence files.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="co"># First, get the list of the occurrence files</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a>occlist &lt;-<span class="st"> </span><span class="kw">list.files</span>(occ_output, <span class="dt">pattern =</span> <span class="st">&quot;.csv&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb7-3"><a href="#cb7-3"></a></span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="kw">OccurrenceManagement</span>(<span class="dt">occlist =</span> occlist,</span>
+<span id="cb7-5"><a href="#cb7-5"></a>                     <span class="dt">output =</span> occ_output,</span>
+<span id="cb7-6"><a href="#cb7-6"></a>                     <span class="dt">envextract =</span> <span class="ot">TRUE</span>,</span>
+<span id="cb7-7"><a href="#cb7-7"></a>                     <span class="dt">envsample =</span> <span class="ot">TRUE</span>,</span>
+<span id="cb7-8"><a href="#cb7-8"></a>                     <span class="dt">nbins =</span> <span class="dv">25</span>,</span>
+<span id="cb7-9"><a href="#cb7-9"></a>                     <span class="dt">envdata =</span> TSEnv<span class="op">$</span>training)</span></code></pre></div>
+</div>
+</div>
+<div id="background-points" class="section level2">
+<h2>Background Points</h2>
+<p>To model species distributions based on presence-only data, a set of “background points” describing the environmental conditions of the training area is needed.</p>
+<div id="background-buffers" class="section level3">
+<h3>Background Buffers</h3>
+<p>Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The <code>BackgroundBuffers</code> function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the “ncores” argument) should be set no higher than the number of cores the computer has minus 1.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a><span class="co"># Get the list of occurrence files again (even if they were written out </span></span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="co"># in the same folder as before)</span></span>
+<span id="cb8-3"><a href="#cb8-3"></a>occlist &lt;-<span class="st"> </span><span class="kw">list.files</span>(occ_output, <span class="dt">pattern =</span> <span class="st">&quot;.csv&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb8-4"><a href="#cb8-4"></a></span>
+<span id="cb8-5"><a href="#cb8-5"></a><span class="co"># The location to print out the background buffers (.shp) (will be created if it doesn&#39;t exist)</span></span>
+<span id="cb8-6"><a href="#cb8-6"></a>buff_output &lt;-<span class="st"> &quot;TestRun/buffers&quot;</span></span>
+<span id="cb8-7"><a href="#cb8-7"></a></span>
+<span id="cb8-8"><a href="#cb8-8"></a><span class="co"># Generates buffers for each species.</span></span>
+<span id="cb8-9"><a href="#cb8-9"></a><span class="kw">BackgroundBuffers</span>(<span class="dt">occlist =</span> occlist,</span>
+<span id="cb8-10"><a href="#cb8-10"></a>                  <span class="dt">envdata =</span> TSEnv<span class="op">$</span>training,</span>
+<span id="cb8-11"><a href="#cb8-11"></a>                  buff_output,</span>
+<span id="cb8-12"><a href="#cb8-12"></a>                  <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+<div id="background-point-generation" class="section level3">
+<h3>Background Point Generation</h3>
+<p>The <code>BackgroundPoints</code> function generates a set of background points for each species. This function offers flexibility in the number of background points generated, the degree of spatial bias, and whether or not the background poins should be environmentally subsampled.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a><span class="co"># Set the parameters for the background point generation </span></span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="co"># (how many points, and how spatially-constrained)</span></span>
+<span id="cb9-3"><a href="#cb9-3"></a></span>
+<span id="cb9-4"><a href="#cb9-4"></a><span class="co"># How many background points should be generated per species?</span></span>
+<span id="cb9-5"><a href="#cb9-5"></a>nbg &lt;-<span class="st"> </span><span class="dv">1000</span></span>
+<span id="cb9-6"><a href="#cb9-6"></a></span>
+<span id="cb9-7"><a href="#cb9-7"></a><span class="co"># What proportion of the background points should be sampled from within the buffers?</span></span>
+<span id="cb9-8"><a href="#cb9-8"></a>spatial_weights &lt;-<span class="st"> </span><span class="fl">0.5</span> </span>
+<span id="cb9-9"><a href="#cb9-9"></a></span>
+<span id="cb9-10"><a href="#cb9-10"></a><span class="co"># Should the background points be environmentally subsampled (Varela) or </span></span>
+<span id="cb9-11"><a href="#cb9-11"></a><span class="co"># randomly distributed (random)?</span></span>
+<span id="cb9-12"><a href="#cb9-12"></a>sampleMethod &lt;-<span class="st"> &quot;Varela&quot;</span> </span>
+<span id="cb9-13"><a href="#cb9-13"></a></span>
+<span id="cb9-14"><a href="#cb9-14"></a><span class="co"># Because we want a partial spatial constraint (50% of points within the buffer), we must make a </span></span>
+<span id="cb9-15"><a href="#cb9-15"></a><span class="co"># list of the buffer files to use in the creation of the background points. In the example, </span></span>
+<span id="cb9-16"><a href="#cb9-16"></a><span class="co"># these files are created from the BackgroundBuffers function, but they can also be generated</span></span>
+<span id="cb9-17"><a href="#cb9-17"></a><span class="co"># outside of megaSDM and brought in here.</span></span>
+<span id="cb9-18"><a href="#cb9-18"></a></span>
+<span id="cb9-19"><a href="#cb9-19"></a>bufflist &lt;-<span class="st"> </span><span class="kw">list.files</span>(buff_output, <span class="dt">pattern =</span> <span class="st">&quot;.shp$&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb9-20"><a href="#cb9-20"></a></span>
+<span id="cb9-21"><a href="#cb9-21"></a><span class="co"># Define the location where the background points will be printed out to (.shp) </span></span>
+<span id="cb9-22"><a href="#cb9-22"></a><span class="co"># (This directory will be created if it doesn&#39;t already exist)</span></span>
+<span id="cb9-23"><a href="#cb9-23"></a>bg_output &lt;-<span class="st"> &quot;TestRun/backgrounds&quot;</span></span>
+<span id="cb9-24"><a href="#cb9-24"></a></span>
+<span id="cb9-25"><a href="#cb9-25"></a><span class="kw">BackgroundPoints</span>(<span class="dt">spplist =</span> spplist,</span>
+<span id="cb9-26"><a href="#cb9-26"></a>                 <span class="dt">envdata =</span> TSEnv<span class="op">$</span>training,</span>
+<span id="cb9-27"><a href="#cb9-27"></a>                 <span class="dt">output =</span> bg_output,</span>
+<span id="cb9-28"><a href="#cb9-28"></a>                 <span class="dt">nbg =</span> nbg,</span>
+<span id="cb9-29"><a href="#cb9-29"></a>                 <span class="dt">spatial_weights =</span> spatial_weights,</span>
+<span id="cb9-30"><a href="#cb9-30"></a>                 <span class="dt">buffers =</span> bufflist,</span>
+<span id="cb9-31"><a href="#cb9-31"></a>                 <span class="dt">method =</span> sampleMethod,</span>
+<span id="cb9-32"><a href="#cb9-32"></a>                 <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+<div id="varying-environmental-sets-by-species" class="section level3">
+<h3>Varying Environmental Sets by Species</h3>
+<p>SDMs are generally better when a species-specific set of environmental variables are used (with biological relevance). The <code>VariableEnv</code> function can change the set of environmental variables used for each species to tailor the analysis to the habitat suitability of each species.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a><span class="co"># Define a list of the environmental variables to keep for each species</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a><span class="co"># In this example, we simply want all of the species to have the same environmental variables.</span></span>
+<span id="cb10-3"><a href="#cb10-3"></a>envvar &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="st">&quot;Bio1,Bio12,Bio14,Bio6,Bio9&quot;</span>, <span class="dt">length =</span> <span class="kw">length</span>(occlist))</span>
+<span id="cb10-4"><a href="#cb10-4"></a></span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="co"># Define a list of the background point files </span></span>
+<span id="cb10-6"><a href="#cb10-6"></a><span class="co"># (either created in the BackgroundPoints function or generated separately)</span></span>
+<span id="cb10-7"><a href="#cb10-7"></a>bglist &lt;-<span class="st"> </span><span class="kw">list.files</span>(bg_output, <span class="dt">pattern =</span> <span class="st">&quot;.csv&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb10-8"><a href="#cb10-8"></a></span>
+<span id="cb10-9"><a href="#cb10-9"></a><span class="co"># In this example, megaSDM overwrites the occurrence and background points,</span></span>
+<span id="cb10-10"><a href="#cb10-10"></a><span class="co"># but they could be placed in a different folder if requested.</span></span>
+<span id="cb10-11"><a href="#cb10-11"></a><span class="kw">VariableEnv</span>(<span class="dt">occlist =</span> occlist,</span>
+<span id="cb10-12"><a href="#cb10-12"></a>           <span class="dt">bglist =</span> bglist,</span>
+<span id="cb10-13"><a href="#cb10-13"></a>           <span class="dt">env_vars =</span> envvar,</span>
+<span id="cb10-14"><a href="#cb10-14"></a>           <span class="dt">occ_output =</span> occ_output,</span>
+<span id="cb10-15"><a href="#cb10-15"></a>           <span class="dt">bg_output =</span> bg_output)</span></code></pre></div>
+</div>
+</div>
+<div id="distribution-modelling-and-projection" class="section level2">
+<h2>Distribution Modelling and Projection</h2>
+<div id="maxent-modelling" class="section level3">
+<h3>MaxEnt Modelling</h3>
+<p>After the occurrence and background point management (if desired), megaSDM will model the habitat suitability using the MaxEnt algorithm. The <code>MaxEntModel</code> function generates the actual MaxEnt models for each species. The MaxEnt parameters (e.g., regualarization, feature types, crossvalidation method) can be manipluted within this function: see the documentation for a complete list of settings and defaults that can be changed.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a><span class="co"># First, define a list of all background and occurrence point files</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a>occlist &lt;-<span class="st"> </span><span class="kw">list.files</span>(occ_output, <span class="dt">pattern =</span> <span class="st">&quot;.csv&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb11-3"><a href="#cb11-3"></a>bglist &lt;-<span class="st"> </span><span class="kw">list.files</span>(bg_output, <span class="dt">pattern =</span> <span class="st">&quot;.csv&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb11-4"><a href="#cb11-4"></a></span>
+<span id="cb11-5"><a href="#cb11-5"></a><span class="co"># Define where the results of the MaxEnt model runs will be printed out to (as .lambdas files)</span></span>
+<span id="cb11-6"><a href="#cb11-6"></a>model_output &lt;-<span class="st"> &quot;TestRun/models&quot;</span></span>
+<span id="cb11-7"><a href="#cb11-7"></a></span>
+<span id="cb11-8"><a href="#cb11-8"></a><span class="co"># &quot;nrep&quot; is set to 4, meaning that the MaxEnt algorithm will run 4 times with different</span></span>
+<span id="cb11-9"><a href="#cb11-9"></a><span class="co"># subsets of occurrence points for a better representation of the habitat suitability.</span></span>
+<span id="cb11-10"><a href="#cb11-10"></a><span class="kw">MaxEntModel</span>(<span class="dt">occlist =</span> occlist,</span>
+<span id="cb11-11"><a href="#cb11-11"></a>            <span class="dt">bglist =</span> bglist,</span>
+<span id="cb11-12"><a href="#cb11-12"></a>            <span class="dt">model_output =</span> model_output,</span>
+<span id="cb11-13"><a href="#cb11-13"></a>            <span class="dt">ncores =</span> <span class="dv">2</span>,</span>
+<span id="cb11-14"><a href="#cb11-14"></a>            <span class="dt">nrep =</span> <span class="dv">4</span>,</span>
+<span id="cb11-15"><a href="#cb11-15"></a>            <span class="dt">alloutputs =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+</div>
+<div id="maxent-projection" class="section level3">
+<h3>MaxEnt Projection</h3>
+<p>After generating the model parameters (or using .lambas files generated in a different program), megaSDM takes the .lambdas files and projects them onto the current and forecasted/hindcasted environmental conditions in the study region. The <code>MaxEntProj</code> function takes the generated model parameters, projects them onto current and future environments, removes poorer models from the analyses, creates ensemble models from the multiple replicates conducted in the previous step, and generates binary presence/absence distribution maps.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a><span class="co"># First, create a list of the time periods and climate scenarios used in the analysis</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a><span class="co"># (starting with the year the model is trained on)</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a>time_periods &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">2010</span>,<span class="dv">2050</span>,<span class="dv">2070</span>)</span>
+<span id="cb12-4"><a href="#cb12-4"></a>scenarios &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;RCP4.5&quot;</span>, <span class="st">&quot;RCP8.5&quot;</span>)</span>
+<span id="cb12-5"><a href="#cb12-5"></a></span>
+<span id="cb12-6"><a href="#cb12-6"></a><span class="co"># Define the directory where the current study area rasters are located </span></span>
+<span id="cb12-7"><a href="#cb12-7"></a><span class="co">#    (generated from the TrainStudyEnv function or brought in from a separate location)</span></span>
+<span id="cb12-8"><a href="#cb12-8"></a>study_dir &lt;-<span class="st"> &quot;TestRun/studyarea&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9"></a></span>
+<span id="cb12-10"><a href="#cb12-10"></a><span class="co"># Define the directories where the future study area rasters are location </span></span>
+<span id="cb12-11"><a href="#cb12-11"></a><span class="co">#    (generated from the PredictEnv function or brought in from a separate location)</span></span>
+<span id="cb12-12"><a href="#cb12-12"></a></span>
+<span id="cb12-13"><a href="#cb12-13"></a></span>
+<span id="cb12-14"><a href="#cb12-14"></a><span class="co"># Define a list of directories for the projected climate layers, </span></span>
+<span id="cb12-15"><a href="#cb12-15"></a><span class="co"># separated into the different climate scenarios and years:</span></span>
+<span id="cb12-16"><a href="#cb12-16"></a><span class="co">#    list(c(Scenario1Year1, Scenario1Year2), </span></span>
+<span id="cb12-17"><a href="#cb12-17"></a><span class="co">#         c(Scenario2Year1, Scenario2Year2))</span></span>
+<span id="cb12-18"><a href="#cb12-18"></a></span>
+<span id="cb12-19"><a href="#cb12-19"></a>predictdir &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">c</span>(<span class="st">&quot;TestRun/RCP4.5/2050&quot;</span>,</span>
+<span id="cb12-20"><a href="#cb12-20"></a>                     <span class="st">&quot;TestRun/RCP4.5/2070&quot;</span>),</span>
+<span id="cb12-21"><a href="#cb12-21"></a>                   <span class="kw">c</span>(<span class="st">&quot;TestRun/RCP8.5/2050&quot;</span>,</span>
+<span id="cb12-22"><a href="#cb12-22"></a>                     <span class="st">&quot;TestRun/RCP8.5/2070&quot;</span>))</span>
+<span id="cb12-23"><a href="#cb12-23"></a></span>
+<span id="cb12-24"><a href="#cb12-24"></a><span class="co"># Define Where the results will be printed out</span></span>
+<span id="cb12-25"><a href="#cb12-25"></a>result_dir &lt;-<span class="st"> &quot;TestRun/Results&quot;</span></span>
+<span id="cb12-26"><a href="#cb12-26"></a></span>
+<span id="cb12-27"><a href="#cb12-27"></a><span class="co"># Other options are also available (check the documentation page)</span></span>
+<span id="cb12-28"><a href="#cb12-28"></a><span class="kw">MaxEntProj</span>(<span class="dt">input =</span> model_output,</span>
+<span id="cb12-29"><a href="#cb12-29"></a>           <span class="dt">time_periods =</span> time_periods,</span>
+<span id="cb12-30"><a href="#cb12-30"></a>           <span class="dt">scenarios =</span> scenarios,</span>
+<span id="cb12-31"><a href="#cb12-31"></a>           <span class="dt">study_dir =</span> study_dir,</span>
+<span id="cb12-32"><a href="#cb12-32"></a>           <span class="dt">predict_dirs =</span> predictdir,</span>
+<span id="cb12-33"><a href="#cb12-33"></a>           <span class="dt">output =</span> result_dir,</span>
+<span id="cb12-34"><a href="#cb12-34"></a>           <span class="dt">aucval =</span> <span class="fl">0.7</span>,</span>
+<span id="cb12-35"><a href="#cb12-35"></a>           <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="analysis" class="section level2">
+<h2>Analysis</h2>
+<div id="time-maps" class="section level3">
+<h3>Time Maps</h3>
+<p>The <code>createTimeMaps</code> function uses the binary maps at each time period to create “time maps”: These maps detail the step-wise expansions and contractions of the species distribution through those time-steps, allowing for the visualization of both unidirectional range shifts (e.g., a range expansion across all time-steps) and more complex dynamics (e.g., a range expansion from 2010-2050 followed by a range contraction from 2050-2070).</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="co"># The time maps will be written out to the directory supplied in &quot;result_dir&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>result_dir &lt;-<span class="st"> &quot;TestRun/Results&quot;</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a></span>
+<span id="cb13-4"><a href="#cb13-4"></a><span class="kw">createTimeMaps</span>(<span class="dt">result_dir =</span> result_dir,</span>
+<span id="cb13-5"><a href="#cb13-5"></a>               <span class="dt">time_periods =</span> time_periods,</span>
+<span id="cb13-6"><a href="#cb13-6"></a>               <span class="dt">scenarios =</span> scenarios,</span>
+<span id="cb13-7"><a href="#cb13-7"></a>               <span class="dt">dispersal =</span> <span class="ot">FALSE</span>,</span>
+<span id="cb13-8"><a href="#cb13-8"></a>               <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+<div id="additional-statistics" class="section level3">
+<h3>Additional Statistics</h3>
+<p>The <code>additionalStats</code> function generates statistics on species range sizes and changes through the multiple time steps and different scenarios. It also creates several graphs (written out to the directory provided by “result_dir”) to visualize these changes.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a><span class="kw">additionalStats</span>(<span class="dt">result_dir =</span> result_dir,</span>
+<span id="cb14-2"><a href="#cb14-2"></a>                <span class="dt">time_periods =</span> time_periods,</span>
+<span id="cb14-3"><a href="#cb14-3"></a>                <span class="dt">scenarios =</span> scenarios,</span>
+<span id="cb14-4"><a href="#cb14-4"></a>                <span class="dt">dispersal =</span> <span class="ot">FALSE</span>,</span>
+<span id="cb14-5"><a href="#cb14-5"></a>                <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="dispersal-rate" class="section level2">
+<h2>Dispersal Rate</h2>
+<p>Incorporating dispersal limitations into SDMs can help to more accurately predict where a species could live in the future. The <code>dispersalRate</code> function uses data on the average yearly dispersal rate of a species (given in km/year) to constrain the continuous habitat suitability maps and the presence/absence maps by the dispersal ability of each species.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a><span class="co"># Add in dispersal data (normally you would read a .csv file with two columns, but in this example </span></span>
+<span id="cb15-2"><a href="#cb15-2"></a><span class="co"># the data is just added in by hand here).</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a>dispersaldata &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Species =</span> spplist, <span class="dt">Rate =</span> <span class="kw">c</span>(<span class="fl">48.92</span>,</span>
+<span id="cb15-4"><a href="#cb15-4"></a>                                                        <span class="fl">1.21</span>,</span>
+<span id="cb15-5"><a href="#cb15-5"></a>                                                        <span class="fl">6.07</span>,</span>
+<span id="cb15-6"><a href="#cb15-6"></a>                                                        <span class="fl">3.37</span>,</span>
+<span id="cb15-7"><a href="#cb15-7"></a>                                                        <span class="fl">0.96</span>,</span>
+<span id="cb15-8"><a href="#cb15-8"></a>                                                        <span class="fl">3.27</span>))</span>
+<span id="cb15-9"><a href="#cb15-9"></a></span>
+<span id="cb15-10"><a href="#cb15-10"></a><span class="kw">dispersalRate</span>(<span class="dt">result_dir =</span> result_dir,</span>
+<span id="cb15-11"><a href="#cb15-11"></a>              <span class="dt">dispersaldata =</span> dispersaldata,</span>
+<span id="cb15-12"><a href="#cb15-12"></a>              <span class="dt">time_periods =</span> time_periods,</span>
+<span id="cb15-13"><a href="#cb15-13"></a>              <span class="dt">scenarios =</span> scenarios,</span>
+<span id="cb15-14"><a href="#cb15-14"></a>              <span class="dt">ncores =</span> <span class="dv">2</span>)</span>
+<span id="cb15-15"><a href="#cb15-15"></a></span>
+<span id="cb15-16"><a href="#cb15-16"></a><span class="co"># Repeat the time map and additional stats steps for the dispersal constrained data.</span></span>
+<span id="cb15-17"><a href="#cb15-17"></a><span class="co"># Set dispersal = TRUE this time.</span></span>
+<span id="cb15-18"><a href="#cb15-18"></a><span class="kw">createTimeMaps</span>(result_dir, </span>
+<span id="cb15-19"><a href="#cb15-19"></a>               time_periods, </span>
+<span id="cb15-20"><a href="#cb15-20"></a>               scenarios, </span>
+<span id="cb15-21"><a href="#cb15-21"></a>               <span class="dt">dispersal =</span> <span class="ot">TRUE</span>, </span>
+<span id="cb15-22"><a href="#cb15-22"></a>               <span class="dt">dispersaldata =</span> dispersaldata, </span>
+<span id="cb15-23"><a href="#cb15-23"></a>               <span class="dt">ncores =</span> <span class="dv">2</span>)</span>
+<span id="cb15-24"><a href="#cb15-24"></a></span>
+<span id="cb15-25"><a href="#cb15-25"></a><span class="co"># The additional stats function will compare the species ranges between the </span></span>
+<span id="cb15-26"><a href="#cb15-26"></a><span class="co"># dispersal-constrained and the regular data.</span></span>
+<span id="cb15-27"><a href="#cb15-27"></a><span class="kw">additionalStats</span>(result_dir, </span>
+<span id="cb15-28"><a href="#cb15-28"></a>                time_periods, </span>
+<span id="cb15-29"><a href="#cb15-29"></a>                scenarios, </span>
+<span id="cb15-30"><a href="#cb15-30"></a>                <span class="dt">dispersal =</span> <span class="ot">TRUE</span>, </span>
+<span id="cb15-31"><a href="#cb15-31"></a>                <span class="dt">dispersaldata =</span> dispersaldata, </span>
+<span id="cb15-32"><a href="#cb15-32"></a>                <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+</div>
+<div id="species-richness" class="section level2">
+<h2>Species Richness</h2>
+<p>The <code>createRichnessMaps</code> function stacks the binary distribution maps to create species richness maps for the set of species examined across all time periods and scenarios. In addition, it compares the species richness of the dispersal-constrained analysis to the regular analysis.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a><span class="kw">createRichnessMaps</span>(<span class="dt">result_dir =</span> result_dir,   <span class="co">#taken from previous steps</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a>                   <span class="dt">time_periods =</span> time_periods, <span class="co">#taken from previous steps</span></span>
+<span id="cb16-3"><a href="#cb16-3"></a>                   <span class="dt">scenarios =</span> scenarios, <span class="co">#taken from previous steps</span></span>
+<span id="cb16-4"><a href="#cb16-4"></a>                   <span class="dt">dispersal =</span> <span class="ot">TRUE</span>, </span>
+<span id="cb16-5"><a href="#cb16-5"></a>                   <span class="dt">taxonlist =</span> <span class="ot">FALSE</span>) </span>
+<span id="cb16-6"><a href="#cb16-6"></a><span class="co"># A list of the higher taxa of each species (e.g., family) can be provided (taxonlist) to create </span></span>
+<span id="cb16-7"><a href="#cb16-7"></a><span class="co"># separate richness maps for each higher taxon.</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

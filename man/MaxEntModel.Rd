@@ -62,8 +62,8 @@ environment relationships with. Options are one or more of \code{"linear", "quad
 If there are few occurrence points, hinge features are discouraged. Default is all feature classes.}
 
 \item{testsamples}{(optional) If cross-validation with a new set of occurrence points is required,
-this should be a list of .csv files corresponding to the occurrence points for each species.
-This will take presidence over the random test percentage given in \code{test_percent}.
+this should be a list of full file paths corresponding to the validation occurrence points for each
+species. This will take presidence over the random test percentage given in \code{test_percent}.
 NOTE: if using null AUC validation, testsamples must be given!}
 
 \item{regularization}{(numeric) regularization parameter (penalizes complex models). A higher

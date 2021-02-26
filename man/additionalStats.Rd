@@ -32,16 +32,16 @@ calculated for the dispersal-constrained distribution maps? If dispersal rate
 analysis are not needed, or if the \code{megaSDM::dispersalRate} function has yet
 to be run, this should be set to \code{FALSE} (the default).}
 
-\item{ncores}{the number of computer cores to parallelize the background point
-generation on. Default is 1; Using one fewer core than the computer has is usually
-optimal.}
-
-\item{disperaldata}{A dataframe or the full file path to a .csv file with two columns:
+\item{dispersaldata}{A dataframe or the full file path to a .csv file with two columns:
 \enumerate{
 \item Species.
 \item Dispersal Rate in km/yr.
 See the function \code{megaSDM::dispersalRate} for more details.
 }}
+
+\item{ncores}{the number of computer cores to parallelize the background point
+generation on. Default is 1; Using one fewer core than the computer has is usually
+optimal.}
 }
 \value{
 creates .pdf files of graphs showing changes in range size and distribution

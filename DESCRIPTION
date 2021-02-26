@@ -33,12 +33,12 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Imports: 
     dplyr (>= 1.0),
-    gtools (>= 3.8.2),
+    gtools (>= 3.8),
     methods (>= 4.0),
     parallel (>= 4.0),
     plotfunctions (>= 1.4),
     raster (>= 3.4),
-    rgbif (>= 3.5.2),
+    rgbif (>= 3.5),
     rgdal (>= 1.5),
     rgeos (>= 0.5),
     sampSurf (>= 0.7),
