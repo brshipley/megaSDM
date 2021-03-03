@@ -242,6 +242,10 @@ OccurrenceManagement <- function(occlist,
       SpeciesEnv <- raster::extract(envdata, SpeciesCoordsSP)
       SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv)
       SpeciesEnv <- na.omit(SpeciesEnv)
+      if (nrow(SpeciesEnv) == 0) {
+        stop("Environmental extraction failed: 
+             ensure that the points and the raster have overlapping extents")
+      }
     }
 
     if (envsample == "TRUE") {

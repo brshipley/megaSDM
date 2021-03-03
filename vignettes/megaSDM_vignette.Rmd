@@ -137,8 +137,15 @@ Occurrences <- OccurrenceCollection(spplist = spplist,
                                     output = occ_output,
                                     trainingarea = extent_occ)
 
+
+# NOTE: when running this using R Markdown, you may get "incomplete final line..." 
+#    warnings. However, they do not appear to affect the total number or identity
+#    of the occurrence points and when the code is run off of the console, the
+#    warnings do not appear.
+
 # Because one species was renamed, rename species list to reflect taxonomy changes
 spplist <- Occurrences$Scientific.Name
+
 ```
 
 ### Occurrence Management
