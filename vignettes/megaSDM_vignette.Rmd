@@ -297,8 +297,12 @@ predictdir <- list(c("TestRun/RCP4.5/2050",
                    c("TestRun/RCP8.5/2050",
                      "TestRun/RCP8.5/2070"))
 
-# Define Where the results will be printed out
-result_dir <- "TestRun/Results"
+# Define Where the results will be printed out.
+# For this example, We'll define a new folder within
+# the working directory that is specifically for the model
+# projecions and analysis.
+
+result_dir <- "Results"
 
 # Other options are also available (check the documentation page)
 MaxEntProj(input = model_output,
@@ -317,7 +321,7 @@ The `createTimeMaps` function uses the binary maps at each time period to create
 
 ```{r}
 # The time maps will be written out to the directory supplied in "result_dir"
-result_dir <- "TestRun/Results"
+result_dir <- "Results"
 
 createTimeMaps(result_dir = result_dir,
                time_periods = time_periods,

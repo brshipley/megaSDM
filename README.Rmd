@@ -61,4 +61,4 @@ sp (1.4.2)
 We have provided an example vignette (brshipley/megaSDM/megaSDM_vignette.html) using occurrence data from GBIF for 6 North American mammal species. Environmental data are from the WorldClim database (Hijmans et al. 2005; https://www.worldclim.org/), and data on dispersal rate (in km/year) were collected by HS. The html file (and acossiated R Markdown file within the package) displays the entire functionality of megaSDM in a cohesive workflow, from data collection to the analysis and presentation of results. 
 
 ## Installation
-In R, use `devtools::install_github("brshipley/megaSDM", build_vignettes = TRUE)` to install the package with the vignette (see above) included. To access the vignette itself, run `??megaSDM_vignette`, and the vignette will be loaded in the HTML viewer. 
+In R, use `devtools::install_github("brshipley/megaSDM", build_vignettes = TRUE)` to install the package with the vignette (see above) included. To access the vignette itself, run `??megaSDM_vignette`, and the vignette will be loaded in the HTML viewer.

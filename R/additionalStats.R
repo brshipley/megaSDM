@@ -45,7 +45,9 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
-
+  if (length(spp.list) == 0) {
+    stop(paste0("No projected models found in 'result_dir': Ensure that 'result_dir' provides a path to the proper location"))
+  }
   ListSpp <- c()
   #Generates the species list for parallelization
   if (dispersal == "TRUE") {
@@ -130,7 +132,6 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #graphical parameters and bar plot (for each climate scenario)
     old.par <- par(mfrow = c(2, ceiling((max(numScenario, 1) / 2))), las = 2, mar = c(8, 4, 4, 2))
-
     for (ScenIndex in 1:numScenario) {
       ticks <- signif(seq(from = 0, to = max(stats$NumberCells), length.out = 10), digits = 3)
       barplot(stats$NumberCells[c(1, (2 + ((ScenIndex - 1) * (numYear - 1))):((2 + ((ScenIndex - 1) * (numYear - 1))) + numYear - 2))],
@@ -146,7 +147,6 @@ additionalStats <- function(result_dir, time_periods, scenarios,
       axis(2, ticks, cex.axis = 0.6)
     }
     dev.off()
-    par(old.par)
   }
 
   #Creates a bar-graph of the change in cells (percent of original) from original
@@ -315,6 +315,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     if (dispersal == "TRUE") {
       DispersalCompare(spp.name, stats)
     }
+    graphics.off()
   }
 
   clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
@@ -329,7 +330,6 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
   for (i in 1:nrow(ListSpp)) {
     out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
-    gc()
   }
   parallel::stopCluster(clus)
 }

@@ -51,6 +51,9 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
+  if (length(spp.list) == 0) {
+    stop(paste0("No projected models found in 'result_dir': Ensure that 'result_dir' provides a path to the proper location"))
+  }
   spp.list <- data.frame(Species = spp.list)
   if (taxonlist == TRUE) {
     if (class(taxonlist) == "character") {

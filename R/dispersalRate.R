@@ -42,7 +42,9 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   spp.list <- spp.list[grep("_", spp.list)]
-
+  if (length(spp.list) == 0) {
+    stop(paste0("No projected models found in 'result_dir': Ensure that 'result_dir' provides a path to the proper location"))
+  }
   #Calculates number of scenarios, future time periods
   numScenario <- length(scenarios)
   numYear <- length(time_periods)
