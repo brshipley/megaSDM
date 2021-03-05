@@ -52,7 +52,7 @@ VariableEnv <- function(occlist, bglist, env_vars,
     ReqVar <- paste(paste0("^", ReqVarList, "$"), collapse = "|")
 
     #Subset the background files to only include the required environmental variables
-    BGFile <- read.csv(BackgroundFile)
+    BGFile <- utils::read.csv(BackgroundFile)
     BGFileCoords <- BGFile[, c("Species", "x", "y")]
     ReqVarCol <- grep(tolower(ReqVar), tolower(names(BGFile)))
     if (length(ReqVarCol) != length(ReqVarList)) {
@@ -61,10 +61,10 @@ VariableEnv <- function(occlist, bglist, env_vars,
     }
 
     BGFile_Final <- data.frame(BGFileCoords, BGFile[, ReqVarCol])
-    write.csv(BGFile_Final, paste0(bg_output, "/", SpeciesName, "_background.csv"), row.names = FALSE)
+    utils::write.csv(BGFile_Final, paste0(bg_output, "/", SpeciesName, "_background.csv"), row.names = FALSE)
 
     #Subset the occurrence files to only include the required environmental variables
-    OCFile <- read.csv(OccurrenceFile)
+    OCFile <- utils::read.csv(OccurrenceFile)
     OCFileCoords <- OCFile[, c("Species", "x", "y")]
     ReqVarCol <- grep(tolower(ReqVar), tolower(names(BGFile)))
     if (length(ReqVarCol) != length(ReqVarList)) {
@@ -73,7 +73,7 @@ VariableEnv <- function(occlist, bglist, env_vars,
     }
 
     OCFile_Final <- data.frame(OCFileCoords, OCFile[, ReqVarCol])
-    write.csv(OCFile_Final, paste0(occ_output, "/", SpeciesName, ".csv"), row.names = FALSE)
+    utils::write.csv(OCFile_Final, paste0(occ_output, "/", SpeciesName, ".csv"), row.names = FALSE)
 
   }
 }

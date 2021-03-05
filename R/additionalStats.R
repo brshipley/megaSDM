@@ -54,7 +54,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #Reads in dispersal data
     if (class(dispersaldata) == "character") {
-      dispersaldata <- read.csv(dispersaldata, stringsAsFactors = FALSE)
+      dispersaldata <- utils::read.csv(dispersaldata, stringsAsFactors = FALSE)
       dispersaldata[, 1] <- gsub("_", " ", dispersaldata[, 1])
     } else {
       dispersaldata[, 1] <- gsub("_", " ", dispersaldata[, 1])
@@ -86,9 +86,9 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   numScenario <- length(scenarios)
 
   #Graphical parameters for the barplots
-  colScenario <- colorRampPalette(c("blue", "darkred"))(max(numScenario, 1))  #COLOR SCHEME
-  colYear <- colorRampPalette(c("darkgreen", "brown"))(numYear)
-  col13 <- colorRampPalette(c("yellow", "darkgrey"))(max(numScenario, 1) * (numYear - 1) + 1)
+  colScenario <- grDevices::colorRampPalette(c("blue", "darkred"))(max(numScenario, 1))  #COLOR SCHEME
+  colYear <- grDevices::colorRampPalette(c("darkgreen", "brown"))(numYear)
+  col13 <- grDevices::colorRampPalette(c("yellow", "darkgrey"))(max(numScenario, 1) * (numYear - 1) + 1)
 
   #Functions----------------------------
 
@@ -97,17 +97,17 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells.pdf"))
     } else {
-      pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells.pdf"))
     }
 
     #Graphical parameters and barplot
-    par(mar = c(8, 4, 4, 2), mfrow = c(1, 1), las = 2)
+    graphics::par(mar = c(8, 4, 4, 2), mfrow = c(1, 1), las = 2)
     ticks <- signif(seq(from = 0, to = max(stats$NumberCells), length.out = 10), digits = 3)
-    par(yaxp = c(0, max(stats$NumberCells), 20))
+    graphics::par(yaxp = c(0, max(stats$NumberCells), 20))
 
-    barplot(stats$NumberCells,
+    graphics::barplot(stats$NumberCells,
             ylab = "Number of Cells",
             axes = FALSE,
             main = spp,
@@ -116,8 +116,8 @@ additionalStats <- function(result_dir, time_periods, scenarios,
             cex.names = 0.7,
             cex.lab = 0.7,
             beside = TRUE)
-    axis(2, ticks, cex.axis = 0.6)
-    dev.off()
+    graphics::axis(2, ticks, cex.axis = 0.6)
+    grDevices::dev.off()
   }
 
   #Creates multiple bar-graphs showing number of cells for each time period (one for each scenario)
@@ -125,16 +125,16 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells", numScenario, "Graphs.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells", numScenario, "Graphs.pdf"))
     } else {
-      pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells", numScenario, "Graphs.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells", numScenario, "Graphs.pdf"))
     }
 
     #graphical parameters and bar plot (for each climate scenario)
-    old.par <- par(mfrow = c(2, ceiling((max(numScenario, 1) / 2))), las = 2, mar = c(8, 4, 4, 2))
+    old.par <- graphics::par(mfrow = c(2, ceiling((max(numScenario, 1) / 2))), las = 2, mar = c(8, 4, 4, 2))
     for (ScenIndex in 1:numScenario) {
       ticks <- signif(seq(from = 0, to = max(stats$NumberCells), length.out = 10), digits = 3)
-      barplot(stats$NumberCells[c(1, (2 + ((ScenIndex - 1) * (numYear - 1))):((2 + ((ScenIndex - 1) * (numYear - 1))) + numYear - 2))],
+      graphics::barplot(stats$NumberCells[c(1, (2 + ((ScenIndex - 1) * (numYear - 1))):((2 + ((ScenIndex - 1) * (numYear - 1))) + numYear - 2))],
               ylab = "Number of Cells",
               axes = FALSE,
               main = paste0(spp, "_", scenarios[ScenIndex]),
@@ -144,9 +144,9 @@ additionalStats <- function(result_dir, time_periods, scenarios,
               cex.lab = 0.7,
               beside = TRUE,
               col = colYear)
-      axis(2, ticks, cex.axis = 0.6)
+      graphics::axis(2, ticks, cex.axis = 0.6)
     }
-    dev.off()
+    grDevices::dev.off()
   }
 
   #Creates a bar-graph of the change in cells (percent of original) from original
@@ -171,20 +171,20 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange.pdf"))
     } else {
-      pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/CellChange.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/CellChange.pdf"))
     }
 
     #barplot
-    CellChangePlot <- barplot(PercentChange[, 1],
+    CellChangePlot <- graphics::barplot(PercentChange[, 1],
                               ylab = paste0("Percent Change from ", time_periods[1]),
                               main = spp,
                               cex.names = 0.7,
                               cex.axis = 0.7,
                               cex.lab = 0.7,
                               col = col13)
-    dev.off()
+    grDevices::dev.off()
   }
 
   getMinMaxGraphs <- function(spp, stats, dispersalApplied) {
@@ -226,15 +226,15 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells.pdf"))
     } else {
-      pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/AvgNumberCells.pdf"))
+      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/AvgNumberCells.pdf"))
     }
 
     #graphical parameters and barplot
     ticks <- signif(seq(from = 0, to = max(numlist), length.out = 10), digits = 2)
 
-    avg <- barplot(numlist,
+    avg <- graphics::barplot(numlist,
                    axes = FALSE,
                    ylab = "Average # of Cells per Decade",
                    main = spp,
@@ -244,16 +244,16 @@ additionalStats <- function(result_dir, time_periods, scenarios,
                    cex.lab = 0.9,
                    beside=TRUE,
                    col=colYear)
-    axis(2, ticks, cex.axis = 0.6)
-    segments(x0 = avg, y0 = minlist, x1 = avg, y1 = maxlist)
-    dev.off()
+    graphics::axis(2, ticks, cex.axis = 0.6)
+    graphics::segments(x0 = avg, y0 = minlist, x1 = avg, y1 = maxlist)
+    grDevices::dev.off()
   }
 
   DispersalCompare <- function(spp, stats) {
     spp.name <- spp
 
     #Reads in the results data frame (not dispersal-constrained)
-    statsNoDisp <- read.csv(file.path(result_dir, spp.name, "Results.csv"))
+    statsNoDisp <- utils::read.csv(file.path(result_dir, spp.name, "Results.csv"))
     statsNoDisp <- statsNoDisp
     nstatsNoDisp <- nrow(statsNoDisp)
 
@@ -271,12 +271,12 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
       #Name the output pdf
       rownames(DispComp) <- c("No Dispersal", "Dispersal")
-      pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
+      grDevices::pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
                         paste0(scenarios[scen], "_DispersalCompare.pdf")))
 
       #graphical parameters and barplot
-      par(mfrow = c(1, 1), mar = c(5, 5, 4, 8))
-      barplot(DispComp,
+      graphics::par(mfrow = c(1, 1), mar = c(5, 5, 4, 8))
+      graphics::barplot(DispComp,
               main = c(spp, paste0("Dispersal Rate Constrained vs. Unconstrained: ", scenarios[scen])),
               ylab = "Number of Cells",
               names.arg = c(time_periods[2:length(time_periods)]),
@@ -284,7 +284,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
               legend = c("Unconstrained", "Constrained"),
               args.legend = list(x = "bottomright", bty = "n",inset = c(-0.35, 0)),
               beside = TRUE)
-      dev.off()
+      grDevices::dev.off()
     }
   }
 
@@ -293,12 +293,12 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     if (dispersal == "TRUE") {
       dir.create(file.path(result_dir, spp.name, "Dispersal Applied Additional Stats"))
-      stats <- read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
+      stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
       stats <- stats
       nstats <- nrow(stats)
     } else {
       dir.create(file.path(result_dir, spp.name, "Additional Stats"))
-      stats <- read.csv(file.path(result_dir, spp.name, "Results.csv"))
+      stats <- utils::read.csv(file.path(result_dir, spp.name, "Results.csv"))
       stats <- stats
       nstats <- nrow(stats)
     }
@@ -315,7 +315,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     if (dispersal == "TRUE") {
       DispersalCompare(spp.name, stats)
     }
-    graphics.off()
+    grDevices::graphics.off()
   }
 
   clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)

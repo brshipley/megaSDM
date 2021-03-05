@@ -88,7 +88,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       aucval <- rep(aucval, length(ListSpp))
     }
     for(i in 1:length(ListSpp)) {
-      results <- read.csv(paste0(input, "/", ListSpp[i], "/maxentResults.csv"))
+      results <- utils::read.csv(paste0(input, "/", ListSpp[i], "/maxentResults.csv"))
       auc <- results$Test.AUC
       aucAbove <- which(auc > aucval[i])
       if (length(aucAbove) > 0){
@@ -100,7 +100,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     ListSpp <- ListSpp[c(AUCRetain)]
   } else {
     ListSpp <- ListSpp
-    results <- read.csv(paste0(input, "/", ListSpp[1], "/maxentResults.csv"))
+    results <- utils::read.csv(paste0(input, "/", ListSpp[1], "/maxentResults.csv"))
   }
 
   nrep <- nrow(results) - 1
@@ -137,7 +137,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     curmodel <- file.path(input, path)
 
     #Reads in the results file for each of the runs
-    results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
+    results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
       #Reads the threshold value for that results file
       if (!is.na(as.numeric(ThreshMethod))) {
@@ -198,9 +198,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                     overwrite = TRUE,
                     format = "EHdr",
                     prj = TRUE)
-        pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
+        grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
-        dev.off()
+        grDevices::dev.off()
       } else {
         if (!dir.exists(file.path(output, path, Scenario))) {
           dir.create(file.path(output, path, Scenario))
@@ -211,9 +211,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                     overwrite = TRUE,
                     format = "EHdr",
                     prj = TRUE)
-        pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
+        grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
-        dev.off()
+        grDevices::dev.off()
       }
       return(ensemble.calc)
     } else {
@@ -230,7 +230,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     curmodel <- paste0(input, "/", path)
     ensemble.stack <- c()
     #Reads in the results file for each of the runs
-    results <- read.csv(paste0(curmodel, "/maxentResults.csv"))
+    results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
       if (!is.na(aucval)) {
         tryCatch({
@@ -253,7 +253,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       }
     }
     #Calculates the median of the stacked rasters
-    ensemble.calc <- raster::calc(ensemble.stack, median, na.rm = TRUE)
+    ensemble.calc <- raster::calc(ensemble.stack, stats::median, na.rm = TRUE)
     if (decade == currentYear) {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
@@ -261,9 +261,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                   overwrite = TRUE,
                   format = "EHdr",
                   prj = TRUE)
-      pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
+      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade))
-      dev.off()
+      grDevices::dev.off()
     } else {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
@@ -271,9 +271,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
                   overwrite = TRUE,
                   format = "EHdr",
                   prj = TRUE)
-      pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
+      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
-      dev.off()
+      grDevices::dev.off()
     }
     rm(ensemble.stack)
     gc()
@@ -458,7 +458,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         }
       }
       #Writes the stats table to be used later
-      write.csv(stats, file = file.path(output, spp.name, "Results.csv"))
+      utils::write.csv(stats, file = file.path(output, spp.name, "Results.csv"))
     } else {
       message(paste0("Removing ", spp.name, " from further analysis"))
     }

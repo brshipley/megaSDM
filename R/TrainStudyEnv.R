@@ -58,7 +58,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   }
 
 
-  if (hasArg(input_SA)) {
+  if (methods::hasArg(input_SA)) {
     #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
     if (class(input_SA) != "RasterStack") {
 
@@ -146,7 +146,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     print("Study area complete!")
   }
 
-  if (!hasArg(input_SA) & (class(clipStudy) == "logical")) {
+  if (!methods::hasArg(input_SA) & (class(clipStudy) == "logical")) {
     studystack <- envstack
   }
   envstack <- raster::trim(envstack)

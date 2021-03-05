@@ -48,7 +48,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
     #Reads in dispersal data
     if (class(dispersaldata) == "character") {
-      dispersaldata <- read.csv(dispersaldata, stringsAsFactors = FALSE)
+      dispersaldata <- utils::read.csv(dispersaldata, stringsAsFactors = FALSE)
       dispersaldata[, 1] <- gsub("_", " ", dispersaldata[, 1])
     } else {
       dispersaldata[, 1] <- gsub("_", " ", dispersaldata[, 1])
@@ -265,7 +265,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
               computedRaster <- allRasters[[col]]
             } else {
               computedRaster <- overlap(computedRaster, allRasters[[col]])
-              allRasterNames <- c(allRasterNames, filename(computedRaster))
+              allRasterNames <- c(allRasterNames, raster::filename(computedRaster))
             }
           }
         }
@@ -281,7 +281,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         for (k in 1:ncol(binary)) {
           if (binary[k] == 0) {
             computedRaster <- raster::mask(computedRaster, allRasters[[k]], inverse = FALSE, maskvalue = 1, updatevalue = 0)
-            allRasterNames <- c(allRasterNames, filename(computedRaster))
+            allRasterNames <- c(allRasterNames, raster::filename(computedRaster))
           }
         }
 
@@ -309,7 +309,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
           breakpoints <- c(breakpoints, as.numeric(name) - 0.1)
           consRasterNames <- c(consRasterNames, paste0("raster_", name))
           assign(paste0("raster_", name), setbinary(computedRaster, as.numeric(name)))
-          removeTempRasterFiles(filename(computedRaster))
+          removeTempRasterFiles(raster::filename(computedRaster))
           rm(computedRaster)
           gc()
         } else {
@@ -318,7 +318,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 2)))
             breakpoints <- c(breakpoints, largestNum * 2 - 0.1)
-            removeTempRasterFiles(filename(computedRaster))
+            removeTempRasterFiles(raster::filename(computedRaster))
             rm(computedRaster)
             gc()
             #If the first and last time periods are a "1", the species distribution contracted and then expanded ("wane-wax")
@@ -326,7 +326,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 4)))
             breakpoints <- c(breakpoints, largestNum * 4 - 0.1)
-            removeTempRasterFiles(filename(computedRaster))
+            removeTempRasterFiles(raster::filename(computedRaster))
             rm(computedRaster)
             gc()
             #If the first and last time periods are different and there is no consistent trend ("mixed")
@@ -334,7 +334,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 3)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 3)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 3)))
             breakpoints <- c(breakpoints, largestNum * 3 - 0.1)
-            removeTempRasterFiles(filename(computedRaster))
+            removeTempRasterFiles(raster::filename(computedRaster))
             rm(computedRaster)
             gc()
           }
@@ -375,14 +375,14 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       #Gets colors for the graph
       color <- c()
       color <- c(color, "lightgrey")
-      dbtolb <- colorRampPalette(c("darkblue", "dodgerblue"))(floor(length(consRasterNames) / 2))
-      redtoyellow <- colorRampPalette(c("red", "yellow"))(ceiling(length(consRasterNames) / 2))
+      dbtolb <- grDevices::colorRampPalette(c("darkblue", "dodgerblue"))(floor(length(consRasterNames) / 2))
+      redtoyellow <- grDevices::colorRampPalette(c("red", "yellow"))(ceiling(length(consRasterNames) / 2))
 
       #The amount of "mixed" depends on the number of time steps
       if (length(time_periods) == 3) {
-        pinktopurple <- colorRampPalette(c("magenta3", "pink"))(2)
+        pinktopurple <- grDevices::colorRampPalette(c("magenta3", "pink"))(2)
       } else {
-        pinktopurple <- colorRampPalette(c("magenta3", "pink"))(3)
+        pinktopurple <- grDevices::colorRampPalette(c("magenta3", "pink"))(3)
       }
       if (length(time_periods) == 2) {
         color <- c(color, dbtolb)
@@ -436,7 +436,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
       bin <- unique(bin)
       for(deleteIndex in 1:length(names(stackedRaster))) {
-        removeTempRasterFiles(filename(stackedRaster[[deleteIndex]]))
+        removeTempRasterFiles(raster::filename(stackedRaster[[deleteIndex]]))
       }
       rm(stackedRaster)
       rm(list = consRasterNames)
@@ -445,7 +445,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
       if (dispersal == TRUE) {
         #creates pdf of the Time Maps
-        pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
+        grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
         raster::plot(legend = FALSE,
              breaks = breakpoints,
              r,
@@ -453,11 +453,11 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
              xlab = "",
              ylab = "",
              main = paste0(CurSpp, " ", scenarios[i], " dispersalRate"))
-        legend("bottomright", legend = rev(bin), fill = rev(color), cex = 0.6)
-        dev.off()
+        graphics::legend("bottomright", legend = rev(bin), fill = rev(color), cex = 0.6)
+        grDevices::dev.off()
       } else {
         #creates pdf of the Time Maps
-        pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_TimeMap.pdf")))
+        grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_TimeMap.pdf")))
         raster::plot(legend = FALSE,
              breaks = breakpoints,
              r,
@@ -465,11 +465,11 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
              xlab = "",
              ylab = "",
              main = paste0(CurSpp, " ", scenarios[i]))
-        legend("bottomright", legend = rev(bin), fill = rev(color), cex = 0.6)
-        dev.off()
+        graphics::legend("bottomright", legend = rev(bin), fill = rev(color), cex = 0.6)
+        grDevices::dev.off()
       }
 
-      removeTempRasterFiles(filename(r))
+      removeTempRasterFiles(raster::filename(r))
       rm(r)
       gc()
     }

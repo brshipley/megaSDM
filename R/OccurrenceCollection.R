@@ -147,8 +147,8 @@ OccurrenceCollection <- function(spplist,
 
   #Iterates through all taxa
   speciterate <- function(start, finish) {
+    p <- c()
     for(i in start:finish) {
-      p <<- i
       #Gets taxon name
       s <- as.character(OurSpp$Scientific.Name[i])
       SpecSplit <- unlist(strsplit(s, " "))
@@ -268,7 +268,7 @@ OccurrenceCollection <- function(spplist,
         #Records details about species as found by GBIF
         sppkeys <- OurSpp$Keys[i]
         specurl <- paste("http://api.gbif.org/v1/species/", trimws(sppkeys[1]), sep="")
-        URLRead <- colnames(read.csv(specurl))
+        URLRead <- colnames(utils::read.csv(specurl))
         gbifapidata <- gsub("\\.", "_", URLRead)
         OurSpp$Species[i] <- paste(as.character(substr(gbifapidata[grep("^species_", gbifapidata)], 9, nchar(gbifapidata[grep("^species_", gbifapidata)]))))
 
@@ -284,7 +284,7 @@ OccurrenceCollection <- function(spplist,
 
 
         #Uses species name from our spplist file as occurrence file name for the csv
-        write.csv(Occ, file = file.path(output, paste0(gsub(" ", "_", s), ".csv")), row.names = FALSE)
+        utils::write.csv(Occ, file = file.path(output, paste0(gsub(" ", "_", s), ".csv")), row.names = FALSE)
         print(paste0("   Finishing species: ", Sys.time()))
       } else {
         print(paste0("   Species failed, no search data found: ", s))
@@ -294,14 +294,16 @@ OccurrenceCollection <- function(spplist,
       FailedSpecies <<- FailedSpecies
       rm(Occ)
       gc()
+      p <- i
     }
+    return(p)
   }
 
   #It is looped to avoid timeout or temporary internet connectivity issues
-  speciterate(1, nspp)
-  if (exists("p")) {
-    while (p < nspp) {
-      speciterate(p, nspp)
+  TestNum <- speciterate(1, nspp)
+  if (TestNum < nspp) {
+    while (TestNum < nspp) {
+      TestNum <- speciterate(TestNum, nspp)
     }
   }
 
@@ -312,7 +314,7 @@ OccurrenceCollection <- function(spplist,
   #Write "FailedSpecies" csv
   if (length(FailedSpecies) > 0) {
     message(paste0("Species Generated in Failed Species List: Check ", paste0(output, "/", "FailedSpecies.csv"), " for failed species"))
-    write.csv(FailedSpecies, paste0(output, "/", "FailedSpecies.csv"), row.names = FALSE)
+    utils::write.csv(FailedSpecies, paste0(output, "/", "FailedSpecies.csv"), row.names = FALSE)
   }
   OurSpp$OrigOccurrences <- as.numeric(OurSpp$OrigOccurrences)
   OurSpp$Occurrences <- as.numeric(OurSpp$Occurrences)
@@ -322,6 +324,6 @@ OccurrenceCollection <- function(spplist,
     dir.create(paste0(output, "/SpeciesCounts"))
   }
 
-  write.csv(OurSpp, paste0(output, "/SpeciesCounts/SpeciesCounts.csv"), row.names = FALSE)
+  utils::write.csv(OurSpp, paste0(output, "/SpeciesCounts/SpeciesCounts.csv"), row.names = FALSE)
   return(OurSpp)
 }

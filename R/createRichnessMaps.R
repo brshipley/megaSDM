@@ -57,7 +57,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
   spp.list <- data.frame(Species = spp.list)
   if (taxonlist == TRUE) {
     if (class(taxonlist) == "character") {
-      taxonlist <- read.csv(taxonlist, stringsAsFactors = FALSE)
+      taxonlist <- utils::read.csv(taxonlist, stringsAsFactors = FALSE)
       taxonlist[, 1] <- gsub("_", " ", taxonlist[, 1])
     } else {
       taxonlist[, 1] <- gsub("_", " ", taxonlist[, 1])
@@ -165,18 +165,18 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     #Sets graphical parameters for dispersal-difference PDFs
     DiffVec <- raster::unique(DifferenceSR, na.last = NA)
     if (min(DiffVec) < 0 & max(DiffVec) > 0) {
-      color <- colorRampPalette(c("red", "grey91", "blue"))(length(DiffVec))
+      color <- grDevices::colorRampPalette(c("red", "grey91", "blue"))(length(DiffVec))
     } else if (min(DiffVec) < 0 & max(DiffVec) <= 0) {
-      color <- colorRampPalette(c("red", "gold1", "grey91"))(length(DiffVec))
+      color <- grDevices::colorRampPalette(c("red", "gold1", "grey91"))(length(DiffVec))
     } else {
-      color <- colorRampPalette(c("grey91", "deepskyblue", "blue"))(length(DiffVec))
+      color <- grDevices::colorRampPalette(c("grey91", "deepskyblue", "blue"))(length(DiffVec))
     }
 
     #Creates dispersal-difference PDFs
-    pdf(file = file.path(result_dir, "RichnessMaps", paste0(taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalDifference.pdf")))
+    grDevices::pdf(file = file.path(result_dir, "RichnessMaps", paste0(taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalDifference.pdf")))
     raster::plot(DifferenceSR, col = color, xlab = "", ylab = "", legend = FALSE, main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
     plotfunctions::gradientLegend(c(min(DiffVec):max(DiffVec)), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
-    dev.off()
+    grDevices::dev.off()
   }
 
   MakePDFMaps <- function(taxon) {
@@ -200,13 +200,13 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
       #Gets color scheme for legend
       breakpoints <- seq(from = 0, to = MaximumRich, length = MaximumRich)
-      color <- c("lightgrey", colorRampPalette(c("springgreen", "dodgerblue", "darkblue"))(length(breakpoints)))
+      color <- c("lightgrey", grDevices::colorRampPalette(c("springgreen", "dodgerblue", "darkblue"))(length(breakpoints)))
 
       #Creates pdf of the species richness raster
-      pdf(file = file.path(paste0(substr(FocusRasters[e], 1, (nchar(FocusRasters[e]) - 4)), ".pdf")))
+      grDevices::pdf(file = file.path(paste0(substr(FocusRasters[e], 1, (nchar(FocusRasters[e]) - 4)), ".pdf")))
       raster::plot(legend = FALSE, Raster1, col = color[1:(MaxRaster1 + 1)], xlab = "", ylab = "", main = names(FocusStack[[e]]))
       plotfunctions::gradientLegend(c(0:MaximumRich), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
-      dev.off()
+      grDevices::dev.off()
     }
     rm(FocusStack)
     gc()

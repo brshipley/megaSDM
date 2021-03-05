@@ -72,24 +72,24 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       if (!is.na(bufflist)) {
         BufferFile <- raster::shapefile(bufflist[s])
       }
-      NOcc <- nrow(read.csv(OccurrenceFile))
+      NOcc <- nrow(utils::read.csv(OccurrenceFile))
       for (i in 1:replicates) {
         if(!is.na(bufflist)) {
           RandomSP <- sp::spsample(BufferFile, NOcc, type = "random")
           RandomOcc <- raster::extract(raster::stack(envdata), RandomSP)
           RandomOcc <- data.frame(RandomSP@coords, RandomOcc)
-          RandomOcc <- data.frame(RandomOcc[complete.cases(RandomOcc),])
+          RandomOcc <- data.frame(RandomOcc[stats::complete.cases(RandomOcc),])
         } else {
           RandomOcc <- raster::sampleRandom(raster::stack(envdata), size = NOcc, na.rm = TRUE, xy = TRUE)
         }
         RandomOcc <- data.frame(Species = rep(spp.name, nrow(RandomOcc)), RandomOcc)
-        BGFile <- read.csv(BackgroundFile)
+        BGFile <- utils::read.csv(BackgroundFile)
         BCol <- c()
         for (b in 1:ncol(BGFile)) {
           BCol <- c(BCol, grep(paste0("^", names(BGFile)[b], "$"), names(RandomOcc)))
         }
         RandomOcc <- RandomOcc[, c(BCol)]
-        write.csv(RandomOcc, file.path(model_output, spp.name, "NullModels", "RandomOcc.csv"),
+        utils::write.csv(RandomOcc, file.path(model_output, spp.name, "NullModels", "RandomOcc.csv"),
                   row.names = FALSE)
         model.out <- tryCatch({
           #can turn off a lot of output writing for the final experiment
@@ -111,10 +111,10 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
         if (!is.null(failed_runs)) {
           message(failed_runs)
         }
-        MaxEntResults <- read.csv(file.path(model_output, spp.name, "NullModels/maxentResults.csv"))
+        MaxEntResults <- utils::read.csv(file.path(model_output, spp.name, "NullModels/maxentResults.csv"))
         NullAUCVals <- c(NullAUCVals, MaxEntResults$Test.AUC[1])
       }
-      write.csv(NullAUCVals, file.path(model_output, spp.name, "NullModel_AUC.csv"), row.names = FALSE)
+      utils::write.csv(NullAUCVals, file.path(model_output, spp.name, "NullModel_AUC.csv"), row.names = FALSE)
       file.remove(model_output, "/", spp.name, "/NullModels")
     }
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)

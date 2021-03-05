@@ -51,7 +51,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
   #Reads in dispersal data
   if (class(dispersaldata) == "character") {
-    dispersal <- read.csv(dispersaldata, stringsAsFactors = FALSE)
+    dispersal <- utils::read.csv(dispersaldata, stringsAsFactors = FALSE)
     dispersal[, 1] <- gsub("_", " ", dispersal[, 1])
   } else {
     dispersal <- dispersaldata
@@ -130,7 +130,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
     #When exponential distributions are added, they convolute to a gamma distribution
     GammaProbFun <- function(x) {
-      1 - pgamma(x, shape = Elapsed, rate = Lambda)
+      1 - stats::pgamma(x, shape = Elapsed, rate = Lambda)
     }
 
     #Relates distance raster to dispersal probability
@@ -294,15 +294,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           for (d in 1:length(DispersalRasters)) {
             if (grepl("binary", DispersalRasters[d])) {
               title <- DispersalNames[d]
-              pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
+              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
               raster::plot(raster::raster(DispersalRasters[d], native = TRUE), legend = FALSE, main = title)
-              legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
-              dev.off()
+              graphics::legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
+              grDevices::dev.off()
             } else {
               title <- DispersalNames[d]
-              pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
+              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
               raster::plot(raster::raster(DispersalRasters[d], native = TRUE), main = title)
-              dev.off()
+              grDevices::dev.off()
             }
           }
         }
@@ -312,7 +312,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
                        T2notT1, Overlap, CentroidX, CentroidY)
 
         stats <- as.data.frame(stats)
-        write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
+        utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
         rm(CurrentBinary)
         gc()
       } else {

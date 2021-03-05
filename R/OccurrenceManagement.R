@@ -94,9 +94,9 @@ OccurrenceManagement <- function(occlist,
       EnvOccur <- raster::extract(env, occurrences)
       EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
       ClimOccur <- EnvOccur
-      ClimOccur <- ClimOccur[complete.cases(ClimOccur), ]
+      ClimOccur <- ClimOccur[stats::complete.cases(ClimOccur), ]
       if (PCA == "Y") {
-        PCAEnv <- prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
+        PCAEnv <- stats::prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
         PCAImp <- summary(PCAEnv)$importance
         #Determine the number of PC axes to use for subsampling
         if (is.numeric(PCAxes)) {
@@ -182,7 +182,7 @@ OccurrenceManagement <- function(occlist,
 
   for (s in 1:length(occlist)) {
     #Reads the occurrence file
-    SpeciesOcc <- read.csv(occlist[s])
+    SpeciesOcc <- utils::read.csv(occlist[s])
 
     #Determines the species name from the name of the occurrence file
     SpeciesSplit <- unlist(strsplit(occlist[s], "/", fixed = TRUE))
@@ -241,7 +241,7 @@ OccurrenceManagement <- function(occlist,
     } else {
       SpeciesEnv <- raster::extract(envdata, SpeciesCoordsSP)
       SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv)
-      SpeciesEnv <- na.omit(SpeciesEnv)
+      SpeciesEnv <- stats::na.omit(SpeciesEnv)
       if (nrow(SpeciesEnv) == 0) {
         stop("Environmental extraction failed: 
              ensure that the points and the raster have overlapping extents")
@@ -257,6 +257,6 @@ OccurrenceManagement <- function(occlist,
       SpeciesFinal$Species <- gsub(" ", "_", SpeciesFinal$Species)
     }
 
-    write.csv(SpeciesFinal, paste0(output, "/", SpeciesName, ".csv"), row.names = FALSE)
+    utils::write.csv(SpeciesFinal, paste0(output, "/", SpeciesName, ".csv"), row.names = FALSE)
   }
 }

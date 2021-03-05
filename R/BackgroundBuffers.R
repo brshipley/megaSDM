@@ -81,7 +81,7 @@ BackgroundBuffers <- function(occlist,
 
   run <- function(CurSpp) {
     species <- occlist[grep(paste0(CurSpp, ".csv"), occlist)]
-    species <- read.csv(species)
+    species <- utils::read.csv(species)
 
     #Converts species occurrence points into SpatialPoints with desiredCRS
     coordinates <- species[, c("x", "y")]
@@ -99,7 +99,7 @@ BackgroundBuffers <- function(occlist,
 
     SampleLocations <- Locations[sample(c(1:nrow(Locations)), size = BufferPointNumber, replace = FALSE), ]
 
-    if (!hasArg(buff_distance)) {
+    if (!methods::hasArg(buff_distance)) {
       #Uses the 95% quantile of the minimum distance between each point
       Distance <- raster::pointDistance(SampleLocations, lonlat = FALSE)
       mindist <- c()
@@ -107,7 +107,7 @@ BackgroundBuffers <- function(occlist,
         DistanceZero <- Distance[which(Distance[, q] > 0), q]
         mindist <- c(mindist, min(DistanceZero))
       }
-      BufferWidth <- 2 * quantile(mindist, 0.95)
+      BufferWidth <- 2 * stats::quantile(mindist, 0.95)
       rm(Distance, mindist)
       gc()
     } else {
@@ -141,7 +141,7 @@ BackgroundBuffers <- function(occlist,
     #Fill out background point stats table with information on the Buffer Width (m)
     BGPStats <- BufferWidth
     dir.create(file.path(output, CurSpp))
-    write.csv(BGPStats, file = file.path(output, CurSpp, "BackgroundPoints_stats.csv"))
+    utils::write.csv(BGPStats, file = file.path(output, CurSpp, "BackgroundPoints_stats.csv"))
   }
 
 

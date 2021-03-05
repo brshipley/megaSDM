@@ -72,7 +72,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
               to = file.path(model_output, "maxent.jar"))
   }
   
-  if (!hasArg(features)) {
+  if (!methods::hasArg(features)) {
     linear <- "true"
     quadratic <- "true"
     product <- "true"

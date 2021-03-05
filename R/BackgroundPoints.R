@@ -52,7 +52,7 @@ BackgroundPoints <- function(spplist, envdata, output,
 
   #Ensures that buffers are provided if spatial_weights are greater than 0
   if (spatial_weights > 0) {
-    if (!hasArg(buffers)) {
+    if (!methods::hasArg(buffers)) {
       stop("Spatially-constrained background points wanted, but no buffers given")
     } else if (length(buffers) != length(spplist)) {
       stop("The number of buffers does not match the number of species")
@@ -110,9 +110,9 @@ BackgroundPoints <- function(spplist, envdata, output,
       EnvOccur <- raster::extract(env, occurrences)
       EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
       ClimOccur <- EnvOccur
-      ClimOccur <- ClimOccur[complete.cases(ClimOccur), ]
+      ClimOccur <- ClimOccur[stats::complete.cases(ClimOccur), ]
       if (PCA == "Y") {
-        PCAEnv <- prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
+        PCAEnv <- stats::prcomp(ClimOccur[, 3:ncol(ClimOccur)], scale = TRUE)
         PCAImp <- summary(PCAEnv)$importance
         #Determine the number of PC axes to use for subsampling
         if (is.numeric(PCAxes)) {
@@ -297,7 +297,7 @@ BackgroundPoints <- function(spplist, envdata, output,
 
         }
 
-        FullPointsEnv <- FullPointsEnv[complete.cases(FullPointsEnv), ]
+        FullPointsEnv <- FullPointsEnv[stats::complete.cases(FullPointsEnv), ]
 
       } else if (method == "random") {
         FullPointsEnv <- raster::sampleRandom(envstack, nbgFull, na.rm = TRUE, xy = TRUE)
@@ -306,9 +306,9 @@ BackgroundPoints <- function(spplist, envdata, output,
       if (spatial_weights == 0) {
         background <- data.frame("Species" = rep(spplist[s], nrow(FullPointsEnv)), FullPointsEnv)
 
-        write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
+        utils::write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
         if (method == "Varela") {
-          write.csv(data.frame("Species" = spplist[s],
+          utils::write.csv(data.frame("Species" = spplist[s],
                                "FullTrainPoints" = nrow(background),
                                "BuffPoints" = 0,
                                "FullPoints" = nrow(background)),
@@ -407,7 +407,7 @@ BackgroundPoints <- function(spplist, envdata, output,
 
       }
 
-      BuffPointsEnv <- BuffPointsEnv2[complete.cases(BuffPointsEnv2), ]
+      BuffPointsEnv <- BuffPointsEnv2[stats::complete.cases(BuffPointsEnv2), ]
 
     } else if (method == "random") {
       BuffPoints <- sp::spsample(bufferSHP, nbgBuff * 10, "random", iter = 15)
@@ -415,7 +415,7 @@ BackgroundPoints <- function(spplist, envdata, output,
 
       BuffPointsEnv <- raster::extract(envstack, BuffPointsCoords)
       BuffPointsEnv <- cbind(BuffPointsCoords, BuffPointsEnv)
-      BuffPointsEnv <- na.omit(BuffPointsEnv)
+      BuffPointsEnv <- stats::na.omit(BuffPointsEnv)
       BuffPointsEnv <- BuffPointsEnv[sample(c(1:nrow(BuffPointsEnv)), nbgBuff, replace = FALSE), ]
     }
 
@@ -423,14 +423,14 @@ BackgroundPoints <- function(spplist, envdata, output,
     background <- data.frame("Species" = rep(spplist[s], nrow(background)), background)
 
     if (method == "Varela") {
-      write.csv(data.frame("Species" = spplist[s],
+      utils::write.csv(data.frame("Species" = spplist[s],
                            "FullTrainPoints" = nrow(FullPointsEnv),
                            "BuffPoints" = nrow(BuffPointsEnv),
                            "FullPoints" = nrow(background)),
                 paste0(StatsLoc, "/", gsub(" ", "_", spplist[s]), "_stats.csv"), row.names = FALSE)
     }
 
-    write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
+    utils::write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
 
   }
 
