@@ -25,6 +25,8 @@ The modelling portion of megaSDM relies on the MaxEnt algorithm, using the "maxe
 
 Once downloaded, double-click the "maxent.jar" file: If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running the modelling functions that megaSDM provies (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
 
+If you are having trouble downloading the package or running this vignette, please first check https://github.com/brshipley/megaSDM/README.Md to make sure that you have the package dependencies up-to-date.
+
 Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out.
 
 ```{r}

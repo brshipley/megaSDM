@@ -307,10 +307,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to _____________ and the documentation of each function.</p>
 <div id="setup" class="section level2">
 <h2>Setup</h2>
-<p>The modelling portion of megaSDM relies on the MaxEnt algorithm, so the “maxent.jar” file must be downloaded before modelling can occur. The “maxent.jar” file can be found at <a href="https://github.com/mrmaxent/Maxent" class="uri">https://github.com/mrmaxent/Maxent</a> or along with this package at <a href="https://github.com/brshipley/megaSDM" class="uri">https://github.com/brshipley/megaSDM</a>.</p>
-<p>If this is your first time running MaxEnt, double-click the “maxent.jar” file to ensure that it can open. If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running megaSDM (<a href="https://www.oracle.com/java/technologies/javase-jre8-downloads.html" class="uri">https://www.oracle.com/java/technologies/javase-jre8-downloads.html</a>).</p>
-<p>Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out, and <em>place the maxent.jar file in it</em>:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>WD &lt;-<span class="st"> &quot;C:/Users/bshipley6/Desktop/EXAMPLE&quot;</span> </span>
+<p><em>First Time Users:</em> The modelling portion of megaSDM relies on the MaxEnt algorithm, using the “maxent.jar” executable file. This file is installed along with the megaSDM package, but if this is your first time running MaxEnt or megaSDM, you may want to download the “maxent.jar” file separately to ensure that it can open. The “maxent.jar” file can be found at <a href="https://github.com/mrmaxent/Maxent" class="uri">https://github.com/mrmaxent/Maxent</a> or along with this package at <a href="https://github.com/brshipley/megaSDM/inst/extdata/" class="uri">https://github.com/brshipley/megaSDM/inst/extdata/</a>.</p>
+<p>Once downloaded, double-click the “maxent.jar” file: If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running the modelling functions that megaSDM provies (<a href="https://www.oracle.com/java/technologies/javase-jre8-downloads.html" class="uri">https://www.oracle.com/java/technologies/javase-jre8-downloads.html</a>).</p>
+<p>If you are having trouble downloading the package or running this vignette, please first check <a href="https://github.com/brshipley/megaSDM/README.Md" class="uri">https://github.com/brshipley/megaSDM/README.Md</a> to make sure that you have the package dependencies up-to-date.</p>
+<p>Finally, set your working directory to a location where you want all of outputs megaSDM provides to be written out.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>WD &lt;-<span class="st"> &quot;F:/EXAMPLE&quot;</span> </span>
 <span id="cb1-2"><a href="#cb1-2"></a><span class="co">#CHANGE TO OWN WORKING DIRECTORY</span></span>
 <span id="cb1-3"><a href="#cb1-3"></a><span class="kw">setwd</span>(WD)</span></code></pre></div>
 </div>
@@ -399,8 +400,14 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb6-20"><a href="#cb6-20"></a>                                    <span class="dt">output =</span> occ_output,</span>
 <span id="cb6-21"><a href="#cb6-21"></a>                                    <span class="dt">trainingarea =</span> extent_occ)</span>
 <span id="cb6-22"><a href="#cb6-22"></a></span>
-<span id="cb6-23"><a href="#cb6-23"></a><span class="co"># Because one species was renamed, rename species list to reflect taxonomy changes</span></span>
-<span id="cb6-24"><a href="#cb6-24"></a>spplist &lt;-<span class="st"> </span>Occurrences<span class="op">$</span>Scientific.Name</span></code></pre></div>
+<span id="cb6-23"><a href="#cb6-23"></a></span>
+<span id="cb6-24"><a href="#cb6-24"></a><span class="co"># </span><span class="al">NOTE</span><span class="co">: when running this using R Markdown, you may get &quot;incomplete final line...&quot; </span></span>
+<span id="cb6-25"><a href="#cb6-25"></a><span class="co">#    warnings. However, they do not appear to affect the total number or identity</span></span>
+<span id="cb6-26"><a href="#cb6-26"></a><span class="co">#    of the occurrence points and when the code is run off of the console, the</span></span>
+<span id="cb6-27"><a href="#cb6-27"></a><span class="co">#    warnings do not appear.</span></span>
+<span id="cb6-28"><a href="#cb6-28"></a></span>
+<span id="cb6-29"><a href="#cb6-29"></a><span class="co"># Because one species was renamed, rename species list to reflect taxonomy changes</span></span>
+<span id="cb6-30"><a href="#cb6-30"></a>spplist &lt;-<span class="st"> </span>Occurrences<span class="op">$</span>Scientific.Name</span></code></pre></div>
 </div>
 <div id="occurrence-management" class="section level3">
 <h3>Occurrence Management</h3>
@@ -539,18 +546,22 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb12-21"><a href="#cb12-21"></a>                   <span class="kw">c</span>(<span class="st">&quot;TestRun/RCP8.5/2050&quot;</span>,</span>
 <span id="cb12-22"><a href="#cb12-22"></a>                     <span class="st">&quot;TestRun/RCP8.5/2070&quot;</span>))</span>
 <span id="cb12-23"><a href="#cb12-23"></a></span>
-<span id="cb12-24"><a href="#cb12-24"></a><span class="co"># Define Where the results will be printed out</span></span>
-<span id="cb12-25"><a href="#cb12-25"></a>result_dir &lt;-<span class="st"> &quot;TestRun/Results&quot;</span></span>
-<span id="cb12-26"><a href="#cb12-26"></a></span>
-<span id="cb12-27"><a href="#cb12-27"></a><span class="co"># Other options are also available (check the documentation page)</span></span>
-<span id="cb12-28"><a href="#cb12-28"></a><span class="kw">MaxEntProj</span>(<span class="dt">input =</span> model_output,</span>
-<span id="cb12-29"><a href="#cb12-29"></a>           <span class="dt">time_periods =</span> time_periods,</span>
-<span id="cb12-30"><a href="#cb12-30"></a>           <span class="dt">scenarios =</span> scenarios,</span>
-<span id="cb12-31"><a href="#cb12-31"></a>           <span class="dt">study_dir =</span> study_dir,</span>
-<span id="cb12-32"><a href="#cb12-32"></a>           <span class="dt">predict_dirs =</span> predictdir,</span>
-<span id="cb12-33"><a href="#cb12-33"></a>           <span class="dt">output =</span> result_dir,</span>
-<span id="cb12-34"><a href="#cb12-34"></a>           <span class="dt">aucval =</span> <span class="fl">0.7</span>,</span>
-<span id="cb12-35"><a href="#cb12-35"></a>           <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
+<span id="cb12-24"><a href="#cb12-24"></a><span class="co"># Define Where the results will be printed out.</span></span>
+<span id="cb12-25"><a href="#cb12-25"></a><span class="co"># For this example, We&#39;ll define a new folder within</span></span>
+<span id="cb12-26"><a href="#cb12-26"></a><span class="co"># the working directory that is specifically for the model</span></span>
+<span id="cb12-27"><a href="#cb12-27"></a><span class="co"># projecions and analysis.</span></span>
+<span id="cb12-28"><a href="#cb12-28"></a></span>
+<span id="cb12-29"><a href="#cb12-29"></a>result_dir &lt;-<span class="st"> &quot;Results&quot;</span></span>
+<span id="cb12-30"><a href="#cb12-30"></a></span>
+<span id="cb12-31"><a href="#cb12-31"></a><span class="co"># Other options are also available (check the documentation page)</span></span>
+<span id="cb12-32"><a href="#cb12-32"></a><span class="kw">MaxEntProj</span>(<span class="dt">input =</span> model_output,</span>
+<span id="cb12-33"><a href="#cb12-33"></a>           <span class="dt">time_periods =</span> time_periods,</span>
+<span id="cb12-34"><a href="#cb12-34"></a>           <span class="dt">scenarios =</span> scenarios,</span>
+<span id="cb12-35"><a href="#cb12-35"></a>           <span class="dt">study_dir =</span> study_dir,</span>
+<span id="cb12-36"><a href="#cb12-36"></a>           <span class="dt">predict_dirs =</span> predictdir,</span>
+<span id="cb12-37"><a href="#cb12-37"></a>           <span class="dt">output =</span> result_dir,</span>
+<span id="cb12-38"><a href="#cb12-38"></a>           <span class="dt">aucval =</span> <span class="fl">0.7</span>,</span>
+<span id="cb12-39"><a href="#cb12-39"></a>           <span class="dt">ncores =</span> <span class="dv">2</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="analysis" class="section level2">
@@ -559,7 +570,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h3>Time Maps</h3>
 <p>The <code>createTimeMaps</code> function uses the binary maps at each time period to create “time maps”: These maps detail the step-wise expansions and contractions of the species distribution through those time-steps, allowing for the visualization of both unidirectional range shifts (e.g., a range expansion across all time-steps) and more complex dynamics (e.g., a range expansion from 2010-2050 followed by a range contraction from 2050-2070).</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="co"># The time maps will be written out to the directory supplied in &quot;result_dir&quot;</span></span>
-<span id="cb13-2"><a href="#cb13-2"></a>result_dir &lt;-<span class="st"> &quot;TestRun/Results&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>result_dir &lt;-<span class="st"> &quot;Results&quot;</span></span>
 <span id="cb13-3"><a href="#cb13-3"></a></span>
 <span id="cb13-4"><a href="#cb13-4"></a><span class="kw">createTimeMaps</span>(<span class="dt">result_dir =</span> result_dir,</span>
 <span id="cb13-5"><a href="#cb13-5"></a>               <span class="dt">time_periods =</span> time_periods,</span>
