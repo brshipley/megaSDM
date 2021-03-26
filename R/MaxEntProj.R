@@ -103,8 +103,12 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     results <- utils::read.csv(paste0(input, "/", ListSpp[1], "/maxentResults.csv"))
   }
 
-  nrep <- nrow(results) - 1
-
+  if (nrow(results) > 1) {
+    nrep <- nrow(results) - 1
+  } else {
+    nrep <- 1
+  }
+  
   if (length(ListSpp) == 0) {
     stop(paste0("No species have AUC values higher than ", aucval))
   }
@@ -130,7 +134,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   #Functions----------------------------
   #Creates binary rasters out of ensembled MaxEnt outputs
   threshold <- function(path, rasters, replicates, Scenario, time) {
-    rasters <- matrix(rasters, nrow = nrep)
+    rasters <- matrix(rasters, nrow = replicates)
     rasterNames <-  c()
 
     ensemble.stack <- c()
