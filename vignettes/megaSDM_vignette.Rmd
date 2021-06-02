@@ -46,7 +46,7 @@ Species distribution models use a training area and a study area. The training a
 
 The first function `TrainStudyEnv` creates and manages the environmental rasters of the current time period for the desired training and study areas.
 
-First, make a list of environmental rasters that we will use to clip, resample, and reproject. In this example, the training area files are in _extdata/trainingarea_, which is downlaoded within the megaSDM package
+First, make a list of environmental rasters that we will use to clip, resample, and reproject. In this example, the training area files are in _extdata/trainingarea_, which is downloaded within the megaSDM package
 
 
 ```{r}

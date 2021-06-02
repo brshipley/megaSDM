@@ -357,7 +357,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     for (g in 1:nrep) {
       #If there is more than 1 replicate, the lambdas file is named differently
       if (nrep == 1) {
-        LambdaFile <- file.path(input, , spp.name, paste0(spp.name, ".lambdas"))
+        LambdaFile <- file.path(input, spp.name, paste0(spp.name, ".lambdas"))
       } else {
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
       }
