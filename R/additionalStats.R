@@ -83,7 +83,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
   #Get the nubmer of years and scenarios
   numYear <- length(time_periods)
-  numScenario <- length(scenarios)
+  numScenario <- length(scenarios[!is.na(scenarios)])
 
   #Graphical parameters for the barplots
   colScenario <- grDevices::colorRampPalette(c("blue", "darkred"))(max(numScenario, 1))  #COLOR SCHEME
