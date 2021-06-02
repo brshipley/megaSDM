@@ -257,7 +257,12 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       }
     }
     #Calculates the median of the stacked rasters
-    ensemble.calc <- raster::calc(ensemble.stack, stats::median, na.rm = TRUE)
+    if (nlayers(ensemble.stack) > 1) {
+      ensemble.calc <- raster::calc(ensemble.stack, stats::median, na.rm = TRUE)
+    } else {
+      ensemble.calc <- ensemble.stack
+    }
+    
     if (decade == currentYear) {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
