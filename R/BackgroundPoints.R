@@ -354,7 +354,7 @@ BackgroundPoints <- function(spplist, envdata, output,
       }
 
       #randomly samples nbg*5 number of points from the shapefile
-      RandomBuff <- sp::spsample(bufferSHP, RastBuffBG, "random", iter = 15)
+      RandomBuff <- sp::spsample(bufferSHP, RastBuffBG, "random", iter = 25)
 
       RandomBuff <- RandomBuff@coords
 
@@ -410,7 +410,7 @@ BackgroundPoints <- function(spplist, envdata, output,
       BuffPointsEnv <- BuffPointsEnv2[stats::complete.cases(BuffPointsEnv2), ]
 
     } else if (method == "random") {
-      BuffPoints <- sp::spsample(bufferSHP, nbgBuff * 10, "random", iter = 15)
+      BuffPoints <- sp::spsample(bufferSHP, nbgBuff * 10, "random", iter = 25)
       BuffPointsCoords <- BuffPoints@coords
 
       BuffPointsEnv <- raster::extract(envstack, BuffPointsCoords)
