@@ -144,21 +144,26 @@ BackgroundBuffers <- function(occlist,
     utils::write.csv(BGPStats, file = file.path(output, CurSpp, "BackgroundPoints_stats.csv"))
   }
 
-
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("occlist", "run", "envstack", "envdata",
-                                            "output", "buff_distance", "ListSpp"), envir = environment())
-
-
-  parallel::clusterEvalQ(clus, library(rgdal))
-  parallel::clusterEvalQ(clus, library(rgeos))
-  parallel::clusterEvalQ(clus, library(raster))
-  parallel::clusterEvalQ(clus, library(sampSurf))
-
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("occlist", "run", "envstack", "envdata",
+                                              "output", "buff_distance", "ListSpp"), envir = environment())
+    
+    
+    parallel::clusterEvalQ(clus, library(rgdal))
+    parallel::clusterEvalQ(clus, library(rgeos))
+    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(sampSurf))
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    }
+    
+    parallel::stopCluster(clus)
   }
-
-  parallel::stopCluster(clus)
+  
 }

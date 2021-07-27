@@ -121,7 +121,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     gc()
   }
 
-  #Determines if there is a consistent trend (waxing or waning) among the time periods
+  #Determines if there is a consistent trend (expanding or contracting) among the time periods
   #If there is more than one change from 0 to 1 or vice versa, "FALSE"
   consecutiveCheck <- function(val) {
     change <- 0
@@ -313,7 +313,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
           rm(computedRaster)
           gc()
         } else {
-          #If the first and last time periods are a "0", the species distribution expanded and then contracted ("wax-wane")
+          #If the first and last time periods are a "0", the species distribution expanded and then contracted ("expand-contract")
           if ((binary[, 1] == 0) && (binary[, ncol(binary)] == 0)) {
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 2)))
@@ -321,7 +321,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             removeTempRasterFiles(raster::filename(computedRaster))
             rm(computedRaster)
             gc()
-            #If the first and last time periods are a "1", the species distribution contracted and then expanded ("wane-wax")
+            #If the first and last time periods are a "1", the species distribution contracted and then expanded ("contract-expand")
           } else if ((binary[, 1] == 1) && (binary[, ncol(binary)] == 1)) {
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 4)))
@@ -417,15 +417,15 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         }
       }
 
-      #Makes "wax-wane", "wane-wax", and "mixed" as legend captions
+      #Makes "expand-contract", "contract-expand", and "mixed" as legend captions
       for(binIndex in 1:length(bin)) {
         if (as.numeric(bin[binIndex]) > largestNum) {
           for (p in 1:length(BinaryPoss)) {
             if (grepl(BinaryPoss[p], bin[binIndex]) == TRUE) {
               if ((possible[p, 1] == 0) && (possible[p, ncol(possible)] == 0)) {
-                bin[binIndex] <- paste0("wax-wane")
+                bin[binIndex] <- paste0("expand-contract")
               } else if ((possible[p, 1] == 1) && (possible[p, ncol(possible)] == 1)) {
-                bin[binIndex] <- paste0("wane-wax")
+                bin[binIndex] <- paste0("contract-expand")
               } else {
                 bin[binIndex] <- paste0("mixed")
               }
@@ -477,22 +477,26 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     rm(ScenariosCalc)
     gc()
   }
-
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("run", "overlap", "removeTempRasterFiles",
-                                           "consecutiveCheck", "setbinary", "BinToDec",
-                                           "numScenario", "timeSort", "numYear", "largestNum",
-                                           "result_dir", "time_periods", "scenarios",
-                                           "dispersal", "dispersaldata", "ncores",
-                                           "ListSpp"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(gtools))
-  parallel::clusterEvalQ(clus, library(raster))
-
-  for (i in 1:nrow(ListSpp)) {
-   out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
-   gc()
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("run", "overlap", "removeTempRasterFiles",
+                                              "consecutiveCheck", "setbinary", "BinToDec",
+                                              "numScenario", "timeSort", "numYear", "largestNum",
+                                              "result_dir", "time_periods", "scenarios",
+                                              "dispersal", "dispersaldata", "ncores",
+                                              "ListSpp"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(gtools))
+    parallel::clusterEvalQ(clus, library(raster))
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+      gc()
+    }
+    parallel::stopCluster(clus)
   }
-  parallel::stopCluster(clus)
 }

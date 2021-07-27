@@ -157,19 +157,25 @@ MaxEntModel <- function(occlist, bglist, model_output,
 
   }
 
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
-                                            "nrep", "categorical", "alloutputs", "model_output",
-                                            "reptype","test_percent", "regularization", "linear",
-                                            "quadratic", "product", "threshold", "hinge",
-                                            "testsamples", "ListSpp"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(raster))
-
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
+                                              "nrep", "categorical", "alloutputs", "model_output",
+                                              "reptype","test_percent", "regularization", "linear",
+                                              "quadratic", "product", "threshold", "hinge",
+                                              "testsamples", "ListSpp"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(raster))
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    }
+    
+    parallel::stopCluster(clus)
   }
-
-  parallel::stopCluster(clus)
 }

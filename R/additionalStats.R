@@ -318,19 +318,24 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     grDevices::graphics.off()
   }
 
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("colScenario", "colYear", "col13", "result_dir",
-                                  "numYear", "numScenario", "dispersal",
-                                  "dispersaldata", "DispersalCompare", "time_periods","scenarios",
-                                  "getCellsGraph", "getDiffScenariosGraph", "getpercentDiffGraphs",
-                                  "getMinMaxGraphs", "run"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(graphics))
-
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("colScenario", "colYear", "col13", "result_dir",
+                                              "numYear", "numScenario", "dispersal",
+                                              "dispersaldata", "DispersalCompare", "time_periods","scenarios",
+                                              "getCellsGraph", "getDiffScenariosGraph", "getpercentDiffGraphs",
+                                              "getMinMaxGraphs", "run"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(graphics))
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    }
+    parallel::stopCluster(clus)
   }
-  parallel::stopCluster(clus)
 }
 

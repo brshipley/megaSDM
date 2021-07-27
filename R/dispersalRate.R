@@ -37,7 +37,7 @@
 #' maps are provided as outputs.
 
 dispersalRate <- function(result_dir, dispersaldata, time_periods,
-                          scenarios, ncores) {
+                          scenarios, ncores = 1) {
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
@@ -323,26 +323,31 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     }
   }
 
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("FinalDispersal", "getCentroid", "DistanceRaster",
-                                            "DispersalProbRaster", "t1nott2", "overlap",
-                                            "numScenario", "numYear", "dispersal",
-                                            "result_dir", "time_periods", "scenarios",
-                                            "ncores", "ListSpp"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(gtools))
-  parallel::clusterEvalQ(clus, library(raster))
-
-  for(i in 1:ncol(ListSpp)) {
-    for(j in 1:nrow(ListSpp)) {
-      FinalDispersal(ListSpp[j,i])
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) FinalDispersal(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("FinalDispersal", "getCentroid", "DistanceRaster",
+                                              "DispersalProbRaster", "t1nott2", "overlap",
+                                              "numScenario", "numYear", "dispersal",
+                                              "result_dir", "time_periods", "scenarios",
+                                              "ncores", "ListSpp"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(gtools))
+    parallel::clusterEvalQ(clus, library(raster))
+    
+    for(i in 1:ncol(ListSpp)) {
+      for(j in 1:nrow(ListSpp)) {
+        FinalDispersal(ListSpp[j,i])
+      }
     }
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) FinalDispersal(x))
+      gc()
+    }
+    parallel::stopCluster(clus)
   }
-
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) FinalDispersal(x))
-    gc()
-  }
-  parallel::stopCluster(clus)
 }

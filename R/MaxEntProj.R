@@ -473,22 +473,27 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     }
 
   }
-
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("run", "threshold", "medianensemble", "getSize",
-                                            "t1nott2", "overlap", "getCentroid","getStats", "nrep",
-                                            "currentYear", "numYear", "numScenario", "nproj",
-                                            "input", "time_periods", "scenarios", "predict_dirs",
-                                            "study_dir", "ThreshMethod", "aucval", "output", "ncores",
-                                            "ListSpp", "desiredCRS"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(gtools))
-  parallel::clusterEvalQ(clus, library(raster))
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
-    gc()
+  
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("run", "threshold", "medianensemble", "getSize",
+                                              "t1nott2", "overlap", "getCentroid","getStats", "nrep",
+                                              "currentYear", "numYear", "numScenario", "nproj",
+                                              "input", "time_periods", "scenarios", "predict_dirs",
+                                              "study_dir", "ThreshMethod", "aucval", "output", "ncores",
+                                              "ListSpp", "desiredCRS"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(gtools))
+    parallel::clusterEvalQ(clus, library(raster))
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+      gc()
+    }
+    parallel::stopCluster(clus)
   }
-  parallel::stopCluster(clus)
 }
 

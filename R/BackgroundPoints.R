@@ -433,21 +433,26 @@ BackgroundPoints <- function(spplist, envdata, output,
     utils::write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
 
   }
-
-  clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-  parallel::clusterExport(clus, varlist = c("VarelaSample", "run", "spplist", "envstack",
-                                  "output", "nbg", "spatial_weights",
-                                  "buffers", "method", "PCA", "ListSpp",
-                                  "nbins", "StatsLoc"), envir = environment())
-
-  parallel::clusterEvalQ(clus, library(dplyr))
-  parallel::clusterEvalQ(clus, library(sp))
-  parallel::clusterEvalQ(clus, library(raster))
-
-  for (i in 1:nrow(ListSpp)) {
-    out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+  if (ncores == 1) {
+    ListSpp <- as.vector(ListSpp)
+    out <- sapply(ListSpp, function(x) run(x))
+  } else {
+    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    
+    parallel::clusterExport(clus, varlist = c("VarelaSample", "run", "spplist", "envstack",
+                                              "output", "nbg", "spatial_weights",
+                                              "buffers", "method", "PCA", "ListSpp",
+                                              "nbins", "StatsLoc"), envir = environment())
+    
+    parallel::clusterEvalQ(clus, library(dplyr))
+    parallel::clusterEvalQ(clus, library(sp))
+    parallel::clusterEvalQ(clus, library(raster))
+    
+    for (i in 1:nrow(ListSpp)) {
+      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    }
+    
+    parallel::stopCluster(clus)
   }
-
-  parallel::stopCluster(clus)
+  
 }
