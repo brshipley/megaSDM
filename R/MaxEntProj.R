@@ -257,7 +257,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       }
     }
     #Calculates the median of the stacked rasters
-    if (nlayers(ensemble.stack) > 1) {
+    if (raster::nlayers(ensemble.stack) > 1) {
       ensemble.calc <- raster::calc(ensemble.stack, stats::median, na.rm = TRUE)
     } else {
       ensemble.calc <- ensemble.stack

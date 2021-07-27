@@ -153,7 +153,7 @@ spplist <- Occurrences$Scientific.Name
 ### Occurrence Management
 After collecting the occurrences, they must be formatted so that they are consistent and able to be read within MaxEnt. The `OccurrenceManagement` function takes a list of occurrence files, extracts environmental data at each point, and, if requested, environmentally subsamples the dataset for more accurate modelling. The environmental subsampling method used in this function was developed by Varela et al. (2014), dividing the environmental data into a given number of bins and selecting one point from each unique combination of bins. This helps to mitigate environmental bias that is intrinsic to occurrence point datasets.
 
-In this example, we want to extract environmental data from each point (envextract = TRUE) using the environmental data we generated in the previous steps. We also want to environmentally subsample the data (envsample = TRUE), sing 25 bins for each environmental variable. Finally, we set the output to the same place as in the previous function so it will overwrite the original occurrence files.
+In this example, we want to extract environmental data from each point (envextract = TRUE) using the environmental data we generated in the previous steps. We also want to environmentally subsample the data (envsample = TRUE), using 25 bins for each environmental variable. Finally, we set the output to the same place as in the previous function so it will overwrite the original occurrence files.
 
 
 ```{r}
@@ -172,7 +172,7 @@ OccurrenceManagement(occlist = occlist,
 To model species distributions based on presence-only data, a set of "background points" describing the environmental conditions of the training area is needed.
 
 ### Background Buffers
-Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The `BackgroundBuffers` function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. If ncores is set to 1, no parallelization will occur. 
+Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The `BackgroundBuffers` function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. If `ncores` is set to 1, no parallelization will occur. 
 
 ```{r}
 # Get the list of occurrence files again (even if they were written out 
