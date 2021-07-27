@@ -175,8 +175,9 @@ To model species distributions based on presence-only data, a set of "background
 Although the best method of generating background points is still up for debate, spatially-constrained background points can be more effective than randomly-generated background points for SDMs. The `BackgroundBuffers` function in megaSDM generates buffers around the occurrence points so that the background points are only sampled within a certain radius of the occurrence points. This function uses parallel processing to dramatically speed up processing time, running a set of species simultaneously. The number of computer cores used for this process (given by the "ncores" argument) should be set no higher than the number of cores the computer has minus 1. If `ncores` is set to 1, no parallelization will occur. 
 
 ```{r}
-# Get the list of occurrence files again (even if they were written out 
-# in the same folder as before)
+# Get the list of occurrence files again, even if they were written out 
+# in the same folder as before. This ensures that the occurrence files 
+# are properly formatted.  
 occlist <- list.files(occ_output, pattern = ".csv", full.names = TRUE)
 
 # The location to print out the background buffers (.shp) (will be created if it doesn't exist)
