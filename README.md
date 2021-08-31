@@ -33,31 +33,31 @@ Jenny McGuire
 
 Bistra Dilkina
 
-## Dependencies *(updated 26 February 2021)*
+## Dependencies *(updated 31 August 2021)*
 
 #### maxent.jar file (may be downloaded at <https://github.com/mrmaxent/Maxent>)
 
-#### R version 3.6 or greater (last tested with v. 4.0.2)
+#### R version 3.6 or greater (last tested with v. 4.0.5)
 
 ### R Package (Version Number of Last Tested)
 
-dplyr (1.0.4)
+dplyr (1.0.7)
 
-gtools (3.8.2)
+gtools (3.9.2)
 
 plotfunctions (1.4)
 
-raster (3.4)
+raster (3.4.13)
 
-rgbif (3.5.2)
+rgbif (3.6.0)
 
-rgdal (1.5.18)
+rgdal (1.5.23)
 
 rgeos (0.5.5)
 
-sampSurf (0.7.5)
+sampSurf (0.7.6)
 
-sp (1.4.2)
+sp (1.4.5)
 
 ## Vignette
 
