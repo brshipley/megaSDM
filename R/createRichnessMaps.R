@@ -42,7 +42,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
                                dispersal = FALSE, taxonlist = FALSE) {
 
   if (is.na(scenarios[1])) {
-    numscenario <- 0
+    numScenario <- 0
     numYear <- 0
   } else {
     numScenario <- length(scenarios)
