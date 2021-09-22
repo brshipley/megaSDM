@@ -321,7 +321,7 @@ BackgroundPoints <- function(spplist, envdata, output,
     #Sampling from the buffer area------------------
 
     if (length(spplist) > 1) {
-      bufferSHP <- buffers[[1]]
+      bufferSHP <- buffers[[s]]
     } else {
       bufferSHP <- buffers
     }
