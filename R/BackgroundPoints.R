@@ -317,6 +317,7 @@ BackgroundPoints <- function(spplist, envdata, output,
         return()
       }
     }
+
     #Sampling from the buffer area------------------
 
     if (length(spplist) > 1) {
@@ -418,8 +419,17 @@ BackgroundPoints <- function(spplist, envdata, output,
       BuffPointsEnv <- stats::na.omit(BuffPointsEnv)
       BuffPointsEnv <- BuffPointsEnv[sample(c(1:nrow(BuffPointsEnv)), nbgBuff, replace = FALSE), ]
     }
-
-    background <- rbind(FullPointsEnv, BuffPointsEnv)
+    
+    if (spatial_weights == 0) {
+      background <- FullPointsEnv
+      BuffPointsEnv <- FullPointsEnv[c(), ]
+    } else if (spatial_weights == 1) {
+      background <- BuffPointsEnv
+      FullPointsEnv <- BuffPointsEnv[c(), ]
+    } else {
+      background <- rbind(FullPointsEnv, BuffPointsEnv)
+    }
+    
     background <- data.frame("Species" = rep(spplist[s], nrow(background)), background)
 
     if (method == "Varela") {
