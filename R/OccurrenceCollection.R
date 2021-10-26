@@ -181,7 +181,7 @@ OccurrenceCollection <- function(spplist,
                                      'year', 'month', 'day', 'evenDate',
                                      'references', 'license', 'geodeticDatum',
                                      'gbifID', 'type', 'preparations',
-                                     'catalogNumber', 'occurrenceStatus'))$data
+                                     'catalogNumber', 'occurrenceStatus', 'datasetKey'))$data
         # Got rid of 'infraspecificEpithet' because it only exists for subspecies
         if(is.null(Occ)) {
           message("No occurrences found within study area! Check species name or study area extent")
@@ -212,7 +212,7 @@ OccurrenceCollection <- function(spplist,
                                      'year', 'month', 'day', 'evenDate',
                                      'references', 'license', 'geodeticDatum',
                                      'gbifID', 'type', 'preparations',
-                                     'catalogNumber', 'occurrenceStatus'))$data
+                                     'catalogNumber', 'occurrenceStatus', 'datasetKey'))$data
 
 
         if(is.null(Occ)) {
