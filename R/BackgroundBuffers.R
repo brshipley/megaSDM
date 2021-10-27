@@ -99,7 +99,7 @@ BackgroundBuffers <- function(occlist,
 
     SampleLocations <- Locations[sample(c(1:nrow(Locations)), size = BufferPointNumber, replace = FALSE), ]
 
-    if (!methods::hasArg(buff_distance)) {
+    if (is.na(buff_distance)) {
       #Uses the 95% quantile of the minimum distance between each point
       Distance <- raster::pointDistance(SampleLocations, lonlat = FALSE)
       mindist <- c()
