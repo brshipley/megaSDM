@@ -15,8 +15,8 @@
 #' @param desiredCRS The coordinate system to project training/test data into given in PROJ4 notation.
 #' Defaults to NA (no projection).
 #' @param resolution The desired resolution of the raster data in the units of the __target projection__.
-#'
 #' NOTE: if CRS is NA, but resolution has a value, the rasters will be resampled to the given resolution.
+#' NOTE: different x and y resolutions (i.e., rectangular pixels) are acceptable for megaSDM in general but MaxEntProj cannot be run.
 #' @param clipTrain Extent object or vector of desired training extent in form c(xmin, xmax, ymin, ymax).
 #' The extent should be given in latlong coordinates.
 #' @param clipStudy Extent object or vector of desired study extent in form c(xmin, xmax, ymin, ymax).
@@ -25,13 +25,15 @@
 #' @param output If the rasters are to be written to the computer, the full path of the directory where
 #' they will be written out to. If set to \code{NA} (the default), the rasters will not be written out
 #' and will be returned as the value of this function.
+#' @param maxentproj TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, rectangular pixels 
+#' without a defined resolution will be resampled to square pixels using the longer of the two sides.   
 #' @export
 #' @return Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
 #' environmental layers. if \code{output != NA}, the rasters will also be written out as ".bil" files.
 
 TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
                           resolution = NA, clipTrain = NA,
-                          clipStudy = NA, output = NA) {
+                          clipStudy = NA, output = NA, maxentproj = TRUE) {
 
   #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
   if (class(input_TA) != "RasterStack") {
@@ -59,7 +61,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
 
 
   if (methods::hasArg(input_SA)) {
-    #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
+    #If the input study area layers are not in rasterstack form, ensure that they have the same projection/extent
     if (class(input_SA) != "RasterStack") {
 
       #Ensure that all training area rasters have the same projection and extent
@@ -71,27 +73,63 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       }
 
       if (length(unique(projstudy)) > 1) {
-        stop("Not all of the training area environmental rasters are in the same projection")
+        stop("Not all of the study area environmental rasters are in the same projection")
       } else if (length(unique(extstudy)) > 1) {
-        stop("Not all of the training area environmental rasters have the same extent")
+        stop("Not all of the study area environmental rasters have the same extent")
       }
     }
 
-    #Make sure that the training layers have a CRS that is not NA
+    #Make sure that the study area layers have a CRS that is not NA
     studystack <- raster::stack(input_SA)
     if (is.na(raster::crs(studystack))) {
-      stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
+      stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
+    } else if (as.character(raster::crs(studystack)) != as.character(raster::crs(envstack))) {
+      studystack <- raster::projectRaster(studystack, crs = raster::crs(envstack))
+      message("Warning: study area has different coordinate projection than training area: reprojecting to training area CRS")
     }
+    
   }
 
+  #If pixels are rectangular and maxentprojection needs to be run, resample to coarser resolution
+  #Also, force resample to avoid tiny resolution errors (see Issue #2)
+  if (maxentproj) {
+    if(length(resolution) > 1) {
+      resolution <- max(resolution)
+      message("The desired resolution will lead to rectangular pixels: resampling to square pixels for use in MaxEnt projection")
+    }
+    if(length(unique(raster::res(envstack))) > 1) {
+      resolution <- max(raster::res(envstack))
+      message("The original training raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
+    }
+    if(exists("studystack")) {
+      if(length(unique(raster::res(studystack))) > 1) {
+        resolution <- max(c(raster::res(envstack), raster::res(studystack)))
+        message("The original study area raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
+      }
+    }
+    if (is.na(resolution)) {
+      resolution <- raster::res(envstack)
+    }
+  }
+  
   if (!is.na(desiredCRS)) {
     if (is.na(resolution)) {
       envstack <- raster::projectRaster(envstack, crs = desiredCRS)
+      if (exists("studystack")) {
+        studystack <- raster::projectRaster(studystack, crs = desiredCRS)
+      }
+      
     } else {
       envstack <- raster::projectRaster(envstack, crs = desiredCRS, res = resolution, method = "bilinear")
+      if (exists("studystack")) {
+        studystack <- raster::projectRaster(studystack, crs = desiredCRS, res = resolution, method = "bilinear")
+      }
     }
 
   } else if (!is.na(resolution)) {
+    if (exists("studystack")) {
+      studystack <- raster::projectRaster(studystack, crs = raster::crs(studystack), res = resolution, method = "bilinear")
+    }
     envstack <- raster::projectRaster(envstack, crs = raster::crs(envstack), res = resolution, method = "bilinear")
   }
 
@@ -122,6 +160,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   if (!exists("studystack")) {
     studystack <- envstack
   }
+  
   if (class(clipStudy) != "logical") {
     clipStudy <- raster::extent(clipStudy)
     ExtentSA <- sp::SpatialPoints(clipStudy, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
@@ -146,9 +185,6 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     print("Study area complete!")
   }
 
-  if (!methods::hasArg(input_SA) & (class(clipStudy) == "logical")) {
-    studystack <- envstack
-  }
   envstack <- raster::trim(envstack)
   studystack <- raster::trim(studystack)
   EnvRasters <- list("training" = raster::stack(envstack), "study" = raster::stack(studystack))
