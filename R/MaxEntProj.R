@@ -80,9 +80,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   #Format the matrix from which to parallelize the species
   ListSpp <- list.dirs(input, full.names = FALSE, recursive = FALSE)
   ListSpp <- ListSpp[grep("_", ListSpp)]
-  if (!is.na(aucval)){
+  if (length(which(complete.cases(aucval))) > 0) {
     #Removes species with all replicates less than the AUC threshold given by aucval
-    print(paste0("    Removing species with Test AUC Values < ", aucval, " from subsequent analyses"))
+    print(paste0("    Removing species with Test AUC Values < AUC threshold from subsequent analyses"))
     AUCRetain <- c()
     if (length(aucval) == 1) {
       aucval <- rep(aucval, length(ListSpp))
@@ -90,7 +90,11 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     for(i in 1:length(ListSpp)) {
       results <- utils::read.csv(paste0(input, "/", ListSpp[i], "/maxentResults.csv"))
       auc <- results$Test.AUC
-      aucAbove <- which(auc > aucval[i])
+      if (!is.na(aucval[i])) {
+        aucAbove <- which(auc > aucval[i])
+      } else {
+        aucAbove <- 1:length(auc)
+      }
       if (length(aucAbove) > 0){
         AUCRetain <- c(AUCRetain, i)
       } else {
@@ -139,7 +143,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
     ensemble.stack <- c()
     curmodel <- file.path(input, path)
-
+    
+    #Find which AUC value corresponds to the species of interest
+    aucvalSpecies <- aucval[which(ListSpp == path)]
+          
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
@@ -154,12 +161,12 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         stop("The threshold for creating binary maps is not found in 'maxentResults.csv'. Revise in config")
       }
 
-      if (!is.na(aucval)) {
+      if (!is.na(aucvalSpecies)) {
         tryCatch({
           #Finds the AUC value of the run
           auc <- results$Test.AUC[j]
           #If the AUC value is below the AUC threshold, the run is not used
-          if (auc >= aucval) {
+          if (auc >= aucvalSpecies) {
             temp <- raster::raster(rasters[j])
             temp[temp >= thresh] <- 1
             temp[temp < thresh] <- 0
@@ -235,13 +242,17 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     ensemble.stack <- c()
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
+    
+    #Find which AUC value corresponds to the species of interest
+    aucvalSpecies <- aucval[which(ListSpp == path)]
+    
     for (j in 1:replicates) {
-      if (!is.na(aucval)) {
+      if (!is.na(aucvalSpecies)) {
         tryCatch({
           #Finds the AUC value of the run
           auc <- results$Test.AUC[j]
           #If the AUC value is below the AUC threshold, the run is not used
-          if (auc >= aucval) {
+          if (auc >= aucvalSpecies) {
             temp <- raster::raster(rasters[j])
             #Creates a stack of output runs to be ensembled
             ensemble.stack <- raster::stack(c(ensemble.stack, temp))

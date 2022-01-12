@@ -108,7 +108,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       }
     }
     if (is.na(resolution)) {
-      resolution <- raster::res(envstack)
+      resolution <- max(raster::res(envstack))
     }
   }
   

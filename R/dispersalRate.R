@@ -140,15 +140,11 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
   #Gets presence pixels in raster 1 but not raster 2
   t1nott2 <- function(t1, t2) {
-    t1 <- raster::trim(t1)
-    t2 <- raster::trim(t2)
     return(raster::mask(t1, t2, inverse = FALSE, maskvalue = 1, updatevalue = 0))
   }
 
   #Calculates overlap between raster 1 and raster 2 presences
   overlap <- function(t1, t2) {
-    t1 <- raster::trim(t1)
-    t2 <- raster::trim(t2)
     return(raster::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
   }
 
