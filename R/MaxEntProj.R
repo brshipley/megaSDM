@@ -235,7 +235,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   medianensemble <- function(path, rasters, replicates, Scenario, decade) {
-    rasters <- matrix(rasters, nrow = nrep)
+    rasters <- matrix(rasters, nrow = nrep_new)
     #Lists all of the folders within "outputs"
     message("starting median ensemble")
     curmodel <- paste0(input, "/", path)
@@ -376,6 +376,15 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, ".lambdas"))
       } else {
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
+        if (!file.exists(LambdaFile)) {
+          message(paste0("Model replicate ", g, " of species ", spp.name, " not found!"))
+          message(paste0("nrep may be greater than number of unique occurrences."))
+          message(paste0("Using fewer replicates for this species."))
+          nrep_new <- g-1
+          break()
+        } else {
+          nrep_new <- g
+        }
       }
       #THIS IS THE PROJECTIONS COMMAND>>
       system(paste0("java -mx900m -cp ", file.path(input, "maxent.jar"), " density.Project ",
@@ -401,12 +410,12 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     modern.rasters <- gtools::mixedsort(modern.rasters)
 
     #Runs "threshold" function, which creates and ensembles binary maps
-    modern.binary <- threshold(spp.name, modern.rasters, nrep, "", currentYear)
+    modern.binary <- threshold(spp.name, modern.rasters, nrep_new, "", currentYear)
     gc()
 
     if (length(modern.binary) > 0) {
       #Runs medianensemble function, which ensembles maps using a median function
-      modern.median <- medianensemble(spp.name, modern.rasters, nrep, "", currentYear)
+      modern.median <- medianensemble(spp.name, modern.rasters, nrep_new, "", currentYear)
       gc()
 
       statsrow <- 1
@@ -434,7 +443,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             focusDate <- time_periods[YearIndex]
             rasterLocation <- predict_dirs[[ScenIndex]][YearIndex - 1]
 
-            for (g in 1:nrep) {
+            for (g in 1:nrep_new) {
               #If there is more than 1 replicate, the lambdas file is named differently
               if (nrep == 1) {
                 LambdaFile <- file.path(input, spp.name, paste0(spp.name, ".lambdas"))
@@ -466,9 +475,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
             }
             length(cur.proj)
             #Thresholds & gets medians of the projected rasters
-            cur.binary <- threshold(spp.name, cur.proj, nrep, focusScen, focusDate)
+            cur.binary <- threshold(spp.name, cur.proj, nrep_new, focusScen, focusDate)
             gc()
-            cur.median <- medianensemble(spp.name, cur.proj, nrep, focusScen, focusDate)
+            cur.median <- medianensemble(spp.name, cur.proj, nrep_new, focusScen, focusDate)
             gc()
             #Fills in the stats table for the projected rasters
             stats <- getStats(paste0(focusScen, "_", focusDate), statsrow, focusDate, cur.binary,
