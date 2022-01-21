@@ -235,7 +235,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   medianensemble <- function(path, rasters, replicates, Scenario, decade) {
-    rasters <- matrix(rasters, nrow = nrep)
+    rasters <- matrix(rasters, nrow = replicates)
     #Lists all of the folders within "outputs"
     message("starting median ensemble")
     curmodel <- paste0(input, "/", path)
