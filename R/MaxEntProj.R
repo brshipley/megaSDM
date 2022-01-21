@@ -235,7 +235,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   medianensemble <- function(path, rasters, replicates, Scenario, decade) {
-    rasters <- matrix(rasters, nrow = nrep_new)
+    rasters <- matrix(rasters, nrow = nrep)
     #Lists all of the folders within "outputs"
     message("starting median ensemble")
     curmodel <- paste0(input, "/", path)
@@ -374,6 +374,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       #If there is more than 1 replicate, the lambdas file is named differently
       if (nrep == 1) {
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, ".lambdas"))
+        nrep_new <- 1
       } else {
         LambdaFile <- file.path(input, spp.name, paste0(spp.name, "_", g-1, ".lambdas"))
         if (!file.exists(LambdaFile)) {
