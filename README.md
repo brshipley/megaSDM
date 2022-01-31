@@ -33,7 +33,7 @@ Jenny McGuire
 
 Bistra Dilkina
 
-## Dependencies *(updated 31 August 2021)*
+## Dependencies *(updated 31 January 2022)*
 
 #### maxent.jar file (may be downloaded at <https://github.com/mrmaxent/Maxent>)
 
@@ -47,17 +47,17 @@ gtools (3.9.2)
 
 plotfunctions (1.4)
 
-raster (3.4.13)
+raster (3.5.15)
 
 rgbif (3.6.0)
 
-rgdal (1.5.23)
+rgdal (1.5.28)
 
-rgeos (0.5.5)
+rgeos (0.5.9)
 
 sampSurf (0.7.6)
 
-sp (1.4.5)
+sp (1.4.6)
 
 ## Vignette
 
