@@ -87,7 +87,7 @@ Env2070_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2070", packa
                           full.names = TRUE)
 Env4.5 <- list(Env2050_4.5, Env2070_4.5)
 
-# The "time_periods" argument contains the current time (the time of the training 
+# The "time_periods" argument must contain the current time (the time of the training 
 # and study rasters) first and then the time periods for the forecast/hindcast.
 
 PredictEnv(studylayers = TSEnv$study,
