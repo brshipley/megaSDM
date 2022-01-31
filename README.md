@@ -37,7 +37,7 @@ Bistra Dilkina
 
 #### maxent.jar file (may be downloaded at <https://github.com/mrmaxent/Maxent>)
 
-#### R version 3.6 or greater (last tested with v. 4.0.5)
+#### R version 3.6 or greater (last tested with v. 4.1.2)
 
 ### R Package (Version Number of Last Tested)
 
