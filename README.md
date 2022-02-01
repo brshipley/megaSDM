@@ -77,3 +77,14 @@ In R, use `devtools::install_github("brshipley/megaSDM", build_vignettes
 = TRUE)` to install the package with the vignette (see above) included.
 To access the vignette itself, run `??megaSDM_vignette`, and the
 vignette will be loaded in the HTML viewer.
+
+## Reference and Citation
+
+For more information about the methods employed in the package and highlighted features, 
+refer to <https://doi.org/10.1111/ecog.05450>. 
+
+Please cite this package as:
+Shipley, B. R., Bach, R., Do, Y., Strathearn, H., McGuire, J. L., & Dilkina, B. (2022).
+megaSDM: integrating dispersal and time‐step analyses into species distribution models.
+Ecography, 2022: e05450.
+
