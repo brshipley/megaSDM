@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 This package can efficiently create and project species distribution models using the MaxEnt framework and parallel processing. It can find and download occurrence data for a list of species on GBIF (Global Biodiversity Information Facility), environmentally subsample the occurrences to mitigate spatial bias, generate background (pseudo-absence) points, train the model and project it to different times (incorporating dispersal rate of each species and intermediate range fluctuations), and create species richness maps for each time period and taxon.
 
-This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to _____________ and the documentation of each function. 
+This example briefly demonstrates much of the functionality of megaSDM and can be used as a template for other SDM analyses. For a more thorough discussion of the methods and novelty of the package, as well as a full list of arguments for each function, refer to https://doi.org/10.1111/ecog.05450 and the documentation of each function. 
 
 ## Setup
 _First Time Users:_
@@ -87,7 +87,7 @@ Env2070_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2070", packa
                           full.names = TRUE)
 Env4.5 <- list(Env2050_4.5, Env2070_4.5)
 
-# The "time_periods" argument contains the current time (the time of the training 
+# The "time_periods" argument must contain the current time (the time of the training 
 # and study rasters) first and then the time periods for the forecast/hindcast.
 
 PredictEnv(studylayers = TSEnv$study,

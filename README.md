@@ -33,11 +33,11 @@ Jenny McGuire
 
 Bistra Dilkina
 
-## Dependencies *(updated 31 August 2021)*
+## Dependencies *(updated 31 January 2022)*
 
 #### maxent.jar file (may be downloaded at <https://github.com/mrmaxent/Maxent>)
 
-#### R version 3.6 or greater (last tested with v. 4.0.5)
+#### R version 3.6 or greater (last tested with v. 4.1.2)
 
 ### R Package (Version Number of Last Tested)
 
@@ -47,17 +47,17 @@ gtools (3.9.2)
 
 plotfunctions (1.4)
 
-raster (3.4.13)
+raster (3.5.15)
 
 rgbif (3.6.0)
 
-rgdal (1.5.23)
+rgdal (1.5.28)
 
-rgeos (0.5.5)
+rgeos (0.5.9)
 
 sampSurf (0.7.6)
 
-sp (1.4.5)
+sp (1.4.6)
 
 ## Vignette
 
@@ -77,3 +77,14 @@ In R, use `devtools::install_github("brshipley/megaSDM", build_vignettes
 = TRUE)` to install the package with the vignette (see above) included.
 To access the vignette itself, run `??megaSDM_vignette`, and the
 vignette will be loaded in the HTML viewer.
+
+## Reference and Citation
+
+For more information about the methods employed in the package and highlighted features, 
+refer to <https://doi.org/10.1111/ecog.05450>. 
+
+Please cite this package as:
+Shipley, B. R., Bach, R., Do, Y., Strathearn, H., McGuire, J. L., & Dilkina, B. (2022).
+megaSDM: integrating dispersal and time‐step analyses into species distribution models.
+Ecography, 2022: e05450.
+
