@@ -59,7 +59,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
 
-
+  #If study area rasters are provided, repeat for study area
   if (methods::hasArg(input_SA)) {
     #If the input study area layers are not in rasterstack form, ensure that they have the same projection/extent
     if (class(input_SA) != "RasterStack") {
@@ -91,27 +91,83 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   }
 
   #If pixels are rectangular and maxentprojection needs to be run, resample to coarser resolution
-  #Also, force resample to avoid tiny resolution errors (see Issue #2)
+  #Also, force resample to avoid tiny resolution errors (see GitHub Issue #2)
   if (maxentproj) {
+    if (is.na(resolution)) {
+      resolution <- max(raster::res(envstack))
+    }
     if(length(resolution) > 1) {
       resolution <- max(resolution)
       message("The desired resolution will lead to rectangular pixels: resampling to square pixels for use in MaxEnt projection")
     }
-    if(length(unique(raster::res(envstack))) > 1) {
+    if(!all.equal(raster::res(envstack)[1], raster::res(envstack)[2])) {
       resolution <- max(raster::res(envstack))
       message("The original training raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
     }
     if(exists("studystack")) {
-      if(length(unique(raster::res(studystack))) > 1) {
+      if(!all.equal(raster::res(studystack)[1], raster::res(studystack)[2])) {
         resolution <- max(c(raster::res(envstack), raster::res(studystack)))
         message("The original study area raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
       }
     }
-    if (is.na(resolution)) {
-      resolution <- max(raster::res(envstack))
-    }
   }
   
+  #Clip rasters to desired extent
+  #Having the clipping step first makes the process faster
+  if (class(clipTrain) != "logical") {
+    clipTrain <- raster::extent(clipTrain)
+    ExtentTA <- sp::SpatialPoints(clipTrain, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
+    ExtentProjTA <- sp::spTransform(ExtentTA, raster::crs(envstack))
+    
+    NewExtentTA <- raster::extent(ExtentProjTA@coords)
+    
+    #Weird projections cause the reprojected layers to have issues (dealt with here)
+    if (NewExtentTA[1] > NewExtentTA[2] | NewExtentTA[3] > NewExtentTA[4]) {
+      stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
+    }
+    
+    if (NewExtentTA > raster::extent(envstack)) {
+      message("Warning: the desired training extent is larger than the original raster")
+      message("Only the intersection of the two extents will be used")
+    }
+    
+    envstack <- raster::crop(envstack, raster::extent(max(NewExtentTA[1], raster::extent(envstack)[1]),
+                                                      min(NewExtentTA[2], raster::extent(envstack)[2]),
+                                                      max(NewExtentTA[3], raster::extent(envstack)[3]),
+                                                      min(NewExtentTA[4], raster::extent(envstack)[4])))
+    print("Training area clipped!")
+  }
+  
+  if (!exists("studystack")) {
+    studystack <- envstack
+  }
+  
+  if (class(clipStudy) != "logical") {
+    clipStudy <- raster::extent(clipStudy)
+    ExtentSA <- sp::SpatialPoints(clipStudy, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
+    ExtentProjSA <- sp::spTransform(ExtentSA, raster::crs(envstack))
+    
+    NewExtentSA <- raster::extent(ExtentProjSA@coords)
+    
+    if (NewExtentSA > raster::extent(studystack)) {
+      message("Warning: the desired study extent is larger than the study rasters")
+      message("Only the intersection of the two extents will be used")
+    }
+    
+    #Weird projections cause the reprojected layers to have issues (dealt with here)
+    if (NewExtentSA[1] > NewExtentSA[2] | NewExtentSA[3] > NewExtentSA[4]) {
+      stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
+    }
+    
+    studystack <- raster::crop(envstack, raster::extent(max(NewExtentSA[1], raster::extent(studystack)[1]),
+                                                        min(NewExtentSA[2], raster::extent(studystack)[2]),
+                                                        max(NewExtentSA[3], raster::extent(studystack)[3]),
+                                                        min(NewExtentSA[4], raster::extent(studystack)[4])))
+    print("Study area clipped!")
+  }
+  
+  #Reproject and/or resample rasters to desired crs and resolution
+  #TODO allow for "method" argument of resampling to be vared based on layer
   if (!is.na(desiredCRS)) {
     if (is.na(resolution)) {
       envstack <- raster::projectRaster(envstack, crs = desiredCRS)
@@ -131,58 +187,6 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       studystack <- raster::projectRaster(studystack, crs = raster::crs(studystack), res = resolution, method = "bilinear")
     }
     envstack <- raster::projectRaster(envstack, crs = raster::crs(envstack), res = resolution, method = "bilinear")
-  }
-
-  if (class(clipTrain) != "logical") {
-    clipTrain <- raster::extent(clipTrain)
-    ExtentTA <- sp::SpatialPoints(clipTrain, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjTA <- sp::spTransform(ExtentTA, raster::crs(envstack))
-
-    NewExtentTA <-raster::extent(ExtentProjTA@coords)
-
-    #Weird projections cause the reprojected layers to have issues (dealt with here)
-    if (NewExtentTA[1] > NewExtentTA[2] | NewExtentTA[3] > NewExtentTA[4]) {
-      stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
-    }
-
-    if (NewExtentTA > raster::extent(envstack)) {
-      message("Warning: the desired training extent is larger than the original raster")
-      message("Only the intersection of the two extents will be used")
-    }
-
-    envstack <- raster::crop(envstack, raster::extent(max(NewExtentTA[1], raster::extent(envstack)[1]),
-                                              min(NewExtentTA[2], raster::extent(envstack)[2]),
-                                              max(NewExtentTA[3], raster::extent(envstack)[3]),
-                                              min(NewExtentTA[4], raster::extent(envstack)[4])))
-    print("Training area complete!")
-  }
-
-  if (!exists("studystack")) {
-    studystack <- envstack
-  }
-  
-  if (class(clipStudy) != "logical") {
-    clipStudy <- raster::extent(clipStudy)
-    ExtentSA <- sp::SpatialPoints(clipStudy, proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjSA <- sp::spTransform(ExtentSA, raster::crs(envstack))
-
-    NewExtentSA <- raster::extent(ExtentProjSA@coords)
-
-    if (NewExtentSA > raster::extent(studystack)) {
-      message("Warning: the desired study extent is larger than the study rasters")
-      message("Only the intersection of the two extents will be used")
-    }
-
-    #Weird projections cause the reprojected layers to have issues (dealt with here)
-    if (NewExtentSA[1] > NewExtentSA[2] | NewExtentSA[3] > NewExtentSA[4]) {
-      stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
-    }
-
-    studystack <- raster::crop(envstack, raster::extent(max(NewExtentSA[1], raster::extent(studystack)[1]),
-                                              min(NewExtentSA[2], raster::extent(studystack)[2]),
-                                              max(NewExtentSA[3], raster::extent(studystack)[3]),
-                                              min(NewExtentSA[4], raster::extent(studystack)[4])))
-    print("Study area complete!")
   }
 
   envstack <- raster::trim(envstack)
