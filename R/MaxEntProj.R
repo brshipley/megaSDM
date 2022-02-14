@@ -207,8 +207,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         raster::writeRaster(ensemble.calc,
                     filename = file.path(output, path, paste0(time, "_binary.bil")),
                     overwrite = TRUE,
-                    format = "EHdr",
-                    prj = TRUE)
+                    format = "EHdr")
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
         grDevices::dev.off()
@@ -220,8 +219,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         raster::writeRaster(ensemble.calc,
                     filename = file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.bil")),
                     overwrite = TRUE,
-                    format = "EHdr",
-                    prj = TRUE)
+                    format = "EHdr")
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
         grDevices::dev.off()
@@ -279,8 +277,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       raster::writeRaster(ensemble.calc,
                   filename = file.path(output, path, paste0(decade, "_ensembled.bil")),
                   overwrite = TRUE,
-                  format = "EHdr",
-                  prj = TRUE)
+                  format = "EHdr")
       grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade))
       grDevices::dev.off()
@@ -289,8 +286,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       raster::writeRaster(ensemble.calc,
                   filename = file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.bil")),
                   overwrite = TRUE,
-                  format = "EHdr",
-                  prj = TRUE)
+                  format = "EHdr")
       grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
       grDevices::dev.off()

@@ -102,6 +102,8 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         timeSort <- time_periods
       }
     }
+  } else {
+    timeSort <- time_periods
   }
 
   #Functions---------------------

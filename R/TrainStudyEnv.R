@@ -93,8 +93,11 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   #If pixels are rectangular and maxentprojection needs to be run, resample to coarser resolution
   #Also, force resample to avoid tiny resolution errors (see GitHub Issue #2)
   if (maxentproj) {
-    if (is.na(resolution)) {
+    if (is.na(resolution) & !is.na(desiredCRS)) {
       resolution <- max(raster::res(envstack))
+    } else if (is.na(resolution)) {
+      TestProject <- raster::projectRaster(envstack[[1]], crs = desiredCRS)
+      resolution <- max(raster::res(TestProject))
     }
     if(length(resolution) > 1) {
       resolution <- max(resolution)
@@ -171,22 +174,28 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   if (!is.na(desiredCRS)) {
     if (is.na(resolution)) {
       envstack <- raster::projectRaster(envstack, crs = desiredCRS)
+      gc(full = TRUE)
       if (exists("studystack")) {
         studystack <- raster::projectRaster(studystack, crs = desiredCRS)
+        gc(full = TRUE)
       }
       
     } else {
       envstack <- raster::projectRaster(envstack, crs = desiredCRS, res = resolution, method = "bilinear")
+      gc(full = TRUE)
       if (exists("studystack")) {
         studystack <- raster::projectRaster(studystack, crs = desiredCRS, res = resolution, method = "bilinear")
+        gc(full = TRUE)
       }
     }
 
   } else if (!is.na(resolution)) {
     if (exists("studystack")) {
       studystack <- raster::projectRaster(studystack, crs = raster::crs(studystack), res = resolution, method = "bilinear")
+      gc(full = TRUE)
     }
     envstack <- raster::projectRaster(envstack, crs = raster::crs(envstack), res = resolution, method = "bilinear")
+    gc(full = TRUE)
   }
 
   envstack <- raster::trim(envstack)
