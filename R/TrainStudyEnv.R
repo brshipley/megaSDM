@@ -93,7 +93,9 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   #If pixels are rectangular and maxentprojection needs to be run, resample to coarser resolution
   #Also, force resample to avoid tiny resolution errors (see GitHub Issue #2)
   if (maxentproj) {
-    if (is.na(resolution) & !is.na(desiredCRS)) {
+    #Set desired resolution to the longest axis of the pixels
+    #If projection to a new CRS is required, first project, then get resolution
+    if (is.na(resolution) & is.na(desiredCRS)) {
       resolution <- max(raster::res(envstack))
     } else if (is.na(resolution)) {
       TestProject <- raster::projectRaster(envstack[[1]], crs = desiredCRS)
