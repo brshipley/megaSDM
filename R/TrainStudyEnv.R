@@ -95,6 +95,7 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
   if (maxentproj) {
     #Set desired resolution to the longest axis of the pixels
     #If projection to a new CRS is required, first project, then get resolution
+    
     if (is.na(resolution) & is.na(desiredCRS)) {
       resolution <- max(raster::res(envstack))
     } else if (is.na(resolution)) {
