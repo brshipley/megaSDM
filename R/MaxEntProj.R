@@ -79,7 +79,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   #Format the matrix from which to parallelize the species
   ListSpp <- list.dirs(input, full.names = FALSE, recursive = FALSE)
-  ListSpp <- ListSpp[grep("_", ListSpp)]
+  
   if (length(which(complete.cases(aucval))) > 0) {
     #Removes species with all replicates less than the AUC threshold given by aucval
     print(paste0("    Removing species with Test AUC Values < AUC threshold from subsequent analyses"))
