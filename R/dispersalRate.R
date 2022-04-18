@@ -6,7 +6,7 @@
 #' distribution, and summed together to create a probability of dispersal for the
 #' intervals between each provided time step. Dispersal-constrained binary (presence
 #' and absence) maps are generated, as well as continuous maps of "invadable suitability"
-#' (see ______TODO_papername______).
+#' (see https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.05450).
 #'
 #' NOTE: dispersal rate analyses are only informative for predicting species
 #' distributions into the future (forecasting) rather than predicting past
@@ -41,7 +41,6 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
-  spp.list <- spp.list[grep("_", spp.list)]
   if (length(spp.list) == 0) {
     stop(paste0("No projected models found in 'result_dir': Ensure that 'result_dir' provides a path to the proper location"))
   }
