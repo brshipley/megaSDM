@@ -56,6 +56,7 @@ OccurrenceCollection <- function(spplist,
                                 Occurrences = rep(0, times = nspp),
                                 StudyArea_Occur = rep(0, nspp),
                                 Keys = as.numeric(rep(NA, times = nspp)),
+                                Class = rep(NA, times = nspp),
                                 Family = rep(NA, times = nspp),
                                 Genus = rep(NA, times = nspp),
                                 stringsAsFactors = FALSE)
