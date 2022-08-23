@@ -187,6 +187,7 @@ OccurrenceCollection <- function(spplist,
         if(is.null(Occ)) {
           message("No occurrences found within study area! Check species name or study area extent")
           FailedSpecies <- c(FailedSpecies, s)
+          p <- i
           next()
         }
 
@@ -219,6 +220,7 @@ OccurrenceCollection <- function(spplist,
         if(is.null(Occ)) {
           message("No occurrences found within study area! Check species name or study area extent")
           FailedSpecies <- c(FailedSpecies, s)
+          p <- i
           next()
         }
 
@@ -302,6 +304,10 @@ OccurrenceCollection <- function(spplist,
 
   #It is looped to avoid timeout or temporary internet connectivity issues
   TestNum <- speciterate(1, nspp)
+  if (is.null(TestNum)) {
+    TestNum <- nspp
+  }
+  
   if (TestNum < nspp) {
     while (TestNum < nspp) {
       TestNum <- speciterate(TestNum, nspp)
@@ -310,7 +316,7 @@ OccurrenceCollection <- function(spplist,
 
 
   #Adds species with 0 occurrences to failed species
-    FailedSpecies <- unique(c(FailedSpecies, OurSpp$Scientific.Name[which(OurSpp$OrigOccurrences == 0)]))
+  FailedSpecies <- unique(c(FailedSpecies, OurSpp$Scientific.Name[which(OurSpp$OrigOccurrences == 0)]))
 
   #Write "FailedSpecies" csv
   if (length(FailedSpecies) > 0) {
