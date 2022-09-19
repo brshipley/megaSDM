@@ -224,8 +224,8 @@ OccurrenceManagement <- function(occlist,
     #If required, extracts environmental data from rasters. Otherwise, adds environmental data back
     #to the projected occurrence points
     if (envextract == "FALSE") {
-      for (l in 1:raster::nlayers(envdata)) {
-        env_var <- names(envdata)[l]
+      for (l in 1:raster::nlayers(envstack)) {
+        env_var <- names(envstack)[l]
         EnvCol <- grep(paste0("^", env_var, "$"), names(SpeciesOcc))
         if (length(EnvCol) == 0) {
           stop(paste0("Environmental layer ", env_var, " not found in occurrence file for ",
@@ -239,7 +239,7 @@ OccurrenceManagement <- function(occlist,
         }
       }
     } else {
-      SpeciesEnv <- raster::extract(envdata, SpeciesCoordsSP)
+      SpeciesEnv <- raster::extract(envstack, SpeciesCoordsSP)
       SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv)
       SpeciesEnv <- stats::na.omit(SpeciesEnv)
       if (nrow(SpeciesEnv) == 0) {

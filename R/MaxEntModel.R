@@ -25,6 +25,8 @@
 #'    2: A multidimensional environmental similarity surface (MESS) showing novel climates.
 #'
 #'    3: Files containing the parameters used to make the response curves.
+#'    
+#'    4: Plots of the response curves for each parameter
 #'
 #' The final set of arguments are optional and used for tuning the maxent model and cross-validation:
 #' @param reptype Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
@@ -125,7 +127,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
         system(paste0("java -mx900m -jar ", file.path(model_output, "maxent.jar")," -e ", BackgroundFile, " -s ", OccurrenceFile,
                       " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", nrep, " betamultiplier=", regularization,
-                      " writeclampgrid=", alloutputs, " writemess=", alloutputs,
+                      " responsecurves=", alloutputs, " writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
                       reptype, " linear=", linear, " quadratic=", quadratic, " product=", product,
                       " threshold=", threshold, " hinge=", hinge, " togglelayertype=", categorical))
@@ -140,7 +142,7 @@ MaxEntModel <- function(occlist, bglist, model_output,
         system(paste0("java -mx900m -jar ", file.path(model_output, "maxent.jar")," -e ", BackgroundFile, " -s ", OccurrenceFile,
                       " -J -o ", file.path(model_output, spp.name), " noaskoverwrite logistic threshold -X ",
                       test_percent, " replicates=", 1, " betamultiplier=", regularization,
-                      " testsamplesfile=", file.path(TestFile)," writeclampgrid=", alloutputs, " writemess=", alloutputs,
+                      " responsecurves=", alloutputs, " testsamplesfile=", file.path(TestFile)," writeclampgrid=", alloutputs, " writemess=", alloutputs,
                       " nowarnings writeplotdata=", alloutputs , " -a ",
                       reptype, " linear=", linear, " quadratic=", quadratic, " product=", product,
                       " threshold=", threshold, " hinge=", hinge, " togglelayertype=", categorical))
