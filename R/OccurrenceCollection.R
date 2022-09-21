@@ -314,7 +314,6 @@ OccurrenceCollection <- function(spplist,
     }
   }
 
-
   #Adds species with 0 occurrences to failed species
   FailedSpecies <- unique(c(FailedSpecies, OurSpp$Scientific.Name[which(OurSpp$OrigOccurrences == 0)]))
 

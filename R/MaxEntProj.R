@@ -513,4 +513,3 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     parallel::stopCluster(clus)
   }
 }
-

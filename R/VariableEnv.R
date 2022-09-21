@@ -66,7 +66,7 @@ VariableEnv <- function(occlist, bglist, env_vars,
     #Subset the occurrence files to only include the required environmental variables
     OCFile <- utils::read.csv(OccurrenceFile)
     OCFileCoords <- OCFile[, c("Species", "x", "y")]
-    ReqVarCol <- grep(tolower(ReqVar), tolower(names(BGFile)))
+    ReqVarCol <- grep(tolower(ReqVar), tolower(names(OCFile)))
     if (length(ReqVarCol) != length(ReqVarList)) {
       stop(paste0("One or more climate variables given in 'env_vars' do not correspond to provided environmental rasters", "\n",
                   "          Check the environmental variable list in 'env_vars'"))

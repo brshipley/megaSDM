@@ -223,7 +223,7 @@ BackgroundPoints <- function(spplist, envdata, output,
     nbgBuff <- round(nbg[s] * spatial_weights)
     nbgFull <- round(nbg[s] - nbgBuff)
 
-    #Sampling fron the full training area--------------------
+    #Sampling from the full training area--------------------
     if (spatial_weights < 1){
       if (method == "Varela") {
 

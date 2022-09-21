@@ -303,10 +303,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
         }
 
         #Fills out stats table
-        stats <- cbind(Projection, NumberCells, CellChange, T1notT2,
-                       T2notT1, Overlap, CentroidX, CentroidY)
-
-        stats <- as.data.frame(stats)
+        stats <- data.frame(Projection = Projection, 
+                            NumberCells = NumberCells, 
+                            CellChange = CellChange, 
+                            T1notT2 = T1notT2,
+                            T2notT1 = T2notT1, 
+                            Overlap = Overlap, 
+                            CentroidX = CentroidX, 
+                            CentroidY = CentroidY)
+        
         utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
         rm(CurrentBinary)
         gc()
