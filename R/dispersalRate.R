@@ -113,7 +113,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     DistFinal <- DistFinal / 1000
     #writes distance raster
     # writeRaster(DistFinal,
-    #             filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, ".bil"),
+    #             filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, ".grd"),
     #             overwrite = TRUE,
     #             format = format,
     #             prj = TRUE)
@@ -160,7 +160,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       }
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
-        CurrentBinary <- raster::raster(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.bil"))
+        CurrentBinary <- raster::raster(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
         #Creates variables for stats
         Projection <- c("Current")
         NumberCells <- c(raster::cellStats(CurrentBinary, stat = sum))
@@ -176,14 +176,14 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           CurScen <- scenarios[s]
           curdir <- file.path(result_dir, CurSpp, CurScen)
           DispersalNames <- c()
-          TimeMap <- raster::raster(file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", CurScen, ".bil")))
+          TimeMap <- raster::raster(file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", CurScen, ".grd")))
           for (y in 2:length(time_periods)) {
             CurYear <- time_periods[y]
 
             #Calculates distance from current distribution
             if (y == 2) {
               DistanceRastersExist <- list.files(path = file.path(result_dir, CurSpp),
-                                                 pattern = paste0("distance_", time_periods[1], "_Current.bil$"))
+                                                 pattern = paste0("distance_", time_periods[1], "_Current.grd$"))
               if (length(DistanceRastersExist) == 0) {
                 SppDistance <- DistanceRaster(CurSpp, CurrentTime, "Current", CurrentBinary, TimeMap)
                 OriginalDistance <- SppDistance
@@ -223,12 +223,12 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             #Calculates the dispersal probability for the given time step
             TimeDiff <- abs(CurYear - time_periods[y - 1])
             SppDispProb <- DispersalProbRaster(dispersal_rate, SppDistance, TimeDiff)
-            RasterList <- list.files(path = curdir, pattern = paste0(".bil$"))
+            RasterList <- list.files(path = curdir, pattern = paste0(".grd$"))
 
             #Creates an ensembled raster that incorporates dispersal rate
             #Calculates the ensembled dispersal probability * habitat suitability to make "invadable suitability"
 
-            EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.bil"), RasterList)
+            EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.grd"), RasterList)
             EnsembleSD <- raster::raster(file.path(curdir, RasterList[EnsembleNum]))
             if ((raster::extent(SppDispProb) != raster::extent(EnsembleSD)) | (raster::ncell(SppDispProb) != raster::ncell(EnsembleSD))) {
               message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
@@ -243,15 +243,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
             #Writes the ensembled dispersal rate raster
             raster::writeRaster(Ensemble_Dispersal,
-                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.bil")),
+                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.grd")),
                         overwrite = TRUE,
-                        format = "EHdr",
+                        format = "raster",
                         prj = TRUE)
 
             DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
 
             #Creates a binary raster from the ensembled raster
-            BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.bil"), RasterList)
+            BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.grd"), RasterList)
             BinarySD <- raster::raster(file.path(curdir, RasterList[BinaryNum]))
             Binary_Dispersal <- (SppDispProb * BinarySD)
             Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
@@ -263,9 +263,9 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
             #Writes the binary raster
             raster::writeRaster(Binary_Dispersal,
-                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.bil")),
+                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.grd")),
                         overwrite = TRUE,
-                        format = "EHdr",
+                        format = "raster",
                         prj = TRUE)
             DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate"))
 
@@ -281,7 +281,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           }
 
           #Writes PDFs
-          DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.bil$"), full.names = TRUE)
+          DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.grd$"), full.names = TRUE)
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
 
@@ -303,10 +303,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
         }
 
         #Fills out stats table
-        stats <- cbind(Projection, NumberCells, CellChange, T1notT2,
-                       T2notT1, Overlap, CentroidX, CentroidY)
-
-        stats <- as.data.frame(stats)
+        stats <- data.frame(Projection = Projection, 
+                            NumberCells = NumberCells, 
+                            CellChange = CellChange, 
+                            T1notT2 = T1notT2,
+                            T2notT1 = T2notT1, 
+                            Overlap = Overlap, 
+                            CentroidX = CentroidX, 
+                            CentroidY = CentroidY)
+        
         utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
         rm(CurrentBinary)
         gc()

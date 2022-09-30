@@ -54,7 +54,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     dir.create(output)
   }
 
-  studylayers <- list.files(study_dir, pattern = ".bil$", full.names = TRUE)
+  studylayers <- list.files(study_dir, pattern = ".grd$", full.names = TRUE)
   #Ensure that all study area rasters have the same projection and extent
   projstudy <- rep(NA, len = length(studylayers))
   extstudy <- rep(NA, len = length(studylayers))
@@ -71,6 +71,17 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   #Make sure that the study layers have a CRS that is not NA
   studystack <- raster::stack(studylayers)
+  
+  StudyNames <- rep(NA, length = length(studylayers))
+  for(i in 1:length(StudyNames)) {
+    focname <- unlist(strsplit(studylayers[i], "/"))
+    focname <- focname[length(focname)]
+    focname <- unlist(strsplit(focname, "\\."))[1]
+    StudyNames[i] <- focname
+  }
+  
+  names(studystack) <- StudyNames
+  
   if (is.na(raster::crs(studystack))) {
     stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   } else {
@@ -131,8 +142,11 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
   nproj <- 1 + (numScenario * (numYear - 1))
   #Renames threshold to add in "logistic.threshold" to the mix
-  if(!grepl(".logistic.threshold", ThreshMethod)) {
-    ThreshMethod <- paste0(ThreshMethod, ".logistic.threshold")
+  ThreshMethodLower <- tolower(ThreshMethod)
+  if(!grepl(".logistic.threshold", ThreshMethodLower)) {
+    ThreshMethod <- paste0(ThreshMethod, ".Logistic.threshold")
+  } else {
+    ThreshMethod <- paste0(substr(ThreshMethod, 1, nchar(ThreshMethod) - 19), ".Logistic.threshold")
   }
 
   #Functions----------------------------
@@ -205,9 +219,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       if (time == currentYear) {
         raster::crs(ensemble.calc) <- desiredCRS
         raster::writeRaster(ensemble.calc,
-                    filename = file.path(output, path, paste0(time, "_binary.bil")),
+                    filename = file.path(output, path, paste0(time, "_binary.grd")),
                     overwrite = TRUE,
-                    format = "EHdr")
+                    format = "raster")
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
         grDevices::dev.off()
@@ -217,9 +231,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
         }
         raster::crs(ensemble.calc) <- desiredCRS
         raster::writeRaster(ensemble.calc,
-                    filename = file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.bil")),
+                    filename = file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.grd")),
                     overwrite = TRUE,
-                    format = "EHdr")
+                    format = "raster")
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
         raster::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
         grDevices::dev.off()
@@ -275,18 +289,18 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     if (decade == currentYear) {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
-                  filename = file.path(output, path, paste0(decade, "_ensembled.bil")),
+                  filename = file.path(output, path, paste0(decade, "_ensembled.grd")),
                   overwrite = TRUE,
-                  format = "EHdr")
-      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
+                  format = "raster")
+      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.grd")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade))
       grDevices::dev.off()
     } else {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
-                  filename = file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.bil")),
+                  filename = file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.grd")),
                   overwrite = TRUE,
-                  format = "EHdr")
+                  format = "raster")
       grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
       grDevices::dev.off()
@@ -513,4 +527,3 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     parallel::stopCluster(clus)
   }
 }
-

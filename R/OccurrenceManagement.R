@@ -68,6 +68,20 @@ OccurrenceManagement <- function(occlist,
 
   #Make sure that the training layers have a CRS that is not NA
   envstack <- raster::stack(envdata)
+  
+  #Provide names for the raster layers in the study area raster stack
+  if (class(envdata) != "RasterStack") {
+    EnvNames <- rep(NA, length = length(envdata))
+    for(i in 1:length(EnvNames)) {
+      focname <- unlist(strsplit(envdata[i], "/"))
+      focname <- focname[length(focname)]
+      focname <- unlist(strsplit(focname, "\\."))[1]
+      EnvNames[i] <- focname
+    }
+    
+    names(envstack) <- EnvNames
+  }
+  
   if (is.na(raster::crs(envstack))) {
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }

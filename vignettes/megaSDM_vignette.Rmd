@@ -51,7 +51,7 @@ First, make a list of environmental rasters that we will use to clip, resample, 
 
 ```{r}
 input_TA <- list.files(system.file("extdata", "trainingarea", package = "megaSDM"),
-                       pattern = ".bil$", 
+                       pattern = ".grd$", 
                        full.names = TRUE)
 # If you have your own data, replace the system.file command with
 # a pathway to the training area files.
@@ -80,10 +80,10 @@ After getting the training and study environmental layers for the current time p
 
 ```{r}
 Env2050_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2050", package = "megaSDM"), 
-                          pattern = ".bil$", 
+                          pattern = ".grd$", 
                           full.names = TRUE)
 Env2070_4.5 <- list.files(system.file("extdata", "predictenv/RCP4.5/2070", package = "megaSDM"), 
-                          pattern = ".bil$", 
+                          pattern = ".grd$", 
                           full.names = TRUE)
 Env4.5 <- list(Env2050_4.5, Env2070_4.5)
 
@@ -98,10 +98,10 @@ PredictEnv(studylayers = TSEnv$study,
 
 #Repeat with a different climate scenario (RCP8.5):
 Env2050_8.5 <- list.files(system.file("extdata", "predictenv/RCP8.5/2050", package = "megaSDM"),
-                          pattern = ".bil$", 
+                          pattern = ".grd$", 
                           full.names = TRUE)
 Env2070_8.5 <- list.files(system.file("extdata", "predictenv/RCP8.5/2070", package = "megaSDM"), 
-                          pattern = ".bil$", 
+                          pattern = ".grd$", 
                           full.names = TRUE)
 
 Env8.5 <- list(Env2050_8.5, Env2070_8.5)

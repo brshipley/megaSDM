@@ -29,7 +29,7 @@
 #' without a defined resolution will be resampled to square pixels using the longer of the two sides.   
 #' @export
 #' @return Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
-#' environmental layers. if \code{output != NA}, the rasters will also be written out as ".bil" files.
+#' environmental layers. if \code{output != NA}, the rasters will also be written out as ".grd" files.
 
 TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
                           resolution = NA, clipTrain = NA,
@@ -59,6 +59,19 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
 
+  #if training layers were read from file names, provide names of the raster stack 
+  if (class(input_TA) != "RasterStack") {
+    TANames <- rep(NA, length = length(input_TA))
+    for(i in 1:length(TANames)) {
+      focname <- unlist(strsplit(input_TA[i], "/"))
+      focname <- focname[length(focname)]
+      focname <- unlist(strsplit(focname, "\\."))[1]
+      TANames[i] <- focname
+    }
+    
+    names(envstack) <- TANames
+  }
+  
   #If study area rasters are provided, repeat for study area
   if (methods::hasArg(input_SA)) {
     #If the input study area layers are not in rasterstack form, ensure that they have the same projection/extent
@@ -86,6 +99,19 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     } else if (as.character(raster::crs(studystack)) != as.character(raster::crs(envstack))) {
       studystack <- raster::projectRaster(studystack, crs = raster::crs(envstack))
       message("Warning: study area has different coordinate projection than training area: reprojecting to training area CRS")
+    }
+    
+    #Provide names for the raster layers in the study area raster stack
+    if (class(input_SA) != "RasterStack") {
+      SANames <- rep(NA, length = length(input_SA))
+      for(i in 1:length(SANames)) {
+        focname <- unlist(strsplit(input_SA[i], "/"))
+        focname <- focname[length(focname)]
+        focname <- unlist(strsplit(focname, "\\."))[1]
+        SANames[i] <- focname
+      }
+      
+      names(studystack) <- SANames
     }
     
   }
@@ -212,10 +238,10 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     if (!dir.exists(paste0(output, "/studyarea"))) {
       dir.create(paste0(output, "/studyarea"), recursive = TRUE)
     }
-    raster::writeRaster(EnvRasters$training, paste0(output, "/trainingarea/", names(EnvRasters$training), ".bil"),
-                        bylayer = TRUE, format = "EHdr", overwrite = TRUE)
-    raster::writeRaster(EnvRasters$study, paste0(output, "/studyarea/", names(EnvRasters$study), ".bil"),
-                        bylayer = TRUE, format = "EHdr", overwrite = TRUE)
+    raster::writeRaster(EnvRasters$training, paste0(output, "/trainingarea/", names(EnvRasters$training), ".grd"),
+                        bylayer = TRUE, format = "raster", overwrite = TRUE)
+    raster::writeRaster(EnvRasters$study, paste0(output, "/studyarea/", names(EnvRasters$study), ".grd"),
+                        bylayer = TRUE, format = "raster", overwrite = TRUE)
   }
 
   return(EnvRasters)

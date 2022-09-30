@@ -337,4 +337,3 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     parallel::stopCluster(clus)
   }
 }
-

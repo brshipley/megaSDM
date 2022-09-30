@@ -34,7 +34,7 @@
 #' (Column 2; e.g., Order, Class) to split the richness maps on. If taxon-specific
 #'  richness maps are not required, \code{taxonlist} should be set to \code{FALSE} (default).
 #' @export
-#' @return writes .pdf files and rasters (.bil) of species richness for all given
+#' @return writes .pdf files and rasters (.grd) of species richness for all given
 #' taxa, time periods, and scenarios and dispersal constraints to the directory
 #' "\code{result_dir}/RichnessMaps".
 
@@ -79,7 +79,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
   DeleteSP <- c()
   for (sp in 1:nrow(ListSpp)) {
     focusspp <- gsub(" ", "_", ListSpp[sp, 1])
-    curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.bil$"))
+    curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.grd$"))
     #If no binary maps were generated, AUC < threshold
     if (!length(curfocus) > 0) {
       message(paste0(focusspp, " was not modelled (likely due to low AUC values)"))
@@ -122,9 +122,9 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     FocusScenario <- scenarios[s]
 
     if (disp == TRUE) {
-      filepath <- "_dispersalRate.bil"
+      filepath <- "_dispersalRate.grd"
     } else {
-      filepath <- ".bil"
+      filepath <- ".grd"
     }
 
     for (sp in 1:length(taxonlist2)) {
@@ -140,7 +140,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     FutureRichness <- raster::calc(futstack, fun = sum)
     raster::writeRaster(FutureRichness,
                 filename = file.path(RichnessMaps, paste0("Richness_", taxon, "_", FocusYear, "_", FocusScenario, filepath)),
-                format = "EHdr",
+                format = "raster",
                 overwrite = TRUE,
                 prj = TRUE)
   }
@@ -149,15 +149,15 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     FocusYear <- time_periods[y]
     FocusScenario <- scenarios[s]
     #Loads Non-dispersal constrained richness maps
-    NonDispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, ".bil"))
+    NonDispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, ".grd"))
 
     #Loads dispersal-constrained richness maps for comparison
-    DispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, "_dispersalRate.bil"))
+    DispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, "_dispersalRate.grd"))
 
     #Calculates difference between dispersal and non-dispersal species richness maps
     DifferenceSR <- DispersalSR - NonDispersalSR
     raster::writeRaster(DifferenceSR,
-                filename = file.path(RichnessMaps, paste0("Richness Difference_", taxon, "_", FocusYear, "_", FocusScenario, ".bil")),
+                filename = file.path(RichnessMaps, paste0("Richness Difference_", taxon, "_", FocusYear, "_", FocusScenario, ".grd")),
                 format = "EHdr",
                 overwrite = TRUE,
                 prj = TRUE)
@@ -181,9 +181,20 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
   MakePDFMaps <- function(taxon) {
     #Upload all raster files, calculate overall maximum richness (regardless of time, scenario)
-    RasterList <- list.files(path = RichnessMaps, pattern = paste0("\\.bil$"), full.names = TRUE)
+    RasterList <- list.files(path = RichnessMaps, pattern = paste0("\\.grd$"), full.names = TRUE)
     FocusRasters <- RasterList[grep(paste0("Richness_", taxon), RasterList)]
     FocusStack <- raster::stack(FocusRasters)
+
+    RichNames <- rep(NA, length = length(FocusRasters))
+    for(i in 1:length(RichNames)) {
+      focname <- unlist(strsplit(FocusRasters[i], "/"))
+      focname <- focname[length(focname)]
+      focname <- substr(focname, 1, nchar(focname) - 4)
+      RichNames[i] <- focname
+    }
+
+    names(FocusStack) <- RichNames
+
     MaximumRich <- max(raster::cellStats(FocusStack, stat = max, na.rm = TRUE))
 
     for (e in 1:raster::nlayers(FocusStack)) {
@@ -230,9 +241,12 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     for (sp in 1:length(taxonlist2)) {
       focusspp <- taxonlist2[sp]
       if (dir.exists(paste0(result_dir, "/", focusspp))) {
-        curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.bil$"), full.names = TRUE)
+        curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.grd$"), full.names = TRUE)
         if (length(curfocus) > 0){
           curraster <- raster::raster(curfocus)
+          #Give the raster the name of the species
+          names(curraster) <- focusspp
+
           curstack <- raster::stack(c(curstack, curraster))
         } else {
           message(paste0(focusspp, " will be removed (was modelled but had no replicates of a high enough AUC value)"))
@@ -252,8 +266,8 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     CurrentRichness <- raster::calc(curstack, fun = sum)
     raster::crs(CurrentRichness) <- raster::crs(curstack)
     raster::writeRaster(CurrentRichness,
-                filename = file.path(RichnessMaps, paste0("Richness_", taxon, "_", time_periods[1], ".bil")),
-                format = "EHdr",
+                filename = file.path(RichnessMaps, paste0("Richness_", taxon, "_", time_periods[1], ".grd")),
+                format = "raster",
                 overwrite = TRUE,
                 prj = TRUE)
 
@@ -273,7 +287,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
       for (sp in 1:length(taxonlist2)) {
         focusspp <- taxonlist2[sp]
         curfocus <- list.files(path = file.path(result_dir, focusspp, scenarios[1]),
-                               pattern = paste0("binary_dispersalRate.bil$"), full.names = TRUE)
+                               pattern = paste0("binary_dispersalRate.grd$"), full.names = TRUE)
         if (!length(curfocus) > 0) {
           message(paste0(focusspp, " will be removed (no dispersal rate rasters were found)"))
           DeleteSP <- c(DeleteSP, sp)

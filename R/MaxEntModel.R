@@ -172,7 +172,6 @@ MaxEntModel <- function(occlist, bglist, model_output,
                                               "quadratic", "product", "threshold", "hinge",
                                               "testsamples", "ListSpp"), envir = environment())
     
-    parallel::clusterEvalQ(clus, library(raster))
     
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))

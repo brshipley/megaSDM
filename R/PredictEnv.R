@@ -50,8 +50,22 @@ PredictEnv <- function(studylayers, futurelayers,
     }
   }
 
-  studylayers <- raster::stack(studylayers)
-  if (is.na(raster::crs(studylayers))) {
+  studystack <- raster::stack(studylayers)
+  
+  #Provide names for the raster layers in the study area raster stack
+  if (class(studylayers) != "RasterStack") {
+    SANames <- rep(NA, length = length(studylayers))
+    for(i in 1:length(SANames)) {
+      focname <- unlist(strsplit(studylayers[i], "/"))
+      focname <- focname[length(focname)]
+      focname <- unlist(strsplit(focname, "\\."))[1]
+      SANames[i] <- focname
+    }
+    
+    names(studystack) <- SANames
+  }
+  
+  if (is.na(raster::crs(studystack))) {
     stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
 
@@ -78,39 +92,54 @@ PredictEnv <- function(studylayers, futurelayers,
       }
     }
 
-    focuslayers <- raster::stack(focuslayers)
-    if (is.na(raster::crs(focuslayers))) {
+    focusstack <- raster::stack(focuslayers)
+    
+    #Provide names for the raster layers in the study area raster stack
+    if (class(focuslayers) != "RasterStack") {
+      FocusNames <- rep(NA, length = length(focuslayers))
+      for(i in 1:length(FocusNames)) {
+        focname <- unlist(strsplit(focuslayers[i], "/"))
+        focname <- focname[length(focname)]
+        focname <- unlist(strsplit(focname, "\\."))[1]
+        FocusNames[i] <- focname
+      }
+      
+      names(focusstack) <- FocusNames
+    }
+    
+    
+    if (is.na(raster::crs(focusstack))) {
       stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
     }
 
-    if (!setequal(names(focuslayers), names(studylayers))) {
+    if (!setequal(names(focusstack), names(studystack))) {
       message("Warning: the environmental layer names do not match between current and future/past raster data")
     }
 
-    if (raster::res(focuslayers)[1] > raster::res(studylayers)[1]) {
+    if (raster::res(focusstack)[1] > raster::res(studystack)[1]) {
       message("Warning: the future/past raster data have coarser resolution than the current raster data")
-      message(paste0("Changing the resolution of the current raster data to ", raster::res(focuslayers)[1], "is recommended"))
+      message(paste0("Changing the resolution of the current raster data to ", raster::res(focusstack)[1], "is recommended"))
     }
 
-    if (as.character(raster::crs(focuslayers)) != as.character(raster::crs(studylayers))) {
-      focuslayers <- raster::projectRaster(focuslayers,
-                                           crs = raster::crs(studylayers),
-                                           res = raster::res(studylayers),
+    if (as.character(raster::crs(focusstack)) != as.character(raster::crs(studystack))) {
+      focusstack <- raster::projectRaster(focusstack,
+                                           crs = raster::crs(studystack),
+                                           res = raster::res(studystack),
                                            method = "bilinear")
     }
 
-    if (raster::extent(focuslayers) != raster::extent(studylayers)) {
-      focuslayers <- raster::crop(focuslayers, raster::extent(studylayers))
+    if (raster::extent(focusstack) != raster::extent(studystack)) {
+      focusstack <- raster::crop(focusstack, raster::extent(studystack))
     }
 
-    if (!setequal(raster::res(focuslayers), raster::res(studylayers))) {
-      focuslayers <- raster::resample(focuslayers, studylayers, method = "bilinear")
+    if (!setequal(raster::res(focusstack), raster::res(studystack))) {
+      focusstack <- raster::resample(focusstack, studystack, method = "bilinear")
     }
 
     if (j == 1) {
-      PredictEnv <- focuslayers
+      PredictEnv <- focusstack
     } else {
-      PredictEnv <- c(PredictEnv, focuslayers)
+      PredictEnv <- c(PredictEnv, focusstack)
     }
 
   }
@@ -127,8 +156,8 @@ PredictEnv <- function(studylayers, futurelayers,
       if (!dir.exists(paste0(output, "/", scenario_name ,"/", time))) {
         dir.create(paste0(output, "/", scenario_name, "/", time))
       }
-      raster::writeRaster(PredictEnv[[i]], paste0(output, "/", scenario_name, "/", time, "/", names(PredictEnv[[i]]), ".bil"),
-                          bylayer = TRUE, format = "EHdr", overwrite = TRUE)
+      raster::writeRaster(PredictEnv[[i]], paste0(output, "/", scenario_name, "/", time, "/", names(PredictEnv[[i]]), ".grd"),
+                          bylayer = TRUE, format = "raster", overwrite = TRUE)
     }
   }
   return(PredictEnv)

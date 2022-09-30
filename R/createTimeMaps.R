@@ -163,7 +163,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     #Lists current binary raster files
-    modernData <- list.files(path = file.path(result_dir, CurSpp), pattern = paste0("binary.bil$"), full.names = TRUE)
+    modernData <- list.files(path = file.path(result_dir, CurSpp), pattern = paste0("binary.grd$"), full.names = TRUE)
     rasterCRS <- raster::crs(raster::raster(modernData[1]))
     directories <- list.dirs(path = file.path(result_dir, CurSpp))
     correctDirectories <- c()
@@ -179,9 +179,9 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     if (dispersal == TRUE) {
-      filepattern <- "binary_dispersalRate.bil$"
+      filepattern <- "binary_dispersalRate.grd$"
     } else {
-      filepattern <- "binary.bil$"
+      filepattern <- "binary.grd$"
     }
 
     #Creates a matrix with the correct file paths to the current and future rasters
@@ -345,15 +345,15 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       #write the output raster
       if (dispersal == TRUE){
         raster::writeRaster(FinalPrintRast,
-                    filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], "_dispersal.bil")),
+                    filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], "_dispersal.grd")),
                     overwrite = TRUE,
-                    format = "EHdr",
+                    format = "raster",
                     prj = TRUE)
       } else {
         raster::writeRaster(FinalPrintRast,
-                            filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], ".bil")),
+                            filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], ".grd")),
                             overwrite = TRUE,
-                            format = "EHdr",
+                            format = "raster",
                             prj = TRUE)
       }
 
