@@ -42,7 +42,7 @@ a list of all species modelled (Column 1) and a selected higher taxon
 richness maps are not required, \code{taxonlist} should be set to \code{FALSE} (default).}
 }
 \value{
-writes .pdf files and rasters (.bil) of species richness for all given
+writes .pdf files and rasters (.grd) of species richness for all given
 taxa, time periods, and scenarios and dispersal constraints to the directory
 "\code{result_dir}/RichnessMaps".
 }

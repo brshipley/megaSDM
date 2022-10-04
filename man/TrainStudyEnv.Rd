@@ -11,7 +11,8 @@ TrainStudyEnv(
   resolution = NA,
   clipTrain = NA,
   clipStudy = NA,
-  output = NA
+  output = NA,
+  maxentproj = TRUE
 )
 }
 \arguments{
@@ -24,8 +25,8 @@ the study area cannot be clipped from the trainingarea. Defaults to NA (same lis
 Defaults to NA (no projection).}
 
 \item{resolution}{The desired resolution of the raster data in the units of the \strong{target projection}.
-
-NOTE: if CRS is NA, but resolution has a value, the rasters will be resampled to the given resolution.}
+NOTE: if CRS is NA, but resolution has a value, the rasters will be resampled to the given resolution.
+NOTE: different x and y resolutions (i.e., rectangular pixels) are acceptable for megaSDM in general but MaxEntProj cannot be run.}
 
 \item{clipTrain}{Extent object or vector of desired training extent in form c(xmin, xmax, ymin, ymax).
 The extent should be given in latlong coordinates.}
@@ -37,10 +38,13 @@ training area extent will be used.}
 \item{output}{If the rasters are to be written to the computer, the full path of the directory where
 they will be written out to. If set to \code{NA} (the default), the rasters will not be written out
 and will be returned as the value of this function.}
+
+\item{maxentproj}{TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, rectangular pixels
+without a defined resolution will be resampled to square pixels using the longer of the two sides.}
 }
 \value{
 Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
-environmental layers. if \code{output != NA}, the rasters will also be written out as ".bil" files.
+environmental layers. if \code{output != NA}, the rasters will also be written out as ".grd" files.
 }
 \description{
 This function manages environmental layers for the training and study areas of an SDM analysis.

@@ -91,11 +91,12 @@ BackgroundBuffers <- function(occlist,
     Locations <- as.data.frame(Coordinates2@coords)
 
     #Uses the first 1000 points (randomly sampled) to create buffers and distances
-    if (nrow(Locations) > 1000) {
-      BufferPointNumber <- 1000
-    } else {
-      BufferPointNumber <- nrow(Locations) - 1
+    if (nrow(Locations) > 5000) {
+      message(paste0("Warning: the number of occurrences for ", CurSpp, " is > 5000"))
+      message(paste0("    Generating backgrond buffers may take some time."))
     }
+
+    BufferPointNumber <- nrow(Locations) - 1
 
     SampleLocations <- Locations[sample(c(1:nrow(Locations)), size = BufferPointNumber, replace = FALSE), ]
 
@@ -118,16 +119,7 @@ BackgroundBuffers <- function(occlist,
       }
     }
 
-    #Makes a buffer (width dependent) around the first occurrence point
-    combinedPolygon <- sampSurf::spCircle(BufferWidth, spUnits = raster::crs(envstack),
-                                centerPoint = c(x = Locations[1, 1], y = Locations[1, 2]))$spCircle
-
-    #Creates buffers aroudn the remaining points and combines them
-    for (b in 2:nrow(Locations)) {
-      circle <- sampSurf::spCircle(BufferWidth, spUnits = raster::crs(envstack), centerPoint = c(x = Locations[b, 1], y = Locations[b, 2]))
-      binded <- raster::bind(combinedPolygon, circle$spCircle)
-      combinedPolygon <- rgeos::gUnaryUnion(binded)
-    }
+    combinedPolygon <- raster::buffer(Coordinates2, width = BufferWidth, dissolve = TRUE)
 
     #Reprojects the buffer into the desired CRS
     sp::proj4string(combinedPolygon) <- raster::crs(envstack)
@@ -149,21 +141,20 @@ BackgroundBuffers <- function(occlist,
     out <- sapply(ListSpp, function(x) run(x))
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-    
+
     parallel::clusterExport(clus, varlist = c("occlist", "run", "envstack", "envdata",
                                               "output", "buff_distance", "ListSpp"), envir = environment())
-    
-    
+
+
     parallel::clusterEvalQ(clus, library(rgdal))
     parallel::clusterEvalQ(clus, library(rgeos))
     parallel::clusterEvalQ(clus, library(raster))
-    parallel::clusterEvalQ(clus, library(sampSurf))
-    
+
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     }
-    
+
     parallel::stopCluster(clus)
   }
-  
+
 }

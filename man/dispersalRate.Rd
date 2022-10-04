@@ -4,7 +4,7 @@
 \alias{dispersalRate}
 \title{Constrain Modelled Species Distributions by Dispersal Ability}
 \usage{
-dispersalRate(result_dir, dispersaldata, time_periods, scenarios, ncores)
+dispersalRate(result_dir, dispersaldata, time_periods, scenarios, ncores = 1)
 }
 \arguments{
 \item{result_dir}{the directory where the ensembled and binary maps are placed.
@@ -42,7 +42,7 @@ of dispersal per year as a function of distance is modelled using an exponential
 distribution, and summed together to create a probability of dispersal for the
 intervals between each provided time step. Dispersal-constrained binary (presence
 and absence) maps are generated, as well as continuous maps of "invadable suitability"
-(see \strong{\strong{\strong{TODO_papername}}}).
+(see https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.05450).
 }
 \details{
 NOTE: dispersal rate analyses are only informative for predicting species

@@ -48,6 +48,8 @@ environmental layers.}
 
 3: Files containing the parameters used to make the response curves.
 
+4: Plots of the response curves for each parameter
+
 The final set of arguments are optional and used for tuning the maxent model and cross-validation:}
 
 \item{reptype}{Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
