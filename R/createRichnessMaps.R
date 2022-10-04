@@ -158,7 +158,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     DifferenceSR <- DispersalSR - NonDispersalSR
     raster::writeRaster(DifferenceSR,
                 filename = file.path(RichnessMaps, paste0("Richness Difference_", taxon, "_", FocusYear, "_", FocusScenario, ".grd")),
-                format = "EHdr",
+                format = "raster",
                 overwrite = TRUE,
                 prj = TRUE)
 

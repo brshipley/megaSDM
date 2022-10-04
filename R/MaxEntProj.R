@@ -71,7 +71,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   #Make sure that the study layers have a CRS that is not NA
   studystack <- raster::stack(studylayers)
-  
+
   StudyNames <- rep(NA, length = length(studylayers))
   for(i in 1:length(StudyNames)) {
     focname <- unlist(strsplit(studylayers[i], "/"))
@@ -79,9 +79,9 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     focname <- unlist(strsplit(focname, "\\."))[1]
     StudyNames[i] <- focname
   }
-  
+
   names(studystack) <- StudyNames
-  
+
   if (is.na(raster::crs(studystack))) {
     stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   } else {
@@ -90,7 +90,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
   #Format the matrix from which to parallelize the species
   ListSpp <- list.dirs(input, full.names = FALSE, recursive = FALSE)
-  
+
   if (length(which(complete.cases(aucval))) > 0) {
     #Removes species with all replicates less than the AUC threshold given by aucval
     print(paste0("    Removing species with Test AUC Values < AUC threshold from subsequent analyses"))
@@ -123,7 +123,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   } else {
     nrep <- 1
   }
-  
+
   if (length(ListSpp) == 0) {
     stop(paste0("No species have AUC values higher than ", aucval))
   }
@@ -157,10 +157,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
     ensemble.stack <- c()
     curmodel <- file.path(input, path)
-    
+
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
-          
+
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
@@ -254,10 +254,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     ensemble.stack <- c()
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
-    
+
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
-    
+
     for (j in 1:replicates) {
       if (!is.na(aucvalSpecies)) {
         tryCatch({
@@ -285,14 +285,14 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     } else {
       ensemble.calc <- ensemble.stack
     }
-    
+
     if (decade == currentYear) {
       raster::crs(ensemble.calc) <- desiredCRS
       raster::writeRaster(ensemble.calc,
                   filename = file.path(output, path, paste0(decade, "_ensembled.grd")),
                   overwrite = TRUE,
                   format = "raster")
-      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.grd")))
+      grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
       raster::plot(ensemble.calc, main = paste0(path, "_", decade))
       grDevices::dev.off()
     } else {
@@ -504,20 +504,20 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     }
 
   }
-  
+
   if (ncores == 1) {
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) run(x))
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-    
+
     parallel::clusterExport(clus, varlist = c("run", "threshold", "medianensemble", "getSize",
                                               "t1nott2", "overlap", "getCentroid","getStats", "nrep",
                                               "currentYear", "numYear", "numScenario", "nproj",
                                               "input", "time_periods", "scenarios", "predict_dirs",
                                               "study_dir", "ThreshMethod", "aucval", "output", "ncores",
                                               "ListSpp", "desiredCRS"), envir = environment())
-    
+
     parallel::clusterEvalQ(clus, library(gtools))
     parallel::clusterEvalQ(clus, library(raster))
     for (i in 1:nrow(ListSpp)) {

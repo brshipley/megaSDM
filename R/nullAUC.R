@@ -49,6 +49,19 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       }
     }
 
+    #if the envdata parameter is not a raster stack, stack it and provide names
+    if (class(envdata) != "RasterStack") {
+      EnvNames <- rep(NA, length = length(envdata))
+      for(i in 1:length(EnvNames)) {
+        focname <- unlist(strsplit(envdata[i], "/"))
+        focname <- focname[length(focname)]
+        focname <- substr(focname, 1, nchar(focname) - 4)
+        EnvNames[i] <- focname
+      }
+      envdata <- raster::stack(envdata)
+      names(envdata) <- EnvNames
+    }
+
     run <- function(CurSpp) {
       s <- grep(CurSpp, occlist)
 
