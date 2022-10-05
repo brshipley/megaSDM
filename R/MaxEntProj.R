@@ -161,6 +161,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
 
+    #If species have been removed from the species list (e.g., not enough high-quality replicates),
+    #only take the first auc value provided
+    aucvalSpecies <- aucvalSpecies[1]
+
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
@@ -257,6 +261,10 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
+
+    #If species have been removed from the species list (e.g., not enough high-quality replicates),
+    #only take the first auc value provided
+    aucvalSpecies <- aucvalSpecies[1]
 
     for (j in 1:replicates) {
       if (!is.na(aucvalSpecies)) {
