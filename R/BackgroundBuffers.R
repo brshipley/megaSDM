@@ -87,6 +87,9 @@ BackgroundBuffers <- function(occlist,
     coordinates <- species[, c("x", "y")]
     Coordinates2 <- sp::SpatialPoints(coordinates, proj4string = raster::crs(envstack))
 
+    #Converts coordinates to a projection with native units as meters (for buffer generation)
+    Coordinates2 <- sp::spTransform(Coordinates2, crs("+proj=cea +datum=WGS84 +no_defs +units=m"))
+
     #Calculates a buffer width based on quantiled minimum distance among all occurrence points
     Locations <- as.data.frame(Coordinates2@coords)
 
@@ -118,11 +121,10 @@ BackgroundBuffers <- function(occlist,
         BufferWidth <- buff_distance[grep(paste0(CurSpp, ".csv"), occlist)]
       }
     }
-
     combinedPolygon <- raster::buffer(Coordinates2, width = BufferWidth, dissolve = TRUE)
 
     #Reprojects the buffer into the desired CRS
-    sp::proj4string(combinedPolygon) <- raster::crs(envstack)
+    combinedPolygon <- sp::spTransform(combinedPolygon, crs(envdata))
 
     #Write shapefile out of the buffer
     sp_poly_df <- sp::SpatialPolygonsDataFrame(combinedPolygon, data = data.frame(ID = 1), match.ID = FALSE)
