@@ -68,7 +68,7 @@ OccurrenceManagement <- function(occlist,
 
   #Make sure that the training layers have a CRS that is not NA
   envstack <- raster::stack(envdata)
-  
+
   #Provide names for the raster layers in the study area raster stack
   if (class(envdata) != "RasterStack") {
     EnvNames <- rep(NA, length = length(envdata))
@@ -78,10 +78,10 @@ OccurrenceManagement <- function(occlist,
       focname <- unlist(strsplit(focname, "\\."))[1]
       EnvNames[i] <- focname
     }
-    
+
     names(envstack) <- EnvNames
   }
-  
+
   if (is.na(raster::crs(envstack))) {
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
@@ -230,7 +230,7 @@ OccurrenceManagement <- function(occlist,
 
     SpeciesCoordsSP <- sp::SpatialPointsDataFrame(coords = SpeciesCoords[, c("Longitude", "Latitude")],
                                            data = SpeciesCoords,
-                                           proj4string = raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
+                                           proj4string = sp::CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
     SpeciesCoordsSP <- sp::spTransform(SpeciesCoordsSP, CRSobj = raster::crs(envstack))
 
     SpeciesCoords <- data.frame("Species" = SpeciesCoordsSP$Species, SpeciesCoordsSP@coords)
@@ -257,7 +257,7 @@ OccurrenceManagement <- function(occlist,
       SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv)
       SpeciesEnv <- stats::na.omit(SpeciesEnv)
       if (nrow(SpeciesEnv) == 0) {
-        stop("Environmental extraction failed: 
+        stop("Environmental extraction failed:
              ensure that the points and the raster have overlapping extents")
       }
     }
