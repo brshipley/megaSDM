@@ -9,8 +9,8 @@
 #' smaller study area is required than will be trained on, it clips the study area from the training
 #' rasters and outputs a list containing both sets of rasters.
 #'
-#' @param input_TA RasterStack or a list of raster files for the training area (full directory path).
-#' @param input_SA (optional) RasterStack or a list of raster files for the study area. Provide if
+#' @param input_TA SpatRaster or a list of raster files for the training area (full directory path).
+#' @param input_SA (optional) SpatRaster or a list of raster files for the study area. Provide if
 #' the study area cannot be clipped from the trainingarea. Defaults to NA (same list of raster files).
 #' @param desiredCRS The coordinate system to project training/test data into given in PROJ4 notation.
 #' Defaults to NA (no projection).
@@ -25,25 +25,27 @@
 #' @param output If the rasters are to be written to the computer, the full path of the directory where
 #' they will be written out to. If set to \code{NA} (the default), the rasters will not be written out
 #' and will be returned as the value of this function.
-#' @param maxentproj TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, rectangular pixels
-#' without a defined resolution will be resampled to square pixels using the longer of the two sides.
+#' @param maxentproj TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, rectangular pixels 
+#' without a defined resolution will be resampled to square pixels using the longer of the two sides. In
+#' addition, the NA value of the raster will be set to the maximum raster value + 0.01 instead of the 
+#' nun-numeric NaN when written out.
 #' @export
-#' @return Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
+#' @return Returns a list of two SpatRasters: training "(\code{$training})" and study area "(\code{$study})"
 #' environmental layers. if \code{output != NA}, the rasters will also be written out as ".grd" files.
 
 TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
                           resolution = NA, clipTrain = NA,
                           clipStudy = NA, output = NA, maxentproj = TRUE) {
 
-  #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
-  if (class(input_TA) != "RasterStack") {
+  #If the input training layers are not in SpatRaster form, ensure that they have the same projection/extent
+  if (class(input_TA) != "SpatRaster") {
 
     #Ensure that all training area rasters have the same projection and extent
     projtrain <- rep(NA, len = length(input_TA))
     exttrain <- rep(NA, len = length(input_TA))
     for (i in 1:length(input_TA)) {
-      projtrain[i] <- as.character(raster::crs(raster::raster(input_TA[[i]])))
-      exttrain[i] <- as.character(raster::extent(raster::raster(input_TA[[i]])))
+      projtrain[i] <- as.character(terra::crs(terra::rast(input_TA[[i]])))
+      exttrain[i] <- as.character(terra::ext(terra::rast(input_TA[[i]])))
     }
 
     if (length(unique(projtrain)) > 1) {
@@ -51,38 +53,27 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     } else if (length(unique(exttrain)) > 1) {
       stop("Not all of the training area environmental rasters have the same extent")
     }
+    envstack <- terra::rast(input_TA)
+  } else {
+    envstack <- input_TA
   }
 
   #Make sure that the training layers have a CRS that is not NA
-  envstack <- raster::stack(input_TA)
-  if (is.na(raster::crs(envstack))) {
+  if (is.na(terra::crs(envstack))) {
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
-  }
-
-  #if training layers were read from file names, provide names of the raster stack
-  if (class(input_TA) != "RasterStack") {
-    TANames <- rep(NA, length = length(input_TA))
-    for(i in 1:length(TANames)) {
-      focname <- unlist(strsplit(input_TA[i], "/"))
-      focname <- focname[length(focname)]
-      focname <- unlist(strsplit(focname, "\\."))[1]
-      TANames[i] <- focname
-    }
-
-    names(envstack) <- TANames
   }
 
   #If study area rasters are provided, repeat for study area
   if (methods::hasArg(input_SA)) {
-    #If the input study area layers are not in rasterstack form, ensure that they have the same projection/extent
-    if (class(input_SA) != "RasterStack") {
+    #If the input study area layers are not in SpatRaster form, ensure that they have the same projection/extent
+    if (class(input_SA) != "SpatRaster") {
 
       #Ensure that all training area rasters have the same projection and extent
       projstudy <- rep(NA, len = length(input_SA))
       extstudy <- rep(NA, len = length(input_SA))
       for (i in 1:length(input_SA)) {
-        projstudy[i] <- as.character(raster::crs(raster::raster(input_SA[[i]])))
-        extstudy[i] <- as.character(raster::extent(raster::raster(input_SA[[i]])))
+        projstudy[i] <- as.character(terra::crs(terra::rast(input_SA[[i]])))
+        extstudy[i] <- as.character(terra::ext(terra::rast(input_SA[[i]])))
       }
 
       if (length(unique(projstudy)) > 1) {
@@ -93,143 +84,138 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     }
 
     #Make sure that the study area layers have a CRS that is not NA
-    studystack <- raster::stack(input_SA)
-    if (is.na(raster::crs(studystack))) {
+    studystack <- terra::rast(input_SA)
+    if (is.na(terra::crs(studystack))) {
       stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
-    } else if (as.character(raster::crs(studystack)) != as.character(raster::crs(envstack))) {
-      studystack <- raster::projectRaster(studystack, crs = raster::crs(envstack))
+    } else if (as.character(terra::crs(studystack)) != as.character(terra::crs(envstack))) {
+      studystack <- terra::project(studystack, terra::crs(envstack))
       message("Warning: study area has different coordinate projection than training area: reprojecting to training area CRS")
     }
-
-    #Provide names for the raster layers in the study area raster stack
-    if (class(input_SA) != "RasterStack") {
-      SANames <- rep(NA, length = length(input_SA))
-      for(i in 1:length(SANames)) {
-        focname <- unlist(strsplit(input_SA[i], "/"))
-        focname <- focname[length(focname)]
-        focname <- unlist(strsplit(focname, "\\."))[1]
-        SANames[i] <- focname
-      }
-
-      names(studystack) <- SANames
-    }
-
+    
   }
 
   #If pixels are rectangular and maxentprojection needs to be run, resample to coarser resolution
   #Also, force resample to avoid tiny resolution errors (see GitHub Issue #2)
   if (maxentproj) {
-    #Set desired resolution to the longest axis of the pixels
+    #Set desired resolution to the longest axis of the pixels	
     #If projection to a new CRS is required, first project, then get resolution
-
+    
     if (is.na(resolution) & is.na(desiredCRS)) {
-      resolution <- max(raster::res(envstack))
+      resolution <- max(terra::res(envstack))
     } else if (is.na(resolution)) {
-      TestProject <- raster::projectRaster(envstack[[1]], crs = desiredCRS)
-      resolution <- max(raster::res(TestProject))
+      TestProject <- terra::project(envstack[[1]], desiredCRS)
+      resolution <- max(terra::res(TestProject))
     }
     if(length(resolution) > 1) {
       resolution <- max(resolution)
       message("The desired resolution will lead to rectangular pixels: resampling to square pixels for use in MaxEnt projection")
     }
-    if(!all.equal(raster::res(envstack)[1], raster::res(envstack)[2])) {
-      resolution <- max(raster::res(envstack))
+    if(!all.equal(terra::res(envstack)[1], terra::res(envstack)[2])) {
+      resolution <- max(terra::res(envstack))
       message("The original training raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
     }
     if(exists("studystack")) {
-      if(!all.equal(raster::res(studystack)[1], raster::res(studystack)[2])) {
-        resolution <- max(c(raster::res(envstack), raster::res(studystack)))
+      if(!all.equal(terra::res(studystack)[1], terra::res(studystack)[2])) {
+        resolution <- max(c(terra::res(envstack), terra::res(studystack)))
         message("The original study area raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
       }
     }
   }
-
+  
   #Clip rasters to desired extent
   #Having the clipping step first makes the process faster
   if (class(clipTrain) != "logical") {
-    clipTrain <- raster::extent(clipTrain)
-    ExtentTA <- sp::SpatialPoints(clipTrain, proj4string = sp::CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjTA <- sp::spTransform(ExtentTA, raster::crs(envstack))
-
-    NewExtentTA <- raster::extent(ExtentProjTA@coords)
-
+    clipTrain <- terra::ext(clipTrain)
+    ExtentTA <- terra::as.points(clipTrain)
+    terra::crs(ExtentTA) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" 
+    ExtentProjTA <- terra::project(ExtentTA, terra::crs(envstack))
+    
+    NewExtentTA <- terra::ext(ExtentProjTA)
+    
     #Weird projections cause the reprojected layers to have issues (dealt with here)
     if (NewExtentTA[1] > NewExtentTA[2] | NewExtentTA[3] > NewExtentTA[4]) {
       stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
     }
-
-    if (NewExtentTA > raster::extent(envstack)) {
+    
+    if (NewExtentTA > terra::ext(envstack)) {
       message("Warning: the desired training extent is larger than the original raster")
       message("Only the intersection of the two extents will be used")
     }
-
-    envstack <- raster::crop(envstack, raster::extent(max(NewExtentTA[1], raster::extent(envstack)[1]),
-                                                      min(NewExtentTA[2], raster::extent(envstack)[2]),
-                                                      max(NewExtentTA[3], raster::extent(envstack)[3]),
-                                                      min(NewExtentTA[4], raster::extent(envstack)[4])))
+    
+    envstack <- terra::crop(envstack, terra::ext(max(NewExtentTA[1], terra::ext(envstack)[1]),
+                                                      min(NewExtentTA[2], terra::ext(envstack)[2]),
+                                                      max(NewExtentTA[3], terra::ext(envstack)[3]),
+                                                      min(NewExtentTA[4], terra::ext(envstack)[4])))
     print("Training area clipped!")
   }
-
+  
   if (!exists("studystack")) {
     studystack <- envstack
   }
-
+  
   if (class(clipStudy) != "logical") {
-    clipStudy <- raster::extent(clipStudy)
-    ExtentSA <- sp::SpatialPoints(clipStudy, proj4string = sp::CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    ExtentProjSA <- sp::spTransform(ExtentSA, raster::crs(envstack))
-
-    NewExtentSA <- raster::extent(ExtentProjSA@coords)
-
-    if (NewExtentSA > raster::extent(studystack)) {
+    clipStudy <- terra::ext(clipStudy)
+    ExtentSA <- terra::as.points(clipStudy)
+    terra::crs(ExtentSA) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+    ExtentProjSA <- terra::project(ExtentSA, terra::crs(envstack))
+    
+    NewExtentSA <- terra::ext(ExtentProjSA)
+    
+    if (NewExtentSA > terra::ext(studystack)) {
       message("Warning: the desired study extent is larger than the study rasters")
       message("Only the intersection of the two extents will be used")
     }
-
+    
     #Weird projections cause the reprojected layers to have issues (dealt with here)
     if (NewExtentSA[1] > NewExtentSA[2] | NewExtentSA[3] > NewExtentSA[4]) {
       stop("The desired CRS chosen may lead to incorrect raster clipping. Choose another CRS or clip the unprojected raster before projecting")
     }
-
-    studystack <- raster::crop(envstack, raster::extent(max(NewExtentSA[1], raster::extent(studystack)[1]),
-                                                        min(NewExtentSA[2], raster::extent(studystack)[2]),
-                                                        max(NewExtentSA[3], raster::extent(studystack)[3]),
-                                                        min(NewExtentSA[4], raster::extent(studystack)[4])))
+    
+    studystack <- terra::crop(envstack, terra::ext(max(NewExtentSA[1], terra::ext(studystack)[1]),
+                                                        min(NewExtentSA[2], terra::ext(studystack)[2]),
+                                                        max(NewExtentSA[3], terra::ext(studystack)[3]),
+                                                        min(NewExtentSA[4], terra::ext(studystack)[4])))
     print("Study area clipped!")
   }
-
+  
   #Reproject and/or resample rasters to desired crs and resolution
   #TODO allow for "method" argument of resampling to be vared based on layer
   if (!is.na(desiredCRS)) {
     if (is.na(resolution)) {
-      envstack <- raster::projectRaster(envstack, crs = desiredCRS)
+      envstack <- terra::project(envstack, desiredCRS)
       gc(full = TRUE)
       if (exists("studystack")) {
-        studystack <- raster::projectRaster(studystack, crs = desiredCRS)
+        studystack <- terra::project(studystack, desiredCRS)
         gc(full = TRUE)
       }
-
+      
     } else {
-      envstack <- raster::projectRaster(envstack, crs = desiredCRS, res = resolution, method = "bilinear")
+      envstack <- terra::project(envstack, desiredCRS)
+      envstack_res <- terra::rast(extent = terra::ext(envstack), resolution = resolution, crs = terra::crs(envstack))
+      envstack <- terra::resample(envstack, envstack_res, method = "bilinear")
       gc(full = TRUE)
       if (exists("studystack")) {
-        studystack <- raster::projectRaster(studystack, crs = desiredCRS, res = resolution, method = "bilinear")
+        studystack <- terra::project(studystack, desiredCRS)
+        studystack_res <- terra::rast(extent = terra::ext(studystack), resolution = resolution, crs = terra::crs(studystack))
+        studystack <- terra::resample(studystack, studystack_res, method = "bilinear")
         gc(full = TRUE)
       }
     }
 
   } else if (!is.na(resolution)) {
     if (exists("studystack")) {
-      studystack <- raster::projectRaster(studystack, crs = raster::crs(studystack), res = resolution, method = "bilinear")
+      studystack_res <- terra::rast(extent = terra::ext(studystack), resolution = resolution, crs = terra::crs(studystack))
+      studystack <- terra::resample(studystack, studystack_res, method = "bilinear")
       gc(full = TRUE)
     }
-    envstack <- raster::projectRaster(envstack, crs = raster::crs(envstack), res = resolution, method = "bilinear")
+    envstack_res <- terra::rast(extent = terra::ext(envstack), resolution = resolution, crs = terra::crs(envstack))
+    envstack <- terra::resample(envstack, envstack_res, method = "bilinear")
     gc(full = TRUE)
   }
 
-  envstack <- raster::trim(envstack)
-  studystack <- raster::trim(studystack)
-  EnvRasters <- list("training" = raster::stack(envstack), "study" = raster::stack(studystack))
+  envstack <- terra::trim(envstack)
+  studystack <- terra::trim(studystack)
+  EnvRasters <- list("training" = envstack, "study" = studystack)
 
   if (!is.na(output)) {
     if (!dir.exists(paste0(output, "/trainingarea"))) {
@@ -238,11 +224,34 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
     if (!dir.exists(paste0(output, "/studyarea"))) {
       dir.create(paste0(output, "/studyarea"), recursive = TRUE)
     }
-    raster::writeRaster(EnvRasters$training, paste0(output, "/trainingarea/", names(EnvRasters$training), ".grd"),
-                        bylayer = TRUE, format = "raster", overwrite = TRUE)
-    raster::writeRaster(EnvRasters$study, paste0(output, "/studyarea/", names(EnvRasters$study), ".grd"),
-                        bylayer = TRUE, format = "raster", overwrite = TRUE)
+    #If maxent projection is necessary: change NA value of each training raster to maximum value + 0.01
+    if (maxentproj) {
+      for(e in 1:terra::nlyr(EnvRasters$training)) {
+        FocusRast <- EnvRasters$training[[e]]
+        MaxValue <- max(terra::values(FocusRast), na.rm = TRUE)
+        FocusRast[which(is.na(terra::values(FocusRast)))] <- as.numeric(MaxValue + 0.01)
+        terra::writeRaster(FocusRast, 
+                           filename = paste0(output, "/trainingarea/", names(FocusRast), ".grd"),
+                           overwrite = TRUE, NAflag = as.numeric(MaxValue + 0.01))
+      }
+      
+      for(e in 1:terra::nlyr(EnvRasters$study)) {
+        FocusRast <- EnvRasters$study[[e]]
+        MaxValue <- max(terra::values(FocusRast), na.rm = TRUE)
+        FocusRast[which(is.na(terra::values(FocusRast)))] <- as.numeric(MaxValue + 0.01)
+        terra::writeRaster(FocusRast, 
+                           filename = paste0(output, "/studyarea/", names(FocusRast), ".grd"),
+                           overwrite = TRUE, NAflag = as.numeric(MaxValue + 0.01))
+      }
+      
+    } else {
+      
+      terra::writeRaster(EnvRasters$training, paste0(output, "/trainingarea/", names(EnvRasters$training), ".grd"),
+                         overwrite = TRUE)
+      terra::writeRaster(EnvRasters$study, paste0(output, "/studyarea/", names(EnvRasters$study), ".grd"),
+                         overwrite = TRUE)
+    }
+   
   }
-
   return(EnvRasters)
 }

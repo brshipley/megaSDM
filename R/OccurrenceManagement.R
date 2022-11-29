@@ -16,7 +16,7 @@
 #' environments at each occurrence point be extracted?
 #' @param envsample (logical (\code{TRUE} or \code{FALSE})) should
 #' environmental (Varela) subsampling be conducted on the occurrence points?
-#' @param envdata a RasterStack or list of raster files
+#' @param envdata a SpatRaster or list of raster files
 #' corresponding to the area the model will be trained on. All environmental
 #' variables should be provided.
 #' @param nbins (integer) the number of bins each climate combination
@@ -48,15 +48,15 @@ OccurrenceManagement <- function(occlist,
     dir.create(output)
   }
 
-  #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
-  if (class(envdata) != "RasterStack") {
+  #If the input training layers are not in SpatRaster form, ensure that they have the same projection/extent
+  if (class(envdata) != "SpatRaster") {
 
     #Ensure that all training area rasters have the same projection and extent
     projtrain <- rep(NA, len = length(envdata))
     exttrain <- rep(NA, len = length(envdata))
     for (i in 1:length(envdata)) {
-      projtrain[i] <- as.character(raster::crs(raster::raster(envdata[[i]])))
-      exttrain[i] <- as.character(raster::extent(raster::raster(envdata[[i]])))
+      projtrain[i] <- as.character(terra::crs(terra::rast(envdata[[i]])))
+      exttrain[i] <- as.character(terra::ext(terra::rast(envdata[[i]])))
     }
 
     if (length(unique(projtrain)) > 1) {
@@ -64,25 +64,14 @@ OccurrenceManagement <- function(occlist,
     } else if (length(unique(exttrain)) > 1) {
       stop("Not all of the training area environmental rasters have the same extent")
     }
+    envstack <- terra::rast(envdata)
+  } else {
+    envstack <- envdata
   }
 
   #Make sure that the training layers have a CRS that is not NA
-  envstack <- raster::stack(envdata)
 
-  #Provide names for the raster layers in the study area raster stack
-  if (class(envdata) != "RasterStack") {
-    EnvNames <- rep(NA, length = length(envdata))
-    for(i in 1:length(EnvNames)) {
-      focname <- unlist(strsplit(envdata[i], "/"))
-      focname <- focname[length(focname)]
-      focname <- unlist(strsplit(focname, "\\."))[1]
-      EnvNames[i] <- focname
-    }
-
-    names(envstack) <- EnvNames
-  }
-
-  if (is.na(raster::crs(envstack))) {
+  if (is.na(terra::crs(envstack))) {
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
 
@@ -90,10 +79,11 @@ OccurrenceManagement <- function(occlist,
 
     if (is.numeric(PCA)) {
       PCAxes <- as.numeric(PCA)
-      if (PCAxes > raster::nlayers(envdata)) {
-        PCAxes <- raster::nlayers(envdata)
+      if (PCAxes > terra::nlyr(envdata)) {
+        PCAxes <- terra::nlyr(envdata)
         message(paste0("Setting Number of PC Axes to Number of Layers: ", PCAxes))
       }
+      PCA <- "Y"
     } else if (!is.na(PCA)) {
       PCAxes <- "Y"
     } else {
@@ -103,10 +93,14 @@ OccurrenceManagement <- function(occlist,
 
     VarelaSample <- function (occurrences, env, no_bins, PCA, PCAxes) {
 
-      occurrences <- sp::SpatialPoints(occurrences, proj4string = raster::crs(env))
+      occurrences <- terra::vect(occurrences,
+                                 geom = c("Longitude", "Latitude"),
+                                 crs = terra::crs(env))
 
-      EnvOccur <- raster::extract(env, occurrences)
-      EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
+      EnvOccur <- terra::extract(env, occurrences)
+      EnvOccur <- EnvOccur[, 2:ncol(EnvOccur)]
+      EnvCoords <- data.frame(terra::geom(occurrences))
+      EnvOccur <- data.frame(x = EnvCoords$x, y = EnvCoords$y, EnvOccur)
       ClimOccur <- EnvOccur
       ClimOccur <- ClimOccur[stats::complete.cases(ClimOccur), ]
       if (PCA == "Y") {
@@ -197,7 +191,11 @@ OccurrenceManagement <- function(occlist,
   for (s in 1:length(occlist)) {
     #Reads the occurrence file
     SpeciesOcc <- utils::read.csv(occlist[s])
-
+  
+    if(nrow(SpeciesOcc) == 0) {
+      next()
+    }
+    
     #Determines the species name from the name of the occurrence file
     SpeciesSplit <- unlist(strsplit(occlist[s], "/", fixed = TRUE))
     SpeciesName <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
@@ -228,18 +226,25 @@ OccurrenceManagement <- function(occlist,
       stop("The species occurrence points are not given in latitude/longitude form. Reproject species occurrences to a latlon projection")
     }
 
-    SpeciesCoordsSP <- sp::SpatialPointsDataFrame(coords = SpeciesCoords[, c("Longitude", "Latitude")],
-                                           data = SpeciesCoords,
-                                           proj4string = sp::CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
-    SpeciesCoordsSP <- sp::spTransform(SpeciesCoordsSP, CRSobj = raster::crs(envstack))
-
-    SpeciesCoords <- data.frame("Species" = SpeciesCoordsSP$Species, SpeciesCoordsSP@coords)
-
+    SpeciesCoordsSP <- terra::vect(SpeciesCoords,
+                                   geom = c("Longitude", "Latitude"),
+                                   crs = terra::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
+    SpeciesCoordsSP <- terra::project(SpeciesCoordsSP, terra::crs(envstack))
+    CoordMat <- terra::geom(SpeciesCoordsSP)[, c("x", "y")]
+    
+    if(nrow(SpeciesCoordsSP) == 1) {
+      CoordMat <- data.frame(x = CoordMat["x"],
+                             y = CoordMat["y"])
+    }
+    
+    SpeciesCoords <- data.frame("Species" = SpeciesCoordsSP$Species, CoordMat)
+    names(SpeciesCoords) <- c("Species", "Longitude", "Latitude")
+    
     #If required, extracts environmental data from rasters. Otherwise, adds environmental data back
     #to the projected occurrence points
     if (envextract == "FALSE") {
-      for (l in 1:raster::nlayers(envstack)) {
-        env_var <- names(envstack)[l]
+      for (l in 1:terra::nlyr(envdata)) {
+        env_var <- names(envdata)[l]
         EnvCol <- grep(paste0("^", env_var, "$"), names(SpeciesOcc))
         if (length(EnvCol) == 0) {
           stop(paste0("Environmental layer ", env_var, " not found in occurrence file for ",
@@ -253,11 +258,11 @@ OccurrenceManagement <- function(occlist,
         }
       }
     } else {
-      SpeciesEnv <- raster::extract(envstack, SpeciesCoordsSP)
-      SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv)
+      SpeciesEnv <- terra::extract(envdata, SpeciesCoordsSP)
+      SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv[, 2:ncol(SpeciesEnv)])
       SpeciesEnv <- stats::na.omit(SpeciesEnv)
       if (nrow(SpeciesEnv) == 0) {
-        stop("Environmental extraction failed:
+        stop("Environmental extraction failed: 
              ensure that the points and the raster have overlapping extents")
       }
     }

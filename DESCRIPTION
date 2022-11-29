@@ -1,6 +1,6 @@
 Package: megaSDM
 Title: Integrating Dispersal and Time-step Analyses into Species Distribution Models
-Version: 1.2.0
+Version: 2.0.0
 Authors@R: 
     c(person(given = "Benjamin",
            family = "Shipley",
@@ -37,12 +37,9 @@ Imports:
     methods (>= 4.1),
     parallel (>= 4.1),
     plotfunctions (>= 1.4),
-    raster (>= 3.6),
     rgbif (>= 3.7),
-    rgdal (>= 1.5),
-    rgeos (>= 0.5),
-    sp (>= 1.5),
-    stats (>= 4.1)
+    stats (>= 4.1),
+    terra (>= 1.6)
 Suggests: 
     knitr,
     rmarkdown

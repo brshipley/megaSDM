@@ -59,8 +59,8 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   projstudy <- rep(NA, len = length(studylayers))
   extstudy <- rep(NA, len = length(studylayers))
   for (i in 1:length(studylayers)) {
-    projstudy[i] <- as.character(raster::crs(raster::raster(studylayers[[i]])))
-    extstudy[i] <- as.character(raster::extent(raster::raster(studylayers[[i]])))
+    projstudy[i] <- as.character(terra::crs(terra::rast(studylayers[[i]])))
+    extstudy[i] <- as.character(terra::ext(terra::rast(studylayers[[i]])))
   }
 
   if (length(unique(projstudy)) > 1) {
@@ -70,24 +70,13 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   #Make sure that the study layers have a CRS that is not NA
-  studystack <- raster::stack(studylayers)
-
-  StudyNames <- rep(NA, length = length(studylayers))
-  for(i in 1:length(StudyNames)) {
-    focname <- unlist(strsplit(studylayers[i], "/"))
-    focname <- focname[length(focname)]
-    focname <- unlist(strsplit(focname, "\\."))[1]
-    StudyNames[i] <- focname
-  }
-
-  names(studystack) <- StudyNames
-
-  if (is.na(raster::crs(studystack))) {
+  studystack <- terra::rast(studylayers)
+  if (is.na(terra::crs(studystack))) {
     stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   } else {
-    desiredCRS <- raster::crs(studystack)
+    desiredCRS <- terra::crs(studystack)
   }
-
+  
   #Format the matrix from which to parallelize the species
   ListSpp <- list.dirs(input, full.names = FALSE, recursive = FALSE)
 
@@ -123,7 +112,7 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   } else {
     nrep <- 1
   }
-
+  
   if (length(ListSpp) == 0) {
     stop(paste0("No species have AUC values higher than ", aucval))
   }
@@ -157,14 +146,15 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
 
     ensemble.stack <- c()
     curmodel <- file.path(input, path)
-
+    
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
-
-    #If species have been removed from the species list (e.g., not enough high-quality replicates),
-    #only take the first auc value provided
-    aucvalSpecies <- aucvalSpecies[1]
-
+    
+    #If species have been removed from the species list (e.g., not enough high-quality replicates),	
+    #only take the first auc value provided	
+    aucvalSpecies <- aucvalSpecies[1]	
+    
+          
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
     for (j in 1:replicates) {
@@ -185,35 +175,37 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
           auc <- results$Test.AUC[j]
           #If the AUC value is below the AUC threshold, the run is not used
           if (auc >= aucvalSpecies) {
-            temp <- raster::raster(rasters[j])
+            temp <- terra::rast(rasters[j])
             temp[temp >= thresh] <- 1
             temp[temp < thresh] <- 0
-            rasterNames <- c(rasterNames, raster::filename(temp))
+            rasterNames <- c(rasterNames, names(temp))
             #Creates a stack of output runs to be ensembled
-            ensemble.stack <- raster::stack(c(ensemble.stack, temp))
+            ensemble.stack <- c(ensemble.stack, temp)
           }
         }, error = function(err) {
           print(paste("MY_ERROR: ", path, " ", err," j= ", j,
                       " Scenario= ", Scenario, " time= ", time))
         })
       } else {
-        temp <- raster::raster(rasters[j])
+        temp <- terra::rast(rasters[j])
         temp[temp >= thresh] <- 1
         temp[temp < thresh] <- 0
-        rasterNames <- c(rasterNames, raster::filename(temp))
+        rasterNames <- c(rasterNames, names(temp))
         #Creates a stack of output runs to be ensembled
-        ensemble.stack <- raster::stack(c(ensemble.stack, temp))
+        ensemble.stack <- c(ensemble.stack, temp)
       }
     }
-
+    #combine list of rasters into a single object
+    ensemble.stack <- terra::rast(ensemble.stack)
+    
     if (length(ensemble.stack) > 0) {
       #Takes the mean of the binary rasters
       #If the mean is >= 0.5 (more than half of the replicates show presence), set to 1
-      ensemble.calc <- (raster::mean(ensemble.stack))
-      rasterNames <- c(rasterNames, raster::filename(ensemble.calc))
+      ensemble.calc <- (terra::mean(ensemble.stack))
+      rasterNames <- c(rasterNames, names(ensemble.calc))
       ensemble.calc[ensemble.calc >= 0.5] <- 1
       ensemble.calc[ensemble.calc < 0.5] <- 0
-      raster::crs(ensemble.calc) <- desiredCRS
+      terra::crs(ensemble.calc) <- desiredCRS
       #Writes out binary rasters
 
       if (!dir.exists(file.path(output, path, "map_pdfs"))) {
@@ -221,25 +213,23 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
       }
 
       if (time == currentYear) {
-        raster::crs(ensemble.calc) <- desiredCRS
-        raster::writeRaster(ensemble.calc,
-                    filename = file.path(output, path, paste0(time, "_binary.grd")),
-                    overwrite = TRUE,
-                    format = "raster")
+        terra::crs(ensemble.calc) <- desiredCRS
+        terra::writeRaster(ensemble.calc,
+                    file.path(output, path, paste0(time, "_binary.grd")),
+                    overwrite = TRUE)
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_binary.pdf")))
-        raster::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
+        terra::plot(ensemble.calc, main = paste0(path, "_", time, "_binary"))
         grDevices::dev.off()
       } else {
         if (!dir.exists(file.path(output, path, Scenario))) {
           dir.create(file.path(output, path, Scenario))
         }
-        raster::crs(ensemble.calc) <- desiredCRS
-        raster::writeRaster(ensemble.calc,
-                    filename = file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.grd")),
-                    overwrite = TRUE,
-                    format = "raster")
+        terra::crs(ensemble.calc) <- desiredCRS
+        terra::writeRaster(ensemble.calc,
+                    file.path(output, path, Scenario, paste0(time, "_", Scenario, "_binary.grd")),
+                    overwrite = TRUE)
         grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(time, "_", Scenario, "_binary.pdf")))
-        raster::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
+        terra::plot(ensemble.calc, main = paste0(path, "_", time, "_", Scenario, "_binary"))
         grDevices::dev.off()
       }
       return(ensemble.calc)
@@ -258,14 +248,14 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     ensemble.stack <- c()
     #Reads in the results file for each of the runs
     results <- utils::read.csv(paste0(curmodel, "/maxentResults.csv"))
-
+    
     #Find which AUC value corresponds to the species of interest
     aucvalSpecies <- aucval[which(ListSpp == path)]
-
-    #If species have been removed from the species list (e.g., not enough high-quality replicates),
-    #only take the first auc value provided
-    aucvalSpecies <- aucvalSpecies[1]
-
+    
+    #If species have been removed from the species list (e.g., not enough high-quality replicates),	
+    #only take the first auc value provided	
+    aucvalSpecies <- aucvalSpecies[1]	
+    
     for (j in 1:replicates) {
       if (!is.na(aucvalSpecies)) {
         tryCatch({
@@ -273,44 +263,46 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
           auc <- results$Test.AUC[j]
           #If the AUC value is below the AUC threshold, the run is not used
           if (auc >= aucvalSpecies) {
-            temp <- raster::raster(rasters[j])
+            temp <- terra::rast(rasters[j])
             #Creates a stack of output runs to be ensembled
-            ensemble.stack <- raster::stack(c(ensemble.stack, temp))
+            ensemble.stack <- c(ensemble.stack, temp)
           }
         }, error = function(err) {
           print(paste("MY_ERROR: ", path, " ", err, "j=", j,
                       " Scenario= ", Scenario, " Decade= ", decade))
         })
       } else {
-        temp <- raster::raster(rasters[j])
+        temp <- terra::rast(rasters[j])
         #Creates a stack of output runs to be ensembled
-        ensemble.stack <- raster::stack(c(ensemble.stack, temp))
+        ensemble.stack <- c(ensemble.stack, temp)
       }
     }
+    
+    #Combine list of rasters into single object
+    ensemble.stack <- terra::rast(ensemble.stack)
+    
     #Calculates the median of the stacked rasters
-    if (raster::nlayers(ensemble.stack) > 1) {
-      ensemble.calc <- raster::calc(ensemble.stack, stats::median, na.rm = TRUE)
+    if (terra::nlyr(ensemble.stack) > 1) {
+      ensemble.calc <- terra::app(ensemble.stack, stats::median, na.rm = TRUE)
     } else {
       ensemble.calc <- ensemble.stack
     }
-
+    
     if (decade == currentYear) {
-      raster::crs(ensemble.calc) <- desiredCRS
-      raster::writeRaster(ensemble.calc,
-                  filename = file.path(output, path, paste0(decade, "_ensembled.grd")),
-                  overwrite = TRUE,
-                  format = "raster")
+      terra::crs(ensemble.calc) <- desiredCRS
+      terra::writeRaster(ensemble.calc,
+                  file.path(output, path, paste0(decade, "_ensembled.grd")),
+                  overwrite = TRUE)
       grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_ensembled.pdf")))
-      raster::plot(ensemble.calc, main = paste0(path, "_", decade))
+      terra::plot(ensemble.calc, main = paste0(path, "_", decade))
       grDevices::dev.off()
     } else {
-      raster::crs(ensemble.calc) <- desiredCRS
-      raster::writeRaster(ensemble.calc,
-                  filename = file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.grd")),
-                  overwrite = TRUE,
-                  format = "raster")
+      terra::crs(ensemble.calc) <- desiredCRS
+      terra::writeRaster(ensemble.calc,
+                  file.path(output, path, Scenario, paste0(decade, "_", Scenario, "_ensembled.grd")),
+                  overwrite = TRUE)
       grDevices::pdf(file = file.path(output, path, "map_pdfs", paste0(decade, "_", Scenario, "_ensembled.pdf")))
-      raster::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
+      terra::plot(ensemble.calc, main = paste0(path, "_", decade, "_", Scenario))
       grDevices::dev.off()
     }
     rm(ensemble.stack)
@@ -319,7 +311,8 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   getSize <- function(raster) {
-    return(raster::freq(raster, digits = 0, value = 1, useNA = 'no', progress = ''))
+    Freq <- data.frame(terra::freq(raster, digits = 0, value = 1))
+    return(Freq$count)
   }
 
   t1nott2 <- function(t1, t2) {
@@ -339,9 +332,13 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
   }
 
   getCentroid <- function(CentRaster) {
-    #A matrix with three columns: x, y, and v (value)
-    points <- raster::rasterToPoints(CentRaster, fun = function(x){x == 1}, spatial = FALSE)
-
+    #convert raster to points and only take the presence points
+    points <- terra::as.points(CentRaster, values = TRUE)
+    points <- points[which(terra::values(points) == 1),]
+    
+    #Get the coordinates of the points
+    points <- data.frame(terra::geom(points))[, c("x", "y")]
+    
     #average latitude (y)
     Clat <- mean(points[, 2], na.rm = TRUE)
 
@@ -512,22 +509,22 @@ MaxEntProj <- function(input, time_periods, scenarios = NA, study_dir, predict_d
     }
 
   }
-
+  
   if (ncores == 1) {
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) run(x))
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
+    
     parallel::clusterExport(clus, varlist = c("run", "threshold", "medianensemble", "getSize",
                                               "t1nott2", "overlap", "getCentroid","getStats", "nrep",
                                               "currentYear", "numYear", "numScenario", "nproj",
                                               "input", "time_periods", "scenarios", "predict_dirs",
                                               "study_dir", "ThreshMethod", "aucval", "output", "ncores",
                                               "ListSpp", "desiredCRS"), envir = environment())
-
+    
     parallel::clusterEvalQ(clus, library(gtools))
-    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(terra))
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
       gc()

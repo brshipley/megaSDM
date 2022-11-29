@@ -131,39 +131,36 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
       focusspp <- taxonlist2[sp]
       path <- paste0(result_dir, "/", focusspp)
       r <- list.files(path = path, pattern = paste0(FocusYear, "_", FocusScenario, "_binary", filepath, "$"), recursive = TRUE)
-      futraster <- raster::raster(paste0(path, "/", r))
-      futstack <- raster::stack(c(futraster, futstack))
+      futraster <- terra::rast(paste0(path, "/", r))
+      futstack <- c(futraster, futstack)
     }
 
 
     #Calculates sum (total species richness) for given parameters, makes rasters and PDFs
-    FutureRichness <- raster::calc(futstack, fun = sum)
-    raster::writeRaster(FutureRichness,
+    FutureRichness <- terra::app(futstack, fun = sum)
+    terra::writeRaster(FutureRichness,
                 filename = file.path(RichnessMaps, paste0("Richness_", taxon, "_", FocusYear, "_", FocusScenario, filepath)),
-                format = "raster",
-                overwrite = TRUE,
-                prj = TRUE)
+                overwrite = TRUE)
   }
 
   DispersalDiff <- function(taxon, y, s) {
     FocusYear <- time_periods[y]
     FocusScenario <- scenarios[s]
     #Loads Non-dispersal constrained richness maps
-    NonDispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, ".grd"))
+    NonDispersalSR <- terra::rast(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, ".grd"))
 
     #Loads dispersal-constrained richness maps for comparison
-    DispersalSR <- raster::raster(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, "_dispersalRate.grd"))
+    DispersalSR <- terra::rast(paste0(RichnessMaps, "/Richness_", taxon, "_", FocusYear, "_", FocusScenario, "_dispersalRate.grd"))
 
     #Calculates difference between dispersal and non-dispersal species richness maps
     DifferenceSR <- DispersalSR - NonDispersalSR
-    raster::writeRaster(DifferenceSR,
+    terra::writeRaster(DifferenceSR,
                 filename = file.path(RichnessMaps, paste0("Richness Difference_", taxon, "_", FocusYear, "_", FocusScenario, ".grd")),
-                format = "raster",
-                overwrite = TRUE,
-                prj = TRUE)
+                overwrite = TRUE)
 
     #Sets graphical parameters for dispersal-difference PDFs
-    DiffVec <- raster::unique(DifferenceSR, na.last = NA)
+    DiffVec <- terra::unique(DifferenceSR)
+    DiffVec <- DiffVec[,1]
     if (min(DiffVec) < 0 & max(DiffVec) > 0) {
       color <- grDevices::colorRampPalette(c("red", "grey91", "blue"))(length(DiffVec))
     } else if (min(DiffVec) < 0 & max(DiffVec) <= 0) {
@@ -174,7 +171,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
     #Creates dispersal-difference PDFs
     grDevices::pdf(file = file.path(result_dir, "RichnessMaps", paste0(taxon, "_", FocusYear, "_", FocusScenario, "_", "dispersalDifference.pdf")))
-    raster::plot(DifferenceSR, col = color, xlab = "", ylab = "", legend = FALSE, main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
+    terra::plot(DifferenceSR, col = color, xlab = "", ylab = "", legend = FALSE, main = paste0(taxon, " ", FocusScenario, " ", FocusYear, " Dispersal Difference"))
     plotfunctions::gradientLegend(c(min(DiffVec):max(DiffVec)), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
     grDevices::dev.off()
   }
@@ -183,26 +180,16 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     #Upload all raster files, calculate overall maximum richness (regardless of time, scenario)
     RasterList <- list.files(path = RichnessMaps, pattern = paste0("\\.grd$"), full.names = TRUE)
     FocusRasters <- RasterList[grep(paste0("Richness_", taxon), RasterList)]
-    FocusStack <- raster::stack(FocusRasters)
+    FocusStack <- terra::rast(FocusRasters)
+    MaximumRich <- max(terra::global(FocusStack, fun = max, na.rm = TRUE))
 
-    RichNames <- rep(NA, length = length(FocusRasters))
-    for(i in 1:length(RichNames)) {
-      focname <- unlist(strsplit(FocusRasters[i], "/"))
-      focname <- focname[length(focname)]
-      focname <- substr(focname, 1, nchar(focname) - 4)
-      RichNames[i] <- focname
-    }
-
-    names(FocusStack) <- RichNames
-
-    MaximumRich <- max(raster::cellStats(FocusStack, stat = max, na.rm = TRUE))
-
-    for (e in 1:raster::nlayers(FocusStack)) {
+    for (e in 1:terra::nlyr(FocusStack)) {
       Raster1 <- FocusStack[[e]]
-      MaxRaster1 <- raster::cellStats(Raster1, stat = max, na.rm = TRUE)
-      ValueFreq <- raster::freq(Raster1)
+      MaxRaster1 <- terra::global(Raster1, fun = max, na.rm = TRUE)
+      MaxRaster1 <- as.numeric(MaxRaster1)
+      ValueFreq <- terra::freq(Raster1, bylayer = FALSE)
       #If the maximum species richness occurs in too few pixels to display in pdf, only plots the next highest species richness
-      while ((ValueFreq[which(ValueFreq[, 1] == MaxRaster1), 2] < floor(0.00005 * raster::ncell(Raster1))) && (MaxRaster1 > 1)) {
+      while ((ValueFreq[which(ValueFreq[, 1] == MaxRaster1), 2] < floor(0.00005 * terra::ncell(Raster1))) && (MaxRaster1 > 1)) {
         Raster1[Raster1 == MaxRaster1] <- MaxRaster1 - 1
         message(paste0("The maximum species richness in the study area, ", MaxRaster1, ", covers too few cells to display on PDF:"))
         message("Examine the created raster for an accurate count of pixels.")
@@ -215,7 +202,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
       #Creates pdf of the species richness raster
       grDevices::pdf(file = file.path(paste0(substr(FocusRasters[e], 1, (nchar(FocusRasters[e]) - 4)), ".pdf")))
-      raster::plot(legend = FALSE, Raster1, col = color[1:(MaxRaster1 + 1)], xlab = "", ylab = "", main = names(FocusStack[[e]]))
+      terra::plot(legend = FALSE, Raster1, col = color[1:(MaxRaster1 + 1)], xlab = "", ylab = "", main = names(FocusStack[[e]]))
       plotfunctions::gradientLegend(c(0:MaximumRich), color = color, pos = 0.125, side = 4, n.seg = 2, dec = 0, fit.margin = TRUE, inside = TRUE)
       grDevices::dev.off()
     }
@@ -243,11 +230,8 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
       if (dir.exists(paste0(result_dir, "/", focusspp))) {
         curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.grd$"), full.names = TRUE)
         if (length(curfocus) > 0){
-          curraster <- raster::raster(curfocus)
-          #Give the raster the name of the species
-          names(curraster) <- focusspp
-
-          curstack <- raster::stack(c(curstack, curraster))
+          curraster <- terra::rast(curfocus)
+          curstack <- c(curstack, curraster)
         } else {
           message(paste0(focusspp, " will be removed (was modelled but had no replicates of a high enough AUC value)"))
           DeleteSP <- c(DeleteSP, sp)
@@ -261,15 +245,14 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     } else {
       taxonlist2 <- taxonlist2
     }
-
+    
+    curstack <- terra::rast(curstack)
     #Calculates the sum of the rasters (species richness), and writes rasters
-    CurrentRichness <- raster::calc(curstack, fun = sum)
-    raster::crs(CurrentRichness) <- raster::crs(curstack)
-    raster::writeRaster(CurrentRichness,
+    CurrentRichness <- terra::app(curstack, fun = sum)
+    terra::crs(CurrentRichness) <- terra::crs(curstack)
+    terra::writeRaster(CurrentRichness,
                 filename = file.path(RichnessMaps, paste0("Richness_", taxon, "_", time_periods[1], ".grd")),
-                format = "raster",
-                overwrite = TRUE,
-                prj = TRUE)
+                overwrite = TRUE)
 
     #Creates species richness maps for other time frames and scenarios
     if (numYear > 1) {

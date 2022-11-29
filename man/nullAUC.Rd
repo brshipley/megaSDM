@@ -7,7 +7,7 @@
 nullAUC(envdata, replicates = 50, bufflist = NA, modelpar)
 }
 \arguments{
-\item{envdata}{a RasterStack or list of raster files corresponding to the
+\item{envdata}{a SpatRaster or list of raster files corresponding to the
 area the model will be trained on.}
 
 \item{replicates}{how many times should the null model be run to get a distribution

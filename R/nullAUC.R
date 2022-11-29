@@ -9,7 +9,7 @@
 #' the subset of real occurrence data, for comparison with the model training on the actual
 #' data. This method was developed by Bohl et al. 2019.
 #'
-#' @param envdata a RasterStack or list of raster files corresponding to the
+#' @param envdata a SpatRaster or list of raster files corresponding to the
 #' area the model will be trained on.
 #' @param replicates how many times should the null model be run to get a distribution
 #' of AUC values? Default is 50 replicates.
@@ -49,25 +49,17 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       }
     }
 
-    #if the envdata parameter is not a raster stack, stack it and provide names
-    if (class(envdata) != "RasterStack") {
-      EnvNames <- rep(NA, length = length(envdata))
-      for(i in 1:length(EnvNames)) {
-        focname <- unlist(strsplit(envdata[i], "/"))
-        focname <- focname[length(focname)]
-        focname <- substr(focname, 1, nchar(focname) - 4)
-        EnvNames[i] <- focname
-      }
-      envdata <- raster::stack(envdata)
-      names(envdata) <- EnvNames
+    if(class(envdata) != "SpatRaster") {
+      envdata <- terra::rast(envdata)
     }
-
+    
     run <- function(CurSpp) {
       s <- grep(CurSpp, occlist)
 
       OccurrenceFile <- occlist[s]
       BackgroundFile <- bglist[s]
       TestFile <- testsamples[s]
+      
       #Determines the species name from the name of the occurrence file
       SpeciesSplit <- unlist(strsplit(OccurrenceFile, "/", fixed = TRUE))
       spp.name <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
@@ -83,17 +75,18 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       dir.create(file.path(model_output, spp.name, "NullModels"))
       NullAUCVals <- c()
       if (!is.na(bufflist)) {
-        BufferFile <- raster::shapefile(bufflist[s])
+        BufferFile <- terra::vect(bufflist[s])
       }
       NOcc <- nrow(utils::read.csv(OccurrenceFile))
       for (i in 1:replicates) {
         if(!is.na(bufflist)) {
-          RandomSP <- sp::spsample(BufferFile, NOcc, type = "random")
-          RandomOcc <- raster::extract(raster::stack(envdata), RandomSP)
-          RandomOcc <- data.frame(RandomSP@coords, RandomOcc)
+          RandomSP <- terra::spatSample(BufferFile, NOcc, method = "random")
+          SPCoords <- data.frame(terra::geom(RandomSP))
+          RandomOcc <- terra::extract(envdata, RandomSP)
+          RandomOcc <- data.frame(SPCoords[, c("x", "y")], RandomOcc)
           RandomOcc <- data.frame(RandomOcc[stats::complete.cases(RandomOcc),])
         } else {
-          RandomOcc <- raster::sampleRandom(raster::stack(envdata), size = NOcc, na.rm = TRUE, xy = TRUE)
+          RandomOcc <- terra::spatSample(envdata, size = NOcc, method = "random", na.rm = TRUE, xy = TRUE)
         }
         RandomOcc <- data.frame(Species = rep(spp.name, nrow(RandomOcc)), RandomOcc)
         BGFile <- utils::read.csv(BackgroundFile)
@@ -107,8 +100,8 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
         model.out <- tryCatch({
           #can turn off a lot of output writing for the final experiment
           #(jackknifing, write plot pngs) press help in maxent for details
-          system(paste0("java -mx900m -jar maxent.jar -e ", BackgroundFile, " -s ",
-                        paste0(model_output, "/", spp.name, "/NullModels/RandomOcc.csv"),
+          system(paste0("java -mx900m -jar ",  file.path(model_output, "maxent.jar"), " -e ", BackgroundFile, " -s ",
+                        file.path(model_output, spp.name, "NullModels","RandomOcc.csv"),
                         " -J -o ", file.path(model_output, spp.name, "NullModels"),
                         " noaskoverwrite logistic threshold -X ",
                         test_percent, " replicates=", 1, " betamultiplier=", regularization,
@@ -132,12 +125,14 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
     }
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
 
+    envdata <- terra::wrap(envdata)
+    
     parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
                                               "nrep", "categorical", "alloutputs", "model_output",
                                               "reptype","test_percent", "regularization", "hinge",
                                               "ListSpp", "replicates", "envdata", "bufflist"), envir = environment())
 
-    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(terra))
 
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))

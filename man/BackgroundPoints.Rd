@@ -19,7 +19,7 @@ BackgroundPoints(
 \arguments{
 \item{spplist}{a vector of species names (used for the generation of output file names).}
 
-\item{envdata}{a RasterStack or list of raster files corresponding to the
+\item{envdata}{a SpatRaster or list of raster files corresponding to the
 area the model will be trained on. If environmental subsampling is desired (method = \code{"Varela"}),
 all environmental layers used for the modelling should be included.}
 
@@ -33,7 +33,7 @@ Should be in the same order as the species list.}
 sampled within the given buffer. A 1 indicates that background points are exclusively sampled
 from within the buffers, whereas a 0 indicates random sampling throughout the training area.}
 
-\item{buffers}{(optional) a list of shapefiles (SpatialPolygons*) or a list of file paths
+\item{buffers}{(optional) a list of shapefiles (SpatVec) or a list of file paths
 for the buffers. Required if \code{spatial_weights} is not 0. Should be in the same order
 as the species list. If only one species is needed, can be a single SpatialPolygon* object.}
 

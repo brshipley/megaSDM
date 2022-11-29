@@ -55,7 +55,7 @@ The final set of arguments are optional and used for tuning the maxent model and
 \item{reptype}{Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
 Default is "Subsample".}
 
-\item{test_percent}{(numeric): number between 0 and 100: percentage of points "held back" for
+\item{test_percent}{(numeric): integer between 0 and 100: percentage of points "held back" for
 crossvalidation, Test AUC validation, etc. Default is 20.}
 
 \item{features}{(optional): a vector of the features for MaxEnt to model the species-

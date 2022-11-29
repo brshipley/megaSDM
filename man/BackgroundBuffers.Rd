@@ -14,7 +14,7 @@ should be named the same as the taxon of interest (e.g.,: ".../Canis_lupus.csv")
 should be in the same coordinate reference system as the projected environmental data
 (see \code{megaSDM::OccurrenceManagement}).}
 
-\item{envdata}{a rasterstack or list of raster files corresponding to the training
+\item{envdata}{a SpatRaster or list of raster files corresponding to the training
 region (the region the SDM model(s) will be trained on). This provides the CRS
 arguments to project the created buffer shapefiles.}
 
@@ -23,9 +23,12 @@ out to. It is recommended that this is a unique directory from the one backgroun
 points will be written to.}
 
 \item{buff_distance}{how wide should the buffers be around the occurrence points? If a single
-number is given, buffers for all species will have a radius of that number in the crs units.
-if a vector of the same length as \code{occlist} is given, the buffer radius for each species
-will correspond to the matching value in the vector. Finally, if set to \code{NA} (default),
+number is given, buffers for all species will have a radius of that number in map units.
+Buffers for longlat projection should be given in meters. If you are unsure what spatial units the
+data have, run \code{terra::linearUnits()} on \code{envdata}, which will give 0 if units are in degrees,
+or a number corresponding to the number of meters within one map unit (e.g., map units of km will have 1000).
+If a vector of the same length as \code{occlist} is given, the buffer radius for each species will
+correspond to the matching value in the vector. Finally, if set to \code{NA} (default),
 2*the 95\% quantile of the minimum distance between each point is taken as the radius.}
 
 \item{ncores}{the number of computer cores to parallelize the background point generation on.

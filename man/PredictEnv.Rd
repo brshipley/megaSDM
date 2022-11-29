@@ -9,15 +9,16 @@ PredictEnv(
   futurelayers,
   time_periods,
   output = NA,
-  scenario_name = NA
+  scenario_name = NA,
+  maxentproj = TRUE
 )
 }
 \arguments{
-\item{studylayers}{A single RasterStack or list of raster files that constitute all environmental
+\item{studylayers}{A single SpatRaster or list of raster files that constitute all environmental
 variables and parameters (e.g., extent, resolution) used for projecting the modelled relationship
 (see \code{$study} in \code{megaSDM::TrainStudyEnv}).}
 
-\item{futurelayers}{A list of rasterstacks or vectors of file-names corresponding to the environmental
+\item{futurelayers}{A list of SpatRasters or vectors of file-names corresponding to the environmental
 variables at the different time periods the model will be forecasted/hindcasted to.}
 
 \item{time_periods}{a vector of the time periods the models will be projected to, with the first element
@@ -28,20 +29,24 @@ current (farthest into the future/past) and give character strings for the years
 running dispersal analyses, \code{time_periods} must be numeric (e.g., -21000 instead of "LGM").}
 
 \item{output}{If the rasters are to be written to the computer, the full path of the directory where
-they will be written out to. If there are multiple climate scenarios wanted in this SDM analysis,
-give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5). If set to \code{NA}
-(the default), the rasters will not be written out and will be returned as the value of this function.}
+they will be written out to as .grd files. If there are multiple climate scenarios wanted in this
+SDM analysis, give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5).
+If set to \code{NA} (the default), the rasters will not be written out and will be returned as the value
+of this function.}
 
 \item{scenario_name}{(optional) If the rasters are to be written to the disk, a character string with the
 name of the climate model/scenario. A sub-directory will be created within \code{output} and files will
 be placed in there. If only one distinct climate scenario is needed, still give it a name for reference
 in other functions within \code{megaSDM}.}
+
+\item{maxentproj}{TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, the NA value of the raster
+will be set to the maximum raster value + 0.01 instead of the non-numeric NaN when written out.}
 }
 \value{
-Returns a list of environnmental layer RasterStacks with each RasterStack corresponding to a time period.
+Returns a list of multi-layer SpatRasters, with each SpatRaster corresponding to a time period.
 }
 \description{
-This function takes lists of RasterStacks that correspond to future or past time periods
+This function takes lists of SpatRasters that correspond to future or past time periods
 of a single climate model (e.g., RCP4.5, CCSM3), ensures that the environmental variables
 are the same as those that the model will be developed on, and projects, clips, and resamples
 these layers to the characteristics of a given study region. If more than one climate scenario

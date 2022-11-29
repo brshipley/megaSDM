@@ -4,15 +4,18 @@
 #' projected habitat suitability models and presence/absence maps. The probability
 #' of dispersal per year as a function of distance is modelled using an exponential
 #' distribution, and summed together to create a probability of dispersal for the
-#' intervals between each provided time step. Dispersal-constrained binary (presence
-#' and absence) maps are generated, as well as continuous maps of "invadable suitability"
+#' intervals between each provided time step. Dispersal-constrained binary (presence	
+#' and absence) maps are generated, as well as continuous maps of "invadable suitability"	
 #' (see https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.05450).
 #'
 #' NOTE: dispersal rate analyses are only informative for predicting species
 #' distributions into the future (forecasting) rather than predicting past
 #' distributions (hindcasting), as range contractions and extirpations are not
 #' limited by dispersal rate.
-#'
+#' 
+#' NOTE: Running this function for data in a longlat projection will take somewhat
+#' longer than using data in equal area projections. Results are the same, however.
+#' 
 #' @param result_dir the directory where the ensembled and binary maps are placed.
 #' Each species should have its own sub-directory, and the forecasted/hindcasted
 #' binary maps should be placed into directories like so: Species/Scenario/Time.
@@ -41,6 +44,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
+
   if (length(spp.list) == 0) {
     stop(paste0("No projected models found in 'result_dir': Ensure that 'result_dir' provides a path to the proper location"))
   }
@@ -75,48 +79,63 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #Functions-------------------
-
-  #Calculates the range centroid (average latitude, longitude)
+  
+  getSize <- function(raster) {
+    Freq <- data.frame(terra::freq(raster, digits = 0, value = 1))
+    return(Freq$count)
+  }
+  
   getCentroid <- function(raster) {
-    # A matrix with three columns: x, y, and v (value)
-    points <- raster::rasterToPoints(raster, fun = function(x){x == 1}, spatial = FALSE)
-
+    #convert raster to points and only take the presence points
+    points <- terra::as.points(raster, values = TRUE)
+    points <- points[which(terra::values(points) == 1),]
+    
+    #Get the coordinates of the points
+    points <- data.frame(terra::geom(points))[, c("x", "y")]
+    
     #average latitude (y)
     Clat <- mean(points[, 2], na.rm = TRUE)
-
+    
     #average longitude (x)
     Clong <- mean(points[, 1], na.rm = TRUE)
-
+    
     #returns the longitude & latitude of the Centroid
     return(c(Clong, Clat))
   }
+  
 
   #Creates distance rasters from original projection (studyarea environmental rasters)
   DistanceRaster <- function(spp, Time, Scen, CurrentBinary, TimeMap) {
     #Loads and reclassifies the binary maps
-    CurrentBinary <- CurrentBinary
-    CurrentPresence <- raster::reclassify(CurrentBinary, c(0, 0, NA), include.lowest = TRUE)
+    CurrentPresence <- CurrentBinary
+    CurrentPresence[which(terra::values(CurrentPresence) == 0)] <- NA
     #Trims the time map as an extent template for faster calculations
     TimeMap2 <- TimeMap
-    TimeMap2[which(raster::values(TimeMap2) == 0)] <- NA
-    TimeMap2 <- raster::trim(TimeMap2)
-    TimeMap2[is.na(raster::values(TimeMap2))] <- 0
+    TimeMap2[which(terra::values(TimeMap2) == 0)] <- NA
+    TimeMap2 <- terra::trim(TimeMap2)
+    TimeMap2[which(is.na(terra::values(TimeMap2)))] <- 0
     #Trims "CurrentPresence" to the extent of the time maps
-    CurrentPresence <- raster::crop(CurrentPresence, raster::extent(TimeMap2))
+    CurrentPresence <- terra::crop(CurrentPresence, terra::ext(TimeMap2))
+    
     #Calculates the distances from each pixel to the nearest presence
-    CurrDist <- raster::distance(CurrentPresence, doEdge = TRUE)
+    CurrDist <- terra::distance(CurrentPresence)
     #Extends the raster back out to full study area extent
-    CurrDist <- raster::extend(CurrDist, raster::extent(CurrentBinary), value = max(raster::values(CurrDist), na.rm = TRUE) + 1)
-    CurrDist[is.na(raster::values(CurrDist))] <- max(raster::values(CurrDist), na.rm = TRUE) + 1
-    DistFinal <- raster::mask(CurrDist, CurrentBinary)
-    #Converts distance (in meters) to kilometers (for dispersal rate)
-    DistFinal <- DistFinal / 1000
+    CurrDist <- terra::extend(CurrDist, terra::ext(CurrentBinary))
+    CurrDist[which(is.na(terra::values(CurrDist)))] <- max(terra::values(CurrDist), na.rm = TRUE) + 1
+    DistFinal <- terra::mask(CurrDist, CurrentBinary)
+    
+    #if the data have units that are not degrees or meters, convert distance values to meters.
+    if(terra::linearUnits(DistFinal) != 0) {
+      unitmult <- terra::linearUnits(DistFinal)
+      DistFinal <- DistFinal * unitmult
+    }
+    
+    #Converts distance (now in meters) to kilometers (for dispersal rate)
+    DistFinal <- (DistFinal / 1000)
     #writes distance raster
-    # writeRaster(DistFinal,
+    # terra::writeRaster(DistFinal,
     #             filename = paste0(result_dir, "/", spp, "/", "distance_", Time, "_", Scen, ".grd"),
-    #             overwrite = TRUE,
-    #             format = format,
-    #             prj = TRUE)
+    #             overwrite = TRUE)
     rm(CurrentPresence, CurrDist)
     gc()
     return(DistFinal)
@@ -133,18 +152,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     }
 
     #Relates distance raster to dispersal probability
-    DistProb <- raster::calc(DistRaster, fun = function(x){GammaProbFun(x)})
+    DistProb <- terra::app(DistRaster, fun = function(x){GammaProbFun(x)})
     return(DistProb)
   }
 
   #Gets presence pixels in raster 1 but not raster 2
   t1nott2 <- function(t1, t2) {
-    return(raster::mask(t1, t2, inverse = FALSE, maskvalue = 1, updatevalue = 0))
+    return(terra::mask(t1, t2, inverse = FALSE, maskvalue = 1, updatevalue = 0))
   }
 
   #Calculates overlap between raster 1 and raster 2 presences
   overlap <- function(t1, t2) {
-    return(raster::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
+    return(terra::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
   }
 
   #Conducts the actual dispersal rate analyses
@@ -160,10 +179,16 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       }
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
-        CurrentBinary <- raster::raster(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
+        CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
+        
+        if(is.na(terra::linearUnits(CurrentBinary))) {
+          stop("The spatial units of the data cannot be found! 
+           Choose a different coordinate system for all data or add units into the existing one.")
+        }
+        
         #Creates variables for stats
         Projection <- c("Current")
-        NumberCells <- c(raster::cellStats(CurrentBinary, stat = sum))
+        NumberCells <- getSize(CurrentBinary)
         CellChange <- c(0)
         T1notT2 <- c(0)
         T2notT1 <- c(0)
@@ -176,7 +201,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           CurScen <- scenarios[s]
           curdir <- file.path(result_dir, CurSpp, CurScen)
           DispersalNames <- c()
-          TimeMap <- raster::raster(file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", CurScen, ".grd")))
+          TimeMap <- terra::rast(file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", CurScen, ".grd")))
           for (y in 2:length(time_periods)) {
             CurYear <- time_periods[y]
 
@@ -188,7 +213,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
                 SppDistance <- DistanceRaster(CurSpp, CurrentTime, "Current", CurrentBinary, TimeMap)
                 OriginalDistance <- SppDistance
               } else {
-                OriginalDistance <- raster::raster(file.path(result_dir, CurSpp, DistanceRastersExist))
+                OriginalDistance <- terra::rast(file.path(result_dir, CurSpp, DistanceRastersExist))
                 SppDistance <- OriginalDistance
               }
             } else {
@@ -199,25 +224,25 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
               #Sizes down the raster for faster distance measuring
               TimeMap2 <- TimeMap
-              TimeMap2[which(raster::values(TimeMap2) == 0)] <- NA
-              TimeMap2 <- raster::trim(TimeMap2)
-              TimeMap2[is.na(raster::values(TimeMap2))] <- 0
+              TimeMap2[which(terra::values(TimeMap2) == 0)] <- NA
+              TimeMap2 <- terra::trim(TimeMap2)
+              TimeMap2[which(is.na(terra::values(TimeMap2)))] <- 0
 
               #Highlights the places where species lived in the previous time step
-              CurrentDistribution <- raster::crop(CurrentDistribution, raster::extent(TimeMap2))
-              CurrentDistribution[which(raster::values(CurrentDistribution) == 0)] <- NA
+              CurrentDistribution <- terra::crop(CurrentDistribution, terra::ext(TimeMap2))
+              CurrentDistribution[which(terra::values(CurrentDistribution) == 0)] <- NA
 
               #Creates new distance raster
-              CurrentDistance <- raster::distance(CurrentDistribution) / 1000
-              SppDistance <- raster::extend(CurrentDistance, raster::extent(Binary_Dispersal),
-                                            value = max(raster::values(SppDistance), na.rm = TRUE) + 1)
-
-              if ((raster::extent(SppDistance) != raster::extent(CurrentBinary)) | (raster::ncell(SppDistance) != raster::ncell(CurrentBinary))) {
+              CurrentDistance <- terra::distance(CurrentDistribution) / 1000
+              SppDistance <- terra::extend(CurrentDistance, terra::ext(Binary_Dispersal))
+              SppDistance[which(is.na(terra::values(SppDistance)))] <- max(terra::values(SppDistance), na.rm = TRUE) + 1
+              
+              if ((terra::ext(SppDistance) != terra::ext(CurrentBinary)) | (terra::ncell(SppDistance) != terra::ncell(CurrentBinary))) {
                 message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
-                SppDistance <- raster::intersect(SppDistance, CurrentBinary)
-                SppDistance <- raster::resample(SppDistance, CurrentBinary, method = "bilinear")
+                SppDistance <- terra::intersect(SppDistance, CurrentBinary)
+                SppDistance <- terra::resample(SppDistance, CurrentBinary, method = "bilinear")
               }
-              SppDistance <- raster::mask(SppDistance, CurrentBinary)
+              SppDistance <- terra::mask(SppDistance, CurrentBinary)
             }
 
             #Calculates the dispersal probability for the given time step
@@ -229,53 +254,53 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             #Calculates the ensembled dispersal probability * habitat suitability to make "invadable suitability"
 
             EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.grd"), RasterList)
-            EnsembleSD <- raster::raster(file.path(curdir, RasterList[EnsembleNum]))
-            if ((raster::extent(SppDispProb) != raster::extent(EnsembleSD)) | (raster::ncell(SppDispProb) != raster::ncell(EnsembleSD))) {
+            EnsembleSD <- terra::rast(file.path(curdir, RasterList[EnsembleNum]))
+            if ((terra::ext(SppDispProb) != terra::ext(EnsembleSD)) | (terra::ncell(SppDispProb) != terra::ncell(EnsembleSD))) {
               message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
-              SppDispProb <- raster::intersect(SppDispProb, EnsembleSD)
-              SppDispProb <- raster::resample(SppDispProb, EnsembleSD, method = "bilinear")
+              SppDispProb <- terra::intersect(SppDispProb, EnsembleSD)
+              SppDispProb <- terra::resample(SppDispProb, EnsembleSD, method = "bilinear")
             }
 
             Ensemble_Dispersal <- SppDispProb * EnsembleSD
-            if (!is.na(raster::crs(EnsembleSD))) {
-              raster::crs(Ensemble_Dispersal) <- raster::crs(EnsembleSD)
+            if (!is.na(terra::crs(EnsembleSD))) {
+              terra::crs(Ensemble_Dispersal) <- terra::crs(EnsembleSD)
             }
 
             #Writes the ensembled dispersal rate raster
-            raster::writeRaster(Ensemble_Dispersal,
+            terra::writeRaster(Ensemble_Dispersal,
                         filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.grd")),
-                        overwrite = TRUE,
-                        format = "raster",
-                        prj = TRUE)
+                        overwrite = TRUE)
 
             DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
 
             #Creates a binary raster from the ensembled raster
             BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.grd"), RasterList)
-            BinarySD <- raster::raster(file.path(curdir, RasterList[BinaryNum]))
+            BinarySD <- terra::rast(file.path(curdir, RasterList[BinaryNum]))
             Binary_Dispersal <- (SppDispProb * BinarySD)
             Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
             Binary_Dispersal[Binary_Dispersal < 0.5] <- 0
 
-            if (!is.na(raster::crs(EnsembleSD))) {
-              raster::crs(Binary_Dispersal) <- raster::crs(EnsembleSD)
+            if (!is.na(terra::crs(EnsembleSD))) {
+              terra::crs(Binary_Dispersal) <- terra::crs(EnsembleSD)
             }
 
             #Writes the binary raster
-            raster::writeRaster(Binary_Dispersal,
+            terra::writeRaster(Binary_Dispersal,
                         filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.grd")),
-                        overwrite = TRUE,
-                        format = "raster",
-                        prj = TRUE)
+                        overwrite = TRUE)
             DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate"))
 
             #Fills out the stats table
             Projection <- c(Projection, paste0(CurScen, "_", CurYear))
-            NumberCells <- c(NumberCells, raster::cellStats(Binary_Dispersal, stat = sum))
+            FocusNCells <- getSize(Binary_Dispersal)
+            NumberCells <- c(NumberCells, FocusNCells)
             CellChange <- c(CellChange, NumberCells[length(NumberCells)] - NumberCells[1])
-            T1notT2 <- c(T1notT2, raster::cellStats(t1nott2(CurrentBinary, Binary_Dispersal), stat = sum))
-            T2notT1 <- c(T2notT1, raster::cellStats(t1nott2(Binary_Dispersal, CurrentBinary), stat = sum))
-            Overlap <- c(Overlap, raster::cellStats(overlap(Binary_Dispersal, CurrentBinary), stat = sum))
+            T1notT2_rast <- t1nott2(CurrentBinary, Binary_Dispersal)
+            T2notT1_rast <- t1nott2(Binary_Dispersal, CurrentBinary)
+            T1notT2 <- c(T1notT2, getSize(T1notT2_rast))
+            T2notT1 <- c(T2notT1, getSize(T2notT1_rast))
+            Overlap_rast <- overlap(Binary_Dispersal, CurrentBinary)
+            Overlap <- c(Overlap, getSize(Overlap_rast))
             CentroidX <- c(CentroidX, getCentroid(Binary_Dispersal)[1])
             CentroidY <- c(CentroidY, getCentroid(Binary_Dispersal)[2])
           }
@@ -290,13 +315,13 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             if (grepl("binary", DispersalRasters[d])) {
               title <- DispersalNames[d]
               grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
-              raster::plot(raster::raster(DispersalRasters[d], native = TRUE), legend = FALSE, main = title)
+              terra::plot(terra::rast(DispersalRasters[d]), legend = FALSE, main = title)
               graphics::legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
               grDevices::dev.off()
             } else {
               title <- DispersalNames[d]
               grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
-              raster::plot(raster::raster(DispersalRasters[d], native = TRUE), main = title)
+              terra::plot(terra::rast(DispersalRasters[d]), main = title)
               grDevices::dev.off()
             }
           }
@@ -311,7 +336,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
                             Overlap = Overlap, 
                             CentroidX = CentroidX, 
                             CentroidY = CentroidY)
-        
+
         utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
         rm(CurrentBinary)
         gc()
@@ -326,17 +351,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
   if (ncores == 1) {
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) FinalDispersal(x))
+    
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
     
     parallel::clusterExport(clus, varlist = c("FinalDispersal", "getCentroid", "DistanceRaster",
-                                              "DispersalProbRaster", "t1nott2", "overlap",
+                                              "DispersalProbRaster", "t1nott2", "overlap", "getSize",
                                               "numScenario", "numYear", "dispersal",
                                               "result_dir", "time_periods", "scenarios",
                                               "ncores", "ListSpp"), envir = environment())
     
     parallel::clusterEvalQ(clus, library(gtools))
-    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(terra))
     
     for(i in 1:ncol(ListSpp)) {
       for(j in 1:nrow(ListSpp)) {

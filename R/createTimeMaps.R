@@ -109,7 +109,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
   #Overlaps two rasters
   overlap <- function(t1, t2) {
-    return(raster::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
+    return(terra::mask(t1, t2, inverse = TRUE, maskvalue = 1, updatevalue = 0))
   }
 
   #Removes some temporary raster files for disk management
@@ -144,7 +144,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
   #Sets the values of the binary (0, 1) raster to the values of the given state (e.g.: 101)
   setbinary <- function(r, val) {
-    return (raster::calc(r, fun = function(x) {x * val}))
+    return (terra::app(r, fun = function(x) {x * val}))
   }
 
   #Converts binary numbers to decimal numbers
@@ -164,7 +164,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
     #Lists current binary raster files
     modernData <- list.files(path = file.path(result_dir, CurSpp), pattern = paste0("binary.grd$"), full.names = TRUE)
-    rasterCRS <- raster::crs(raster::raster(modernData[1]))
+    rasterCRS <- terra::crs(terra::rast(modernData[1]))
     directories <- list.dirs(path = file.path(result_dir, CurSpp))
     correctDirectories <- c()
 
@@ -215,21 +215,21 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
     #Stacks the list of projected raster files and gives the stack the name %Scenarios[i]%
     for(i in 1:ncol(results)) {
-      if (raster::extent(raster::raster(results[1, 1])) == raster::extent(raster::raster(results[2, 1]))) {
-        assign(scenarios[i], raster::stack(results[, i]))
+      if (terra::ext(terra::rast(results[1, 1])) == terra::ext(terra::rast(results[2, 1]))) {
+        assign(scenarios[i], terra::rast(results[, i]))
       } else {
         #if the extents don't match, crop the rasters to ensure that they do
         assign(scenarios[i], NULL)
         for(j in 1:nrow(results)) {
-          minX <- max(raster::extent(raster::raster(results[1, 1]))[1], raster::extent(raster::raster(results[2, 1]))[1])
-          maxX <- min(raster::extent(raster::raster(results[1, 1]))[2], raster::extent(raster::raster(results[2, 1]))[2])
-          minY <- max(raster::extent(raster::raster(results[1, 1]))[3], raster::extent(raster::raster(results[2, 1]))[3])
-          maxY <- min(raster::extent(raster::raster(results[1, 1]))[4], raster::extent(raster::raster(results[2, 1]))[4])
+          minX <- max(terra::ext(terra::rast(results[1, 1]))[1], terra::ext(terra::rast(results[2, 1]))[1])
+          maxX <- min(terra::ext(terra::rast(results[1, 1]))[2], terra::ext(terra::rast(results[2, 1]))[2])
+          minY <- max(terra::ext(terra::rast(results[1, 1]))[3], terra::ext(terra::rast(results[2, 1]))[3])
+          maxY <- min(terra::ext(terra::rast(results[1, 1]))[4], terra::ext(terra::rast(results[2, 1]))[4])
           Extent2 <- rbind(c(minX, maxX), c(minY, maxY))
           if (j == 1) {
-            assign(scenarios[i], raster::crop(raster::raster(results[j, i]), Extent2))
+            assign(scenarios[i], terra::crop(terra::rast(results[j, i]), Extent2))
           } else {
-            assign(scenarios[i], raster::stack(get(scenarios[i]), raster::crop(raster::raster(results[j, i]), Extent2)))
+            assign(scenarios[i], terra::rast(get(scenarios[i]), terra::crop(terra::rast(results[j, i]), Extent2)))
           }
         }
       }
@@ -266,7 +266,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
               computedRaster <- allRasters[[col]]
             } else {
               computedRaster <- overlap(computedRaster, allRasters[[col]])
-              allRasterNames <- c(allRasterNames, raster::filename(computedRaster))
+              allRasterNames <- c(allRasterNames, names(computedRaster))
             }
           }
         }
@@ -281,8 +281,8 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         #creates a mask of the overlapped raster (removes areas that are state "0" for other times)
         for (k in 1:ncol(binary)) {
           if (binary[k] == 0) {
-            computedRaster <- raster::mask(computedRaster, allRasters[[k]], inverse = FALSE, maskvalue = 1, updatevalue = 0)
-            allRasterNames <- c(allRasterNames, raster::filename(computedRaster))
+            computedRaster <- terra::mask(computedRaster, allRasters[[k]], inverse = FALSE, maskvalue = 1, updatevalue = 0)
+            allRasterNames <- c(allRasterNames, names(computedRaster))
           }
         }
 
@@ -295,22 +295,22 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
         #Creates a composite raster with the binary values of computedRaster
         PrintedRaster <- computedRaster
-        PrintedRaster[PrintedRaster@data@values == 1] <- as.numeric(name)
+        PrintedRaster[PrintedRaster == 1] <- as.numeric(name)
         if (j == 1) {
           FinalPrintRast <- PrintedRaster
         } else {
-          PrintStack <- raster::stack(PrintedRaster, FinalPrintRast)
-          FinalPrintRast <- raster::calc(PrintStack, fun = max)
+          PrintStack <- c(PrintedRaster, FinalPrintRast)
+          FinalPrintRast <- terra::app(PrintStack, fun = max)
         }
 
-        raster::crs(FinalPrintRast) <- rasterCRS
+        terra::crs(FinalPrintRast) <- rasterCRS
 
         #Seperates the rasters showing a consistent trend (consecutiveCheck) and those that don't
         if (consecutiveCheck(name)) {
           breakpoints <- c(breakpoints, as.numeric(name) - 0.1)
           consRasterNames <- c(consRasterNames, paste0("raster_", name))
           assign(paste0("raster_", name), setbinary(computedRaster, as.numeric(name)))
-          removeTempRasterFiles(raster::filename(computedRaster))
+          removeTempRasterFiles(terra::sources(computedRaster))
           rm(computedRaster)
           gc()
         } else {
@@ -319,7 +319,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 2)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 2)))
             breakpoints <- c(breakpoints, largestNum * 2 - 0.1)
-            removeTempRasterFiles(raster::filename(computedRaster))
+            removeTempRasterFiles(terra::sources(computedRaster))
             rm(computedRaster)
             gc()
             #If the first and last time periods are a "1", the species distribution contracted and then expanded ("contract-expand")
@@ -327,7 +327,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 4)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 4)))
             breakpoints <- c(breakpoints, largestNum * 4 - 0.1)
-            removeTempRasterFiles(raster::filename(computedRaster))
+            removeTempRasterFiles(terra::sources(computedRaster))
             rm(computedRaster)
             gc()
             #If the first and last time periods are different and there is no consistent trend ("mixed")
@@ -335,7 +335,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
             rasterNames <- c(rasterNames, paste0("raster_", as.character(as.numeric(name) + (largestNum * 3)), "_", BinToDec(as.numeric(name))))
             assign(paste0("raster_", as.character(as.numeric(name) + (largestNum * 3)), "_", BinToDec(as.numeric(name))), setbinary(computedRaster, (largestNum * 3)))
             breakpoints <- c(breakpoints, largestNum * 3 - 0.1)
-            removeTempRasterFiles(raster::filename(computedRaster))
+            removeTempRasterFiles(terra::sources(computedRaster))
             rm(computedRaster)
             gc()
           }
@@ -343,18 +343,14 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       }
 
       #write the output raster
-      if (dispersal == TRUE){
-        raster::writeRaster(FinalPrintRast,
+      if (dispersal == TRUE) {
+        terra::writeRaster(FinalPrintRast,
                     filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], "_dispersal.grd")),
-                    overwrite = TRUE,
-                    format = "raster",
-                    prj = TRUE)
+                    overwrite = TRUE)
       } else {
-        raster::writeRaster(FinalPrintRast,
+        terra::writeRaster(FinalPrintRast,
                             filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], ".grd")),
-                            overwrite = TRUE,
-                            format = "raster",
-                            prj = TRUE)
+                            overwrite = TRUE)
       }
 
       #Creates breakpoints (used to delineate colors in the PDFs)
@@ -365,11 +361,11 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       rasterNames <- gtools::mixedsort(rasterNames)
       stackedRaster <- get(consRasterNames[1])
       for (index in 2:length(consRasterNames)) {
-        stackedRaster <- raster::stack(stackedRaster, get(consRasterNames[index]))
+        stackedRaster <- c(stackedRaster, get(consRasterNames[index]))
       }
       if (length(rasterNames) > 0) {
         for (index in 1:length(rasterNames)) {
-          stackedRaster <- raster::stack(stackedRaster, get(rasterNames[index]))
+          stackedRaster <- c(stackedRaster, get(rasterNames[index]))
         }
       }
 
@@ -395,7 +391,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       }
 
       #Combines all of the rasters into a single one
-      ScenariosCalc <- c(ScenariosCalc, raster::calc(stackedRaster, fun = max))
+      ScenariosCalc <- c(ScenariosCalc, terra::app(stackedRaster, fun = max))
       r <- ScenariosCalc[[length(ScenariosCalc)]]
 
       #Gets the full legend captions
@@ -436,8 +432,8 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       }
 
       bin <- unique(bin)
-      for(deleteIndex in 1:length(names(stackedRaster))) {
-        removeTempRasterFiles(raster::filename(stackedRaster[[deleteIndex]]))
+      for (deleteIndex in 1:length(names(stackedRaster))) {
+        removeTempRasterFiles(terra::sources(stackedRaster[[deleteIndex]]))
       }
       rm(stackedRaster)
       rm(list = consRasterNames)
@@ -447,7 +443,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       if (dispersal == TRUE) {
         #creates pdf of the Time Maps
         grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
-        raster::plot(legend = FALSE,
+        terra::plot(legend = FALSE,
              breaks = breakpoints,
              r,
              col = color,
@@ -459,7 +455,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       } else {
         #creates pdf of the Time Maps
         grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_TimeMap.pdf")))
-        raster::plot(legend = FALSE,
+        terra::plot(legend = FALSE,
              breaks = breakpoints,
              r,
              col = color,
@@ -470,11 +466,10 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         grDevices::dev.off()
       }
 
-      removeTempRasterFiles(raster::filename(r))
+      removeTempRasterFiles(terra::sources(r))
       rm(r)
       gc()
     }
-    raster::removeTmpFiles(h = 0)
     rm(ScenariosCalc)
     gc()
   }
@@ -492,7 +487,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
                                               "ListSpp"), envir = environment())
     
     parallel::clusterEvalQ(clus, library(gtools))
-    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(terra))
     
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))

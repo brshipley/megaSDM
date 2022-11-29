@@ -16,9 +16,9 @@ TrainStudyEnv(
 )
 }
 \arguments{
-\item{input_TA}{RasterStack or a list of raster files for the training area (full directory path).}
+\item{input_TA}{SpatRaster or a list of raster files for the training area (full directory path).}
 
-\item{input_SA}{(optional) RasterStack or a list of raster files for the study area. Provide if
+\item{input_SA}{(optional) SpatRaster or a list of raster files for the study area. Provide if
 the study area cannot be clipped from the trainingarea. Defaults to NA (same list of raster files).}
 
 \item{desiredCRS}{The coordinate system to project training/test data into given in PROJ4 notation.
@@ -40,10 +40,12 @@ they will be written out to. If set to \code{NA} (the default), the rasters will
 and will be returned as the value of this function.}
 
 \item{maxentproj}{TRUE/FALSE: Will the MaxEntProj step be run on these data? If so, rectangular pixels
-without a defined resolution will be resampled to square pixels using the longer of the two sides.}
+without a defined resolution will be resampled to square pixels using the longer of the two sides. In
+addition, the NA value of the raster will be set to the maximum raster value + 0.01 instead of the
+nun-numeric NaN when written out.}
 }
 \value{
-Returns a list of two rasterStacks: training "(\code{$training})" and study area "(\code{$study})"
+Returns a list of two SpatRasters: training "(\code{$training})" and study area "(\code{$study})"
 environmental layers. if \code{output != NA}, the rasters will also be written out as ".grd" files.
 }
 \description{

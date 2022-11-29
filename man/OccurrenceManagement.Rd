@@ -28,7 +28,7 @@ environments at each occurrence point be extracted?}
 \item{envsample}{(logical (\code{TRUE} or \code{FALSE})) should
 environmental (Varela) subsampling be conducted on the occurrence points?}
 
-\item{envdata}{a RasterStack or list of raster files
+\item{envdata}{a SpatRaster or list of raster files
 corresponding to the area the model will be trained on. All environmental
 variables should be provided.}
 

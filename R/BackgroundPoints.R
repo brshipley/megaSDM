@@ -8,7 +8,7 @@
 #' within the buffer (\code{spatial_weights} = 1) or a hybrid method (\code{spatial_weights} between 0 and 1).
 #'
 #' @param spplist a vector of species names (used for the generation of output file names).
-#' @param envdata a RasterStack or list of raster files corresponding to the
+#' @param envdata a SpatRaster or list of raster files corresponding to the
 #' area the model will be trained on. If environmental subsampling is desired (method = \code{"Varela"}),
 #' all environmental layers used for the modelling should be included.
 #' @param output a file folder where the output background point files will be placed.
@@ -18,7 +18,7 @@
 #' @param spatial_weights a number between 0 and 1 determining the percentage of background points
 #' sampled within the given buffer. A 1 indicates that background points are exclusively sampled
 #' from within the buffers, whereas a 0 indicates random sampling throughout the training area.
-#' @param buffers (optional) a list of shapefiles (SpatialPolygons*) or a list of file paths
+#' @param buffers (optional) a list of shapefiles (SpatVec) or a list of file paths
 #' for the buffers. Required if \code{spatial_weights} is not 0. Should be in the same order
 #' as the species list. If only one species is needed, can be a single SpatialPolygon* object.
 #' @param method either "Varela" or "random", where "Varela" incorporates environmental subsampling
@@ -69,15 +69,15 @@ BackgroundPoints <- function(spplist, envdata, output,
          is associated with exactly one element of nbg")
   }
 
-  #If the input training layers are not in rasterstack form, ensure that they have the same projection/extent
-  if (class(envdata) != "RasterStack") {
+  #If the input training layers are not in SpatRaster form, ensure that they have the same projection/extent
+  if (class(envdata) != "SpatRaster") {
 
     #Ensure that all training area rasters have the same projection and extent
     projtrain <- rep(NA, len = length(envdata))
     exttrain <- rep(NA, len = length(envdata))
     for (i in 1:length(envdata)) {
-      projtrain[i] <- as.character(raster::crs(raster::raster(envdata[[i]])))
-      exttrain[i] <- as.character(raster::extent(raster::raster(envdata[[i]])))
+      projtrain[i] <- as.character(terra::crs(terra::rast(envdata[[i]])))
+      exttrain[i] <- as.character(terra::crs(terra::rast(envdata[[i]])))
     }
 
     if (length(unique(projtrain)) > 1) {
@@ -85,25 +85,14 @@ BackgroundPoints <- function(spplist, envdata, output,
     } else if (length(unique(exttrain)) > 1) {
       stop("Not all of the training area environmental rasters have the same extent")
     }
+    envstack <- terra::rast(envdata)
+  } else {
+    envstack <- envdata
   }
 
   #Make sure that the training layers have a CRS that is not NA
-  envstack <- raster::stack(envdata)
   
-  #Provide names for the raster layers in the study area raster stack
-  if (class(envdata) != "RasterStack") {
-    EnvNames <- rep(NA, length = length(envdata))
-    for(i in 1:length(EnvNames)) {
-      focname <- unlist(strsplit(envdata[i], "/"))
-      focname <- focname[length(focname)]
-      focname <- unlist(strsplit(focname, "\\."))[1]
-      FocusNames[i] <- focname
-    }
-    
-    names(envstack) <- EnvNames
-  }
-  
-  if (is.na(raster::crs(envstack))) {
+  if (is.na(terra::crs(envstack))) {
     stop("training area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
 
@@ -119,10 +108,14 @@ BackgroundPoints <- function(spplist, envdata, output,
     #Function for Varela sampling
     VarelaSample <- function (occurrences, env, no_bins, PCA, PCAxes) {
 
-      occurrences <- sp::SpatialPoints(occurrences, proj4string = raster::crs(env))
+      occurrences <- terra::vect(occurrences,
+                                 geom = c("Longitude", "Latitude"),
+                                 crs = terra::crs(env))
 
-      EnvOccur <- raster::extract(env, occurrences)
-      EnvOccur <- data.frame(x = occurrences@coords[, 1], y = occurrences@coords[, 2], EnvOccur)
+      EnvOccur <- terra::extract(env, occurrences)
+      EnvOccur <- EnvOccur[, 2:ncol(EnvOccur)]
+      EnvCoords <- data.frame(terra::geom(occurrences))
+      EnvOccur <- data.frame(x = EnvCoords$x, y = EnvCoords$y, EnvOccur)
       ClimOccur <- EnvOccur
       ClimOccur <- ClimOccur[stats::complete.cases(ClimOccur), ]
       if (PCA == "Y") {
@@ -224,13 +217,15 @@ BackgroundPoints <- function(spplist, envdata, output,
 
   run <- function(CurSpp) {
     s <- grep(CurSpp, spplist)
-
+    
+    envstack <- terra::rast(envstack)
+    
     #If the number of background points wanted is more than the number of cells, prints warning, sets nbg-->ncells
-    if (nbg[s] > raster::ncell(envstack)) {
-      nbg[s] <- raster::ncell(envstack)
+    if (nbg[s] > terra::ncell(envstack)) {
+      nbg[s] <- terra::ncell(envstack)
       message(paste0("Warning: the number of background points wanted for ", spplist[s],
                      " is more than the number of unique cells in the environmental raster"))
-      message(paste0("    Changing the number of background points to ", raster::ncell(envstack)))
+      message(paste0("    Changing the number of background points to ", terra::ncell(envstack)))
 
     }
 
@@ -243,24 +238,26 @@ BackgroundPoints <- function(spplist, envdata, output,
 
         if (is.numeric(PCA)) {
           PCAxes <- as.numeric(PCA)
-          if (PCAxes > raster::nlayers(envstack)) {
-            PCAxes <- raster::nlayers(envstack)
+          if (PCAxes > terra::nlyr(envstack)) {
+            PCAxes <- terra::nlyr(envstack)
             message(paste0("Setting Number of PC Axes to Number of Layers: ", PCAxes))
           }
+          PCA <- "Y"
         } else if (!is.na(PCA)) {
           PCAxes <- "Y"
         } else {
           PCA <- "N"
           PCAxes <- ""
         }
-
-        if (nbgFull * 10 > raster::ncell(envstack[[1]])) {
-          RastFullBG <- raster::ncell(envstack[[1]])
+        
+        if (nbgFull * 10 > terra::ncell(envstack[[1]])) {
+          RastFullBG <- terra::ncell(envstack[[1]])
         } else {
           RastFullBG <- nbgFull * 10
         }
 
-        RandomTrain <- raster::sampleRandom(envstack, RastFullBG, na.rm = TRUE, xy = TRUE)
+        RandomTrain <- terra::spatSample(envstack, RastFullBG, na.rm = TRUE, xy = TRUE)
+        names(RandomTrain)[1:2] <- c("Longitude", "Latitude")
         nbinscount <- nbins
 
         NUniqueClim <- nrow(unique(RandomTrain[, 3:ncol(RandomTrain)]))
@@ -314,7 +311,8 @@ BackgroundPoints <- function(spplist, envdata, output,
         FullPointsEnv <- FullPointsEnv[stats::complete.cases(FullPointsEnv), ]
 
       } else if (method == "random") {
-        FullPointsEnv <- raster::sampleRandom(envstack, nbgFull, na.rm = TRUE, xy = TRUE)
+        FullPointsEnv <- terra::spatSample(x = envstack, size = nbgFull, na.rm = TRUE, xy = TRUE)
+        names(FullPointsEnv)[1:2] <- c("Longitude", "Latitude")
       }
 
       if (spatial_weights == 0) {
@@ -340,20 +338,20 @@ BackgroundPoints <- function(spplist, envdata, output,
       bufferSHP <- buffers
     }
 
-    if (!grepl("Spatial", class(bufferSHP))) {
-      bufferSHP <- raster::shapefile(bufferSHP)
+    if (!grepl("SpatVector", class(bufferSHP))) {
+      bufferSHP <- terra::vect(bufferSHP)
     }
 
-    if (as.character(raster::crs(bufferSHP)) != as.character(raster::crs(envstack))) {
-      bufferSHP <- sp::spTransform(bufferSHP, CRSobj = raster::crs(envstack))
+    if (as.character(terra::crs(bufferSHP)) != as.character(terra::crs(envstack))) {
+      bufferSHP <- terra::project(bufferSHP, terra::crs(envstack))
     }
 
     if (method == "Varela") {
 
       if (is.numeric(PCA)) {
         PCAxes <- as.numeric(PCA)
-        if (PCAxes > raster::nlayers(envstack)) {
-          PCAxes <- raster::nlayers(envstack)
+        if (PCAxes > terra::nlyr(envstack)) {
+          PCAxes <- terra::nlyr(envstack)
           message(paste0("Setting Number of PC Axes to Number of Layers: ", PCAxes))
         }
       } else if (!is.na(PCA)) {
@@ -362,21 +360,22 @@ BackgroundPoints <- function(spplist, envdata, output,
         PCAxes <- ""
       }
 
-      if (nbgBuff * 10 > raster::ncell(envstack[[1]])) {
-        RastBuffBG <- raster::ncell(envstack[[1]])
+      if (nbgBuff * 10 > terra::ncell(envstack[[1]])) {
+        RastBuffBG <- terra::ncell(envstack[[1]])
       } else {
         RastBuffBG <- nbgBuff * 10
       }
 
       #randomly samples nbg*5 number of points from the shapefile
-      RandomBuff <- sp::spsample(bufferSHP, RastBuffBG, "random", iter = 25)
+      RandomBuff <- terra::spatSample(bufferSHP, RastBuffBG, "random")
 
-      RandomBuff <- RandomBuff@coords
-
+      RandomBuff <- terra::geom(RandomBuff)
+      RandomBuff <- data.frame(RandomBuff[, c("x", "y")])
+      names(RandomBuff) <- c("Longitude", "Latitude")
       nbinscount <- nbins
 
       #Prints a warning if the nubmer of unique climates is less than the buffer background points wanted
-      BuffClim <- raster::extract(envstack, RandomBuff)
+      BuffClim <- terra::extract(envstack, RandomBuff, ID = FALSE)
       NUniqueClim <- nrow(unique(BuffClim))
 
       if (NUniqueClim < nbgBuff) {
@@ -425,10 +424,12 @@ BackgroundPoints <- function(spplist, envdata, output,
       BuffPointsEnv <- BuffPointsEnv2[stats::complete.cases(BuffPointsEnv2), ]
 
     } else if (method == "random") {
-      BuffPoints <- sp::spsample(bufferSHP, nbgBuff * 10, "random", iter = 25)
-      BuffPointsCoords <- BuffPoints@coords
-
-      BuffPointsEnv <- raster::extract(envstack, BuffPointsCoords)
+      BuffPoints <- terra::spatSample(bufferSHP, nbgBuff * 10, "random")
+      BuffPointsCoords <- terra::geom(BuffPoints)
+      BuffPointsCoords <- data.frame(BuffPointsCoords[, c("x", "y")])
+      names(BuffPointsCoords) <- c("Longitude", "Latitude")
+      
+      BuffPointsEnv <- terra::extract(envstack, BuffPointsCoords, ID = FALSE)
       BuffPointsEnv <- cbind(BuffPointsCoords, BuffPointsEnv)
       BuffPointsEnv <- stats::na.omit(BuffPointsEnv)
       BuffPointsEnv <- BuffPointsEnv[sample(c(1:nrow(BuffPointsEnv)), nbgBuff, replace = FALSE), ]
@@ -457,6 +458,10 @@ BackgroundPoints <- function(spplist, envdata, output,
     utils::write.csv(background, paste0(output, "/", gsub(" ", "_", spplist[s]), "_background.csv"), row.names = FALSE)
 
   }
+  
+  #Convert envstack to a "packed" raster so that it can be parallelized
+  envstack <- terra::wrap(envstack)
+  
   if (ncores == 1) {
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) run(x))
@@ -469,8 +474,7 @@ BackgroundPoints <- function(spplist, envdata, output,
                                               "nbins", "StatsLoc"), envir = environment())
     
     parallel::clusterEvalQ(clus, library(dplyr))
-    parallel::clusterEvalQ(clus, library(sp))
-    parallel::clusterEvalQ(clus, library(raster))
+    parallel::clusterEvalQ(clus, library(terra))
     
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))

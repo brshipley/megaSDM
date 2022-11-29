@@ -49,4 +49,7 @@ NOTE: dispersal rate analyses are only informative for predicting species
 distributions into the future (forecasting) rather than predicting past
 distributions (hindcasting), as range contractions and extirpations are not
 limited by dispersal rate.
+
+NOTE: Running this function for data in a longlat projection will take somewhat
+longer than using data in equal area projections. Results are the same, however.
 }

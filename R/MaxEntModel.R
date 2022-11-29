@@ -27,11 +27,11 @@
 #'    3: Files containing the parameters used to make the response curves.
 #'    
 #'    4: Plots of the response curves for each parameter
-#'
+#'    
 #' The final set of arguments are optional and used for tuning the maxent model and cross-validation:
 #' @param reptype Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
 #' Default is "Subsample".
-#' @param test_percent (numeric): number between 0 and 100: percentage of points "held back" for
+#' @param test_percent (numeric): integer between 0 and 100: percentage of points "held back" for
 #' crossvalidation, Test AUC validation, etc. Default is 20.
 #' @param features (optional): a vector of the features for MaxEnt to model the species-
 #' environment relationships with. Options are one or more of \code{"linear", "quadratic", "product",
@@ -171,7 +171,6 @@ MaxEntModel <- function(occlist, bglist, model_output,
                                               "reptype","test_percent", "regularization", "linear",
                                               "quadratic", "product", "threshold", "hinge",
                                               "testsamples", "ListSpp"), envir = environment())
-    
     
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
