@@ -18,8 +18,8 @@
 #' current (farthest into the future/past) and give character strings for the years (e.g., "LGM"). If
 #' running dispersal analyses, \code{time_periods} must be numeric (e.g., -21000 instead of "LGM").
 #' @param output If the rasters are to be written to the computer, the full path of the directory where
-#' they will be written out to as .grd files. If there are multiple climate scenarios wanted in this 
-#' SDM analysis, give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5). 
+#' they will be written out to as .grd files. If there are multiple climate scenarios wanted in this
+#' SDM analysis, give the output directory the name of the climate scenario (e.g., ".../output/RCP4.5).
 #' If set to \code{NA} (the default), the rasters will not be written out and will be returned as the value
 #' of this function.
 #' @param scenario_name (optional) If the rasters are to be written to the disk, a character string with the
@@ -54,7 +54,7 @@ PredictEnv <- function(studylayers, futurelayers,
     }
     studylayers <- terra::rast(studylayers)
   }
-  
+
   if (is.na(terra::crs(studylayers))) {
     stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
   }
@@ -83,7 +83,7 @@ PredictEnv <- function(studylayers, futurelayers,
       focuslayers <- terra::rast(focuslayers)
     }
 
-    
+
     if (is.na(terra::crs(focuslayers))) {
       stop("study area raster crs = NA: Ensure all raster layers have a defined coordinate projection")
     }
@@ -94,12 +94,12 @@ PredictEnv <- function(studylayers, futurelayers,
 
     if (as.character(terra::crs(focuslayers)) != as.character(terra::crs(studylayers))) {
       focuslayers <- terra::project(focuslayers, terra::crs(studylayers))
-      
+
       if (terra::res(focuslayers)[1] > terra::res(studylayers)[1]) {
         message("Warning: the future/past raster data have coarser resolution than the current raster data")
         message(paste0("Changing the resolution of the current raster data to ", terra::res(focuslayers)[1], "is recommended"))
       }
-      
+
       focuslayers_res <- terra::rast(extent = terra::ext(studylayers), resolution = terra::res(studylayers), crs = terra::crs(studylayers))
       focuslayers <- terra::resample(focuslayers, focuslayers_res, method = "bilinear")
     } else if (terra::res(focuslayers)[1] > terra::res(studylayers)[1]) {
@@ -107,8 +107,8 @@ PredictEnv <- function(studylayers, futurelayers,
       message(paste0("Changing the resolution of the current raster data to ", terra::res(focuslayers)[1], "is recommended"))
     }
 
-    
-    
+
+
     if (terra::ext(focuslayers) != terra::ext(studylayers)) {
       focuslayers <- terra::crop(focuslayers, terra::ext(studylayers))
     }
@@ -118,9 +118,9 @@ PredictEnv <- function(studylayers, futurelayers,
     }
 
     if (j == 1) {
-      PredictEnv <- focuslayers
+      PredictEnv <- list(focuslayers)
     } else {
-      PredictEnv <- list(PredictEnv, focuslayers)
+      PredictEnv[[j]] <- focuslayers
     }
 
   }
@@ -137,14 +137,14 @@ PredictEnv <- function(studylayers, futurelayers,
       if (!dir.exists(paste0(output, "/", scenario_name ,"/", time))) {
         dir.create(paste0(output, "/", scenario_name, "/", time))
       }
-      
+
       #If maxent projection is necessary: change NA value of each training raster to maximum value + 0.01
       if (maxentproj) {
         for(e in 1:terra::nlyr(PredictEnv[[i]])) {
           FocusRast <- PredictEnv[[i]][[e]]
           MaxValue <- max(terra::values(FocusRast), na.rm = TRUE)
           FocusRast[which(is.na(terra::values(FocusRast)))] <- as.numeric(MaxValue + 0.01)
-          terra::writeRaster(FocusRast, 
+          terra::writeRaster(FocusRast,
                              filename = paste0(output, "/", scenario_name, "/", time, "/", names(FocusRast), ".grd"),
                              overwrite = TRUE, NAflag = as.numeric(MaxValue + 0.01))
         }
