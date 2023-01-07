@@ -74,13 +74,14 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
 
       dir.create(file.path(model_output, spp.name, "NullModels"))
       NullAUCVals <- c()
-      if (!is.na(bufflist)) {
-        BufferFile <- terra::vect(bufflist[s])
+      if (!is.na(bglist[s])) {
+        BGPoints <- read.csv(bglist[s])
+        BufferFile <- terra::vect(BGPoints, geom=c("x", "y"))
       }
       NOcc <- nrow(utils::read.csv(OccurrenceFile))
       for (i in 1:replicates) {
-        if(!is.na(bufflist)) {
-          RandomSP <- terra::spatSample(BufferFile, NOcc, method = "random")
+        if(!is.na(bglist[s])) {
+          RandomSP <- sample(BufferFile, NOcc)
           SPCoords <- data.frame(terra::geom(RandomSP))
           RandomOcc <- terra::extract(envdata, RandomSP)
           RandomOcc <- data.frame(SPCoords[, c("x", "y")], RandomOcc)
@@ -105,7 +106,7 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
                         " -J -o ", file.path(model_output, spp.name, "NullModels"),
                         " noaskoverwrite logistic threshold -X ",
                         test_percent, " replicates=", 1, " betamultiplier=", regularization,
-                        " testsamplesfile=", TestFile," writeclampgrid=false", " writemess=false",
+                        " writeclampgrid=false", " writemess=false",
                         " nowarnings writeplotdata=false", " -a ",
                         reptype, " hinge=", hinge, " togglelayertype=", categorical))
         }, error = function(err) {
@@ -123,22 +124,27 @@ nullAUC <- function(envdata, replicates = 50, bufflist = NA, modelpar) {
       utils::write.csv(NullAUCVals, file.path(model_output, spp.name, "NullModel_AUC.csv"), row.names = FALSE)
       file.remove(model_output, "/", spp.name, "/NullModels")
     }
-    clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-
-    envdata <- terra::wrap(envdata)
     
-    parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
-                                              "nrep", "categorical", "alloutputs", "model_output",
-                                              "reptype","test_percent", "regularization", "hinge",
-                                              "ListSpp", "replicates", "envdata", "bufflist"), envir = environment())
-
-    parallel::clusterEvalQ(clus, library(terra))
-
-    for (i in 1:nrow(ListSpp)) {
-      out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    for(i in 1:length(ListSpp)) {
+      run(ListSpp[i])
     }
-
-    parallel::stopCluster(clus)
+    
+    # clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
+    # 
+    # envdata <- terra::wrap(envdata)
+    # 
+    # parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
+    #                                           "nrep", "categorical", "alloutputs", "model_output",
+    #                                           "reptype","test_percent", "regularization", "hinge",
+    #                                           "ListSpp", "replicates", "envdata", "bufflist"), envir = environment())
+    # 
+    # parallel::clusterEvalQ(clus, library(terra))
+    # 
+    # for (i in 1:nrow(ListSpp)) {
+    #   out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
+    # }
+    # 
+    # parallel::stopCluster(clus)
   }
 
   do.call(NullMaxent, modelpar)
