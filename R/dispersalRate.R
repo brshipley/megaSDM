@@ -211,7 +211,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           truepatches <- truepatches[which(!is.na(truepatches))]
 
           #Convert unoccupied patches to 0, occupied patches to 1
-          CurrentPatch[!(CurrentPatch %in% truepatches)] <- NA
+          CurrentPatch <- terra::match(CurrentPatch, truepatches)
           CurrentPatch[!is.na(CurrentPatch)] <- 1
           CurrentPatch[is.na(CurrentPatch)] <- 0
           CurrentPatch <- terra::mask(CurrentPatch, CurrentBinary)
