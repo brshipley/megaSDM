@@ -223,9 +223,11 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
           #Write out rasters
           terra::writeRaster(CurrentBinary, file.path(result_dir, CurSpp,
-                                                      paste0(CurrentTime, "_binary_original.grd")))
+                                                      paste0(CurrentTime, "_binary_original.grd")),
+                             overwrite = TRUE)
           terra::writeRaster(CurrentEnsemble, file.path(result_dir, CurSpp,
-                                                        paste0(CurrentTime, "_ensembled_original.grd")))
+                                                        paste0(CurrentTime, "_ensembled_original.grd")),
+                             overwrite = TRUE)
 
           terra::writeRaster(CurrentPatch, file.path(result_dir, CurSpp,
                                                      paste0(CurrentTime, "_binary.grd")), overwrite = TRUE)
