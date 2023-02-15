@@ -4,22 +4,22 @@
 #' projected habitat suitability models and presence/absence maps. The probability
 #' of dispersal per year as a function of distance is modelled using an exponential
 #' distribution, and summed together to create a probability of dispersal for the
-#' intervals between each provided time step. Dispersal-constrained binary (presence	
-#' and absence) maps are generated, as well as continuous maps of "invadable suitability"	
+#' intervals between each provided time step. Dispersal-constrained binary (presence
+#' and absence) maps are generated, as well as continuous maps of "invadable suitability"
 #' (see https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.05450).
 #'
 #' NOTE: dispersal rate analyses are only informative for predicting species
 #' distributions into the future (forecasting) rather than predicting past
 #' distributions (hindcasting), as range contractions and extirpations are not
 #' limited by dispersal rate.
-#' 
+#'
 #' NOTE: Running this function for data in a longlat projection will take somewhat
 #' longer than using data in equal area projections. Results are the same, however.
-#' 
+#'
 #' @param result_dir the directory where the ensembled and binary maps are placed.
 #' Each species should have its own sub-directory, and the forecasted/hindcasted
 #' binary maps should be placed into directories like so: Species/Scenario/Time.
-#' If \code{projectSuit} was used to make these maps, this is probably the same
+#' If \code{MaxEntProj} was used to make these maps, this is probably the same
 #' as the \code{output} argument in that function.
 #' @param dispersaldata either a dataframe or the complete path name of a
 #' .csv file with two columns:
@@ -31,6 +31,15 @@
 #' element should be the original year (the year in which the model was generated).
 #' @param scenarios a vector of character strings detailing the different climate models
 #' used in the forecasted/hindcasted species distribution models.
+#' @param contiguous TRUE/FALSE: when constraining by dispersal rate, should only the contiguous
+#' areas around each occurrence point be used for the first time step? setting this argument to
+#' \code{TRUE} will mitigate the effects of overpediction in areas where a species has
+#' not been observed. Default is \code{FALSE}.
+#' @param point_data If contiguous = \code{TRUE}, a file path to the directory holding all
+#' occurrence data used for the model generation. If previous steps of megaSDM have been run
+#' (e.g., \code{MaxEntProj}, \code{MaxEntModel}, \code{OccurrenceManagement}), this will likely
+#' be equal to \code{occ_output} in the vignette. If not, the occurrence data should have
+#' coordinates in "x" and "y" columns.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
 #' @export
@@ -40,7 +49,8 @@
 #' maps are provided as outputs.
 
 dispersalRate <- function(result_dir, dispersaldata, time_periods,
-                          scenarios, ncores = 1) {
+                          scenarios, contiguous = FALSE,
+                          point_data = NA, ncores = 1) {
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
@@ -79,30 +89,30 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
   ListSpp <- matrix(ListSpp, ncol = ncores)
 
   #Functions-------------------
-  
+
   getSize <- function(raster) {
     Freq <- data.frame(terra::freq(raster, digits = 0, value = 1))
     return(Freq$count)
   }
-  
+
   getCentroid <- function(raster) {
     #convert raster to points and only take the presence points
     points <- terra::as.points(raster, values = TRUE)
     points <- points[which(terra::values(points) == 1),]
-    
+
     #Get the coordinates of the points
     points <- data.frame(terra::geom(points))[, c("x", "y")]
-    
+
     #average latitude (y)
     Clat <- mean(points[, 2], na.rm = TRUE)
-    
+
     #average longitude (x)
     Clong <- mean(points[, 1], na.rm = TRUE)
-    
+
     #returns the longitude & latitude of the Centroid
     return(c(Clong, Clat))
   }
-  
+
 
   #Creates distance rasters from original projection (studyarea environmental rasters)
   DistanceRaster <- function(spp, Time, Scen, CurrentBinary, TimeMap) {
@@ -116,20 +126,20 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
     TimeMap2[which(is.na(terra::values(TimeMap2)))] <- 0
     #Trims "CurrentPresence" to the extent of the time maps
     CurrentPresence <- terra::crop(CurrentPresence, terra::ext(TimeMap2))
-    
+
     #Calculates the distances from each pixel to the nearest presence
     CurrDist <- terra::distance(CurrentPresence)
     #Extends the raster back out to full study area extent
     CurrDist <- terra::extend(CurrDist, terra::ext(CurrentBinary))
     CurrDist[which(is.na(terra::values(CurrDist)))] <- max(terra::values(CurrDist), na.rm = TRUE) + 1
     DistFinal <- terra::mask(CurrDist, CurrentBinary)
-    
+
     #if the data have units that are not degrees or meters, convert distance values to meters.
     if(terra::linearUnits(DistFinal) != 0) {
       unitmult <- terra::linearUnits(DistFinal)
       DistFinal <- DistFinal * unitmult
     }
-    
+
     #Converts distance (now in meters) to kilometers (for dispersal rate)
     DistFinal <- (DistFinal / 1000)
     #writes distance raster
@@ -179,13 +189,57 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       }
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
+
+        #If desired, removes patches of the binary map at the first time step that do not border
+        #the occurrence points used for the model. This is to avoid extrapolation errors.
+        if (contiguous == TRUE) {
+
+          #Read in the binary and ensembled rasters for the species at the time period the model was trained on
+          CurrentBinary <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_binary.grd")))
+          CurrentEnsemble <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_ensembled.grd")))
+
+          CurrentPatch <- terra::patches(CurrentBinary, zeroAsNA = TRUE)
+
+          #Get a list of occurrences and convert to SpatVector
+          occurrence <- read.csv(file.path(point_data, paste0(CurSpp, ".csv")))
+          occurrence <- terra::vect(occurrence, geom = c("x", "y"))
+          terra::crs(occurrence) <- terra::crs(CurrentPatch)
+
+          #Extract patch ID numbers that have points in them
+          occ_extract <- terra::extract(CurrentPatch, occurrence, ID = FALSE)
+          truepatches <- unique(occ_extract$patches)
+          truepatches <- truepatches[which(!is.na(truepatches))]
+
+          #Convert unoccupied patches to 0, occupied patches to 1
+          CurrentPatch[!(CurrentPatch %in% truepatches)] <- NA
+          CurrentPatch[!is.na(CurrentPatch)] <- 1
+          CurrentPatch[is.na(CurrentPatch)] <- 0
+          CurrentPatch <- terra::mask(CurrentPatch, CurrentBinary)
+
+          #Clip ensembled raster to boundary of occupied patches
+          Ensemble2 <- terra::mask(CurrentEnsemble, CurrentPatch, maskvalue = 0)
+          Ensemble2[is.na(Ensemble2)] <- 0
+          Ensemble2 <- terra::mask(Ensemble2, CurrentBinary)
+
+          #Write out rasters
+          terra::writeRaster(CurrentBinary, file.path(result_dir, CurSpp,
+                                                      paste0(CurrentTime, "_binary_original.grd")))
+          terra::writeRaster(CurrentEnsemble, file.path(result_dir, CurSpp,
+                                                        paste0(CurrentTime, "_ensembled_original.grd")))
+
+          terra::writeRaster(CurrentPatch, file.path(result_dir, CurSpp,
+                                                     paste0(CurrentTime, "_binary.grd")), overwrite = TRUE)
+          terra::writeRaster(Ensemble2, file.path(result_dir, CurSpp,
+                                                     paste0(CurrentTime, "_ensembled.grd")), overwrite = TRUE)
+        }
+
         CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
-        
+
         if(is.na(terra::linearUnits(CurrentBinary))) {
-          stop("The spatial units of the data cannot be found! 
+          stop("The spatial units of the data cannot be found!
            Choose a different coordinate system for all data or add units into the existing one.")
         }
-        
+
         #Creates variables for stats
         Projection <- c("Current")
         NumberCells <- getSize(CurrentBinary)
@@ -236,7 +290,7 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
               CurrentDistance <- terra::distance(CurrentDistribution) / 1000
               SppDistance <- terra::extend(CurrentDistance, terra::ext(Binary_Dispersal))
               SppDistance[which(is.na(terra::values(SppDistance)))] <- max(terra::values(SppDistance), na.rm = TRUE) + 1
-              
+
               if ((terra::ext(SppDistance) != terra::ext(CurrentBinary)) | (terra::ncell(SppDistance) != terra::ncell(CurrentBinary))) {
                 message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
                 SppDistance <- terra::intersect(SppDistance, CurrentBinary)
@@ -328,13 +382,13 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
         }
 
         #Fills out stats table
-        stats <- data.frame(Projection = Projection, 
-                            NumberCells = NumberCells, 
-                            CellChange = CellChange, 
+        stats <- data.frame(Projection = Projection,
+                            NumberCells = NumberCells,
+                            CellChange = CellChange,
                             T1notT2 = T1notT2,
-                            T2notT1 = T2notT1, 
-                            Overlap = Overlap, 
-                            CentroidX = CentroidX, 
+                            T2notT1 = T2notT1,
+                            Overlap = Overlap,
+                            CentroidX = CentroidX,
                             CentroidY = CentroidY)
 
         utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
@@ -351,25 +405,25 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
   if (ncores == 1) {
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) FinalDispersal(x))
-    
+
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-    
+
     parallel::clusterExport(clus, varlist = c("FinalDispersal", "getCentroid", "DistanceRaster",
                                               "DispersalProbRaster", "t1nott2", "overlap", "getSize",
                                               "numScenario", "numYear", "dispersal",
                                               "result_dir", "time_periods", "scenarios",
-                                              "ncores", "ListSpp"), envir = environment())
-    
+                                              "contiguous", "point_data", "ncores", "ListSpp"), envir = environment())
+
     parallel::clusterEvalQ(clus, library(gtools))
     parallel::clusterEvalQ(clus, library(terra))
-    
+
     for(i in 1:ncol(ListSpp)) {
       for(j in 1:nrow(ListSpp)) {
         FinalDispersal(ListSpp[j,i])
       }
     }
-    
+
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) FinalDispersal(x))
       gc()
