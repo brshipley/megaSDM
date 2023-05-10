@@ -191,11 +191,11 @@ OccurrenceManagement <- function(occlist,
   for (s in 1:length(occlist)) {
     #Reads the occurrence file
     SpeciesOcc <- utils::read.csv(occlist[s])
-  
+
     if(nrow(SpeciesOcc) == 0) {
       next()
     }
-    
+
     #Determines the species name from the name of the occurrence file
     SpeciesSplit <- unlist(strsplit(occlist[s], "/", fixed = TRUE))
     SpeciesName <- substr(SpeciesSplit[length(SpeciesSplit)], 1,
@@ -231,15 +231,15 @@ OccurrenceManagement <- function(occlist,
                                    crs = terra::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +no_defs"))
     SpeciesCoordsSP <- terra::project(SpeciesCoordsSP, terra::crs(envstack))
     CoordMat <- terra::geom(SpeciesCoordsSP)[, c("x", "y")]
-    
+
     if(nrow(SpeciesCoordsSP) == 1) {
       CoordMat <- data.frame(x = CoordMat["x"],
                              y = CoordMat["y"])
     }
-    
+
     SpeciesCoords <- data.frame("Species" = SpeciesCoordsSP$Species, CoordMat)
     names(SpeciesCoords) <- c("Species", "Longitude", "Latitude")
-    
+
     #If required, extracts environmental data from rasters. Otherwise, adds environmental data back
     #to the projected occurrence points
     if (envextract == "FALSE") {
@@ -258,17 +258,17 @@ OccurrenceManagement <- function(occlist,
         }
       }
     } else {
-      SpeciesEnv <- terra::extract(envdata, SpeciesCoordsSP)
+      SpeciesEnv <- terra::extract(envstack, SpeciesCoordsSP)
       SpeciesEnv <- cbind(SpeciesCoords, SpeciesEnv[, 2:ncol(SpeciesEnv)])
       SpeciesEnv <- stats::na.omit(SpeciesEnv)
       if (nrow(SpeciesEnv) == 0) {
-        stop("Environmental extraction failed: 
+        stop("Environmental extraction failed:
              ensure that the points and the raster have overlapping extents")
       }
     }
 
     if (envsample == "TRUE") {
-      SpeciesFinal <- VarelaSample(SpeciesEnv[, c("Longitude", "Latitude")], envdata, nbins, PCA, PCAxes)
+      SpeciesFinal <- VarelaSample(SpeciesEnv[, c("Longitude", "Latitude")], envstack, nbins, PCA, PCAxes)
       SpeciesFinal <- data.frame("Species" = rep(SpeciesName, nrow(SpeciesFinal)), SpeciesFinal)
     } else {
       SpeciesFinal <- SpeciesEnv
