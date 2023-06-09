@@ -245,8 +245,7 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
     } else {
       taxonlist2 <- taxonlist2
     }
-    
-    curstack <- terra::rast(curstack)
+
     #Calculates the sum of the rasters (species richness), and writes rasters
     CurrentRichness <- terra::app(curstack, fun = sum)
     terra::crs(CurrentRichness) <- terra::crs(curstack)
