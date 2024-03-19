@@ -268,6 +268,11 @@ OccurrenceManagement <- function(occlist,
     }
 
     if (envsample == "TRUE") {
+      SpeciesClim <- SpeciesEnv[, 4:ncol(SpeciesEnv)]
+      if(nrow(unique(SpeciesClim)) == 1) {
+        message("All occurrences have the same climate! Skipping...")
+        next()
+      }
       SpeciesFinal <- VarelaSample(SpeciesEnv[, c("Longitude", "Latitude")], envstack, nbins, PCA, PCAxes)
       SpeciesFinal <- data.frame("Species" = rep(SpeciesName, nrow(SpeciesFinal)), SpeciesFinal)
     } else {

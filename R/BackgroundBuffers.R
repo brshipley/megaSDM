@@ -19,12 +19,12 @@
 #' out to. It is recommended that this is a unique directory from the one background
 #' points will be written to.
 #' @param buff_distance how wide should the buffers be around the occurrence points? If a single
-#' number is given, buffers for all species will have a radius of that number in map units. 
+#' number is given, buffers for all species will have a radius of that number in map units.
 #' Buffers for longlat projection should be given in meters. If you are unsure what spatial units the
 #' data have, run \code{terra::linearUnits()} on \code{envdata}, which will give 0 if units are in degrees,
 #' or a number corresponding to the number of meters within one map unit (e.g., map units of km will have 1000).
 #' If a vector of the same length as \code{occlist} is given, the buffer radius for each species will
-#' correspond to the matching value in the vector. Finally, if set to \code{NA} (default), 
+#' correspond to the matching value in the vector. Finally, if set to \code{NA} (default),
 #' 2*the 95% quantile of the minimum distance between each point is taken as the radius.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
@@ -85,7 +85,7 @@ BackgroundBuffers <- function(occlist,
 
   #Convert envstack to a "packed" raster so that it can be parallelized
   envstack <- terra::wrap(envstack)
-  
+
   run <- function(CurSpp) {
     envstack <- terra::rast(envstack)
     species <- occlist[grep(paste0(CurSpp, ".csv"), occlist)]
@@ -96,18 +96,18 @@ BackgroundBuffers <- function(occlist,
     Coordinates2 <- terra::vect(coordinates, geom = c("x", "y"), crs = terra::crs(envstack))
 
     if(is.na(terra::linearUnits(Coordinates2))) {
-      stop("The spatial units of the data cannot be found! 
+      stop("The spatial units of the data cannot be found!
            Choose a different coordinate system for all data or add units into the existing one.")
     }
-    
+
     #Calculates a buffer width based on quantiled minimum distance among all occurrence points
     Locations <- as.data.frame(terra::geom(Coordinates2)[, c("x", "y")])
 
-    if (nrow(Locations) > 5000) {	
-      message(paste0("Warning: the number of occurrences for ", CurSpp, " is > 5000"))	
-      message(paste0("    Generating backgrond buffers may take some time."))	
-    }	
-    
+    if (nrow(Locations) > 5000) {
+      message(paste0("Warning: the number of occurrences for ", CurSpp, " is > 5000"))
+      message(paste0("    Generating backgrond buffers may take some time."))
+    }
+
     #If different sizes of buffers are wanted for the different species, pull the one that matches the current species
     if (length(buff_distance) == 1) {
       cur_dist <- buff_distance
@@ -136,10 +136,10 @@ BackgroundBuffers <- function(occlist,
       unitmult <- terra::linearUnits(Coordinates2)
       BufferWidth <- BufferWidth / unitmult
     }
-    
+
     #Makes a buffer (width dependent) around the first occurrence point
     combinedPolygon <- terra::buffer(Coordinates2, BufferWidth)
-    combinedPolygon <- terra::aggregate(combinedPolygon)  
+    combinedPolygon <- terra::aggregate(combinedPolygon)
 
     #Reprojects the buffer into the desired CRS
     combinedPolygon <- terra::project(combinedPolygon, terra::crs(envstack))
@@ -160,16 +160,16 @@ BackgroundBuffers <- function(occlist,
     out <- sapply(ListSpp, function(x) run(x))
   } else {
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-    
+
     parallel::clusterExport(clus, varlist = c("occlist", "run", "envstack",
                                               "output", "buff_distance", "ListSpp"), envir = environment())
     parallel::clusterEvalQ(clus, library(terra))
-    
+
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     }
-    
+
     parallel::stopCluster(clus)
   }
-  
+
 }

@@ -79,6 +79,10 @@ OccurrenceCollection <- function(spplist,
     #If the taxon is a species (not a subspecies), renames it to the GBIF taxonomy.
     #However, if the taxon *is* a subspecies, leave alone.
     if (length(SpecSplit) == 2) {
+      if(!("species" %in% names(SpeciesName))) {
+        message("Species ", s, " not found: Check spelling or try searching a synonym")
+        next
+      }
       if (SpeciesName$species != s) {
 
         #If the GBIF backbone name doesn't equal the species name provided, either renames or merges with another provided species
@@ -307,7 +311,7 @@ OccurrenceCollection <- function(spplist,
   if (is.null(TestNum)) {
     TestNum <- nspp
   }
-  
+
   if (TestNum < nspp) {
     while (TestNum < nspp) {
       TestNum <- speciterate(TestNum, nspp)

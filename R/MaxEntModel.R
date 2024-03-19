@@ -25,9 +25,9 @@
 #'    2: A multidimensional environmental similarity surface (MESS) showing novel climates.
 #'
 #'    3: Files containing the parameters used to make the response curves.
-#'    
+#'
 #'    4: Plots of the response curves for each parameter
-#'    
+#'
 #' The final set of arguments are optional and used for tuning the maxent model and cross-validation:
 #' @param reptype Type of replication ("Crossvalidate", "Bootstrap", "Subsample"; see MAXENT manual).
 #' Default is "Subsample".
@@ -63,17 +63,17 @@ MaxEntModel <- function(occlist, bglist, model_output,
   ListSpp <- matrix(data = occlist, ncol = ncores)
 
   #Creates sub-directory for the given species
-  
+
   if (!dir.exists(model_output)) {
     dir.create(model_output)
   }
-  
+
   #Copies maxent.jar into the model_output folder
   if (!file.exists(file.path(model_output, "maxent.jar"))) {
     file.copy(from = system.file("extdata", "maxent.jar", package = "megaSDM"),
               to = file.path(model_output, "maxent.jar"))
   }
-  
+
   if (!methods::hasArg(features)) {
     linear <- "true"
     quadratic <- "true"
@@ -163,19 +163,19 @@ MaxEntModel <- function(occlist, bglist, model_output,
     ListSpp <- as.vector(ListSpp)
     out <- sapply(ListSpp, function(x) run(x))
   } else {
-    
+
     clus <- parallel::makeCluster(ncores, setup_timeout = 0.5)
-    
+
     parallel::clusterExport(clus, varlist = c("run", "checkError", "occlist", "bglist", "ncores",
                                               "nrep", "categorical", "alloutputs", "model_output",
                                               "reptype","test_percent", "regularization", "linear",
                                               "quadratic", "product", "threshold", "hinge",
                                               "testsamples", "ListSpp"), envir = environment())
-    
+
     for (i in 1:nrow(ListSpp)) {
       out <- parallel::parLapply(clus, ListSpp[i, ], function(x) run(x))
     }
-    
+
     parallel::stopCluster(clus)
   }
 }

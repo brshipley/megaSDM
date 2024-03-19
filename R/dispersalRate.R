@@ -33,13 +33,19 @@
 #' used in the forecasted/hindcasted species distribution models.
 #' @param contiguous TRUE/FALSE: when constraining by dispersal rate, should only the contiguous
 #' areas around each occurrence point be used for the first time step? setting this argument to
-#' \code{TRUE} will mitigate the effects of overpediction in areas where a species has
+#' \code{TRUE} will mitigate the effects of overprediction in areas where a species has
 #' not been observed. Default is \code{FALSE}.
 #' @param point_data If contiguous = \code{TRUE}, a file path to the directory holding all
 #' occurrence data used for the model generation. If previous steps of megaSDM have been run
 #' (e.g., \code{MaxEntProj}, \code{MaxEntModel}, \code{OccurrenceManagement}), this will likely
 #' be equal to \code{occ_output} in the vignette. If not, the occurrence data should have
 #' coordinates in "x" and "y" columns.
+#' @param hindcast TRUE/FALSE: is this a hindcasted model? If TRUE, dispersal rate calculations
+#' will start at the first time period, not the current one.
+#' @param startpoint if hindcast is \code{TRUE} then startpoint is a vector of length 2
+#' describing a scenario/time combination, with the first argument as the scenario name
+#' and the second as the time period desired as a starting point for the dispersal
+#' simulations.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
 #' @export
@@ -50,7 +56,8 @@
 
 dispersalRate <- function(result_dir, dispersaldata, time_periods,
                           scenarios, contiguous = FALSE,
-                          point_data = NA, ncores = 1) {
+                          point_data = NA, hindcast = FALSE, 
+                          startpoint = c(NA, NA), ncores = 1) {
 
   #Gets list of species from the directories given by "result_dir"
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
@@ -187,6 +194,14 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       if (length(dispersal_rate) > 1) {
         stop(paste0("More than one dispersal rate found for ", speciesName))
       }
+      
+      #Checking to see if the time periods pass through the year the model is projected on
+      #or if they are historical time periods
+      TrueCurr <- time_periods[1]
+      if(hindcast == TRUE) {
+        time_periods <- sort(time_periods)
+      }
+      
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
 
@@ -234,9 +249,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           terra::writeRaster(Ensemble2, file.path(result_dir, CurSpp,
                                                      paste0(CurrentTime, "_ensembled.grd")), overwrite = TRUE)
         }
-
-        CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
-
+        
+        if (hindcast == FALSE) {
+          CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
+        } else {
+          CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", 
+                                              startpoint[1], "/", startpoint[2], "_",
+                                              startpoint[1],"_binary.grd"))
+        }
+        
         if(is.na(terra::linearUnits(CurrentBinary))) {
           stop("The spatial units of the data cannot be found!
            Choose a different coordinate system for all data or add units into the existing one.")
@@ -304,13 +325,21 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             #Calculates the dispersal probability for the given time step
             TimeDiff <- abs(CurYear - time_periods[y - 1])
             SppDispProb <- DispersalProbRaster(dispersal_rate, SppDistance, TimeDiff)
-            RasterList <- list.files(path = curdir, pattern = paste0(".grd$"))
+            
+            if(CurYear == TrueCurr) {
+              RasterList <- list.files(file.path(result_dir, CurSpp), pattern = paste0(".grd$"))
+              EnsembleNum <- grep(paste0(CurYear, "_ensembled.grd"), RasterList)
+              EnsembleSD <- terra::rast(file.path(result_dir, CurSpp,
+                                                  RasterList[EnsembleNum]))
+            } else {
+              RasterList <- list.files(path = curdir, pattern = paste0(".grd$"))
+              EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.grd"), RasterList)
+              EnsembleSD <- terra::rast(file.path(curdir, RasterList[EnsembleNum]))
+            }
+            
 
             #Creates an ensembled raster that incorporates dispersal rate
             #Calculates the ensembled dispersal probability * habitat suitability to make "invadable suitability"
-
-            EnsembleNum <- grep(paste0(CurYear, "_", CurScen, "_ensembled.grd"), RasterList)
-            EnsembleSD <- terra::rast(file.path(curdir, RasterList[EnsembleNum]))
             if ((terra::ext(SppDispProb) != terra::ext(EnsembleSD)) | (terra::ncell(SppDispProb) != terra::ncell(EnsembleSD))) {
               message("Raster extents are not consistent: only the intersection of the rasters will be analysed")
               SppDispProb <- terra::intersect(SppDispProb, EnsembleSD)
@@ -330,8 +359,16 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
 
             #Creates a binary raster from the ensembled raster
-            BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.grd"), RasterList)
-            BinarySD <- terra::rast(file.path(curdir, RasterList[BinaryNum]))
+            if(CurYear == TrueCurr) {
+              BinaryNum <- grep(paste0(CurYear, "_binary.grd"), RasterList)
+              BinarySD <- terra::rast(file.path(result_dir, CurSpp,
+                                                  RasterList[EnsembleNum]))
+            } else {
+              BinaryNum <- grep(paste0(CurYear, "_", CurScen, "_binary.grd"), RasterList)
+              BinarySD <- terra::rast(file.path(curdir, RasterList[BinaryNum]))
+            }
+            
+            
             Binary_Dispersal <- (SppDispProb * BinarySD)
             Binary_Dispersal[Binary_Dispersal >= 0.5] <- 1
             Binary_Dispersal[Binary_Dispersal < 0.5] <- 0
@@ -363,6 +400,10 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
 
           #Writes PDFs
           DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.grd$"), full.names = TRUE)
+          if(hindcast == TRUE) {
+            DispersalRasters <- DispersalRasters[-grep(paste0("/\\", CurrentTime), 
+                                                       DispersalRasters)]
+          }
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
 

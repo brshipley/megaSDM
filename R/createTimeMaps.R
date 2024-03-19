@@ -86,6 +86,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
   }
 
   #Checking to see if the time periods pass through the year the model is projected on
+  #or if they are historical time periods
   largestNum <- as.numeric(largestNum)
   if (is.numeric(time_periods)) {
     if (time_periods[length(time_periods)] > time_periods[1]) {
@@ -95,7 +96,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         timeSort <- time_periods
       }
     } else if (time_periods[length(time_periods)] < time_periods[1]) {
-      if (!identical(sort(time_periods, decreasing = TRUE), time_periods)) {
+      if (!identical(sort(time_periods), time_periods)) {
         timeSort <- sort(time_periods)
       } else {
         timeSort <- time_periods
@@ -188,25 +189,41 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     collength <- length(list.files(path = file.path(correctDirectories[1]),
                                    pattern = paste0(filepattern),
                                    full.names = TRUE))
-
-    results <- matrix(data = NA,
-                      nrow = collength + 1,
-                      ncol = length(correctDirectories),
-                      byrow = FALSE,
-                      dimnames = NULL)
-
-    sortmodern <- which(timeSort == time_periods[1])
-
-    for (i in 1:ncol(results)) {
-      results[sortmodern, i] <- modernData
+    
+    if(collength < length(time_periods)) {
+      results <- matrix(data = NA,
+                        nrow = collength + 1,
+                        ncol = length(correctDirectories),
+                        byrow = FALSE,
+                        dimnames = NULL)
+      
+      sortmodern <- which(timeSort == time_periods[1])
+      
+      for (i in 1:ncol(results)) {
+        results[sortmodern, i] <- modernData
+      }
+      
+    } else if (collength == length(time_periods)) {
+      results <- matrix(data = NA,
+                        nrow = collength,
+                        ncol = length(correctDirectories),
+                        byrow = FALSE,
+                        dimnames = NULL)
     }
+    
 
     for(i in 1:length(correctDirectories)) {
       files <- list.files(path = file.path(correctDirectories[i]),
                           pattern = paste0(filepattern),
                           full.names = TRUE)
-
-      for (j in 2:nrow(results)) {
+      
+      if(length(files) == length(time_periods)) {
+        jstart <- 1
+      } else {
+        jstart <- 2
+      }
+      
+      for (j in jstart:nrow(results)) {
         sortfut <- which(timeSort == time_periods[j])
         futfile <- files[grep(time_periods[j], files)]
         results[sortfut, i] <- futfile
