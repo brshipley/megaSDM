@@ -401,8 +401,10 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           #Writes PDFs
           DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.grd$"), full.names = TRUE)
           if(hindcast == TRUE) {
-            DispersalRasters <- DispersalRasters[-grep(paste0("/\\", CurrentTime), 
-                                                       DispersalRasters)]
+            currentrastind <- grep(paste0("/\\", CurrentTime), DispersalRasters)
+            if(length(currentrastind) > 0) {
+              DispersalRasters <- DispersalRasters[-currentrastind]
+            }
           }
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
