@@ -223,15 +223,18 @@ createRichnessMaps <- function(result_dir, time_periods, scenarios = NA,
 
     #Uploads and stacks current binary rasters of all species within the taxa
     #Removes species with AUC values < threshold
-    curstack <- c()
     DeleteSP <- c()
     for (sp in 1:length(taxonlist2)) {
       focusspp <- taxonlist2[sp]
       if (dir.exists(paste0(result_dir, "/", focusspp))) {
         curfocus <- list.files(path = file.path(result_dir, focusspp), pattern = paste0("binary.grd$"), full.names = TRUE)
         if (length(curfocus) > 0){
-          curraster <- terra::rast(curfocus)
-          curstack <- c(curstack, curraster)
+          if(!exists("curstack")) {
+            curstack <- terra::rast(curfocus)
+          } else {
+            curraster <- terra::rast(curfocus)
+            curstack <- c(curstack, curraster)
+          }
         } else {
           message(paste0(focusspp, " will be removed (was modelled but had no replicates of a high enough AUC value)"))
           DeleteSP <- c(DeleteSP, sp)
