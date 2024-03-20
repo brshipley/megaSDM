@@ -264,7 +264,11 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
         }
 
         #Creates variables for stats
-        Projection <- c("Current")
+        if(hindcast == TRUE) {
+          Projection <- c(paste0(startpoint[1], "_", startpoint[2]))
+        } else {
+          Projection <- c("Current")
+        }
         NumberCells <- getSize(CurrentBinary)
         CellChange <- c(0)
         T1notT2 <- c(0)

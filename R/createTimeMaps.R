@@ -199,8 +199,11 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       
       sortmodern <- which(timeSort == time_periods[1])
       
+      #Fill in with modern data
       for (i in 1:ncol(results)) {
-        results[sortmodern, i] <- modernData
+        if(is.na(results[sortmodern, i])) {
+          results[sortmodern, i] <- modernData
+        } 
       }
       
     } else if (collength == length(time_periods)) {
@@ -226,6 +229,15 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
       for (j in jstart:nrow(results)) {
         sortfut <- which(timeSort == time_periods[j])
         futfile <- files[grep(time_periods[j], files)]
+        
+        #If we don't have a dispersal rate raster, use the non-dispersal rate
+        #rater (this is useful in hindcasting, where dispersal rate analyses
+        #start from a non-modern time period)
+        if(length(futfile) == 0) {
+          futfilelist <- list.files(correctDirectories[i], pattern = "binary.grd$",
+                                full.names = TRUE)
+          futfile <- futfilelist[grep(time_periods[j], futfilelist)]
+        }
         results[sortfut, i] <- futfile
       }
     }
