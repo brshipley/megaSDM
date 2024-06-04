@@ -110,12 +110,12 @@ TrainStudyEnv <- function(input_TA, input_SA, desiredCRS = NA,
       resolution <- max(resolution)
       message("The desired resolution will lead to rectangular pixels: resampling to square pixels for use in MaxEnt projection")
     }
-    if(!all.equal(terra::res(envstack)[1], terra::res(envstack)[2])) {
+    if(!identical(terra::res(envstack)[1], terra::res(envstack)[2])) {
       resolution <- max(terra::res(envstack))
       message("The original training raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
     }
     if(exists("studystack")) {
-      if(!all.equal(terra::res(studystack)[1], terra::res(studystack)[2])) {
+      if(!identical(terra::res(studystack)[1], terra::res(studystack)[2])) {
         resolution <- max(c(terra::res(envstack), terra::res(studystack)))
         message("The original study area raster pixels are rectangular: resampling to square pixels for use in MaxEnt projection")
       }
