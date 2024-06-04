@@ -32,7 +32,7 @@ Jenny McGuire
 
 Bistra Dilkina
 
-## Dependencies *(updated 06 June 2024)*
+## Dependencies *(updated 04 June 2024)*
 
 #### maxent.jar file (may be downloaded at <https://github.com/mrmaxent/Maxent>)
 
