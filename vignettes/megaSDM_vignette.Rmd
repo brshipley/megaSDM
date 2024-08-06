@@ -21,7 +21,7 @@ This example briefly demonstrates much of the functionality of megaSDM and can b
 
 ## Setup
 _First Time Users:_
-The modelling portion of megaSDM relies on the MaxEnt algorithm, using the "maxent.jar" executable file. This file is installed along with the megaSDM package, but if this is your first time running MaxEnt or megaSDM, you may want to download the "maxent.jar" file separately to ensure that it can open. The "maxent.jar" file can be found at https://github.com/mrmaxent/Maxent or along with this package at https://github.com/brshipley/megaSDM/inst/extdata/.
+The modelling portion of megaSDM relies on the MaxEnt algorithm, using the "maxent.jar" executable file. This file is installed along with the megaSDM package, but if this is your first time running MaxEnt or megaSDM, you may want to download the "maxent.jar" file separately to ensure that it can open. The "maxent.jar" file can be found at https://github.com/mrmaxent/Maxent or along with this package at https://github.com/brshipley/megaSDM/tree/master/inst/extdata.
 
 Once downloaded, double-click the "maxent.jar" file: If the maxent.jar dialog box does not load when opened (this is common when using MacOS), the Java Runtime Environment may need to be downloaded before running the modelling functions that megaSDM provies (https://www.oracle.com/java/technologies/javase-jre8-downloads.html).
 
