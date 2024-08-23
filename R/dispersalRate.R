@@ -412,18 +412,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           }
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
-
+          DispersalNames2 <- substr(DispersalNames, 1, nchar(DispersalNames)-9)
           dir.create(file.path(result_dir, CurSpp, "map_pdfs"))
           for (d in 1:length(DispersalRasters)) {
             if (grepl("binary", DispersalRasters[d])) {
-              title <- DispersalNames[d]
-              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
+              title <- DispersalNames2[d]
+              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames2[d], ".pdf")))
               terra::plot(terra::rast(DispersalRasters[d]), legend = FALSE, main = title)
               graphics::legend("bottomright", legend = c("Absence", "Presence"), fill = c("white", "forestgreen"))
               grDevices::dev.off()
             } else {
-              title <- DispersalNames[d]
-              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames[d], ".pdf")))
+              title <- DispersalNames2[d]
+              grDevices::pdf(file = file.path(result_dir, CurSpp, "map_pdfs", paste0(CurSpp, "_", DispersalNames2[d], ".pdf")))
               terra::plot(terra::rast(DispersalRasters[d]), main = title)
               grDevices::dev.off()
             }
