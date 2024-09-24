@@ -25,6 +25,11 @@
 #' calculated for the dispersal-constrained distribution maps? If dispersal rate
 #' analysis are not needed, or if the \code{megaSDM::dispersalRate} function has yet
 #' to be run, this should be set to \code{FALSE} (the default).
+#' @param contiguous (logical \code{TRUE} or \code{FALSE}) If \code{dispersal == TRUE},
+#' do the statistics that need to be calculated come from the analysis that 
+#' constrained the suitable habitat at the first time step to the existing occurrences? 
+#' See the \code{contiguous} argument in the \code{dispersalRate()} function. 
+#' Default is \code{FALSE}
 #' @param dispersaldata A dataframe or the full file path to a .csv file with two columns:
 #'   1. Species.
 #'   2. Dispersal Rate in km/yr.
@@ -40,8 +45,8 @@
 #'
 
 additionalStats <- function(result_dir, time_periods, scenarios,
-                            dispersal = FALSE, dispersaldata = NA,
-                            ncores = 1) {
+                            dispersal = FALSE, contiguous = FALSE,
+                            dispersaldata = NA, ncores = 1) {
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   if (length(spp.list) == 0) {
@@ -49,7 +54,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   }
   ListSpp <- c()
   #Generates the species list for parallelization
-  if (dispersal == "TRUE") {
+  if (dispersal == TRUE) {
 
     #Reads in dispersal data
     if (class(dispersaldata) == "character") {
@@ -92,11 +97,15 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   #Functions----------------------------
 
   #Creates a bar-graph of the number of cells at all time periods for all scenarios
-  getCellsGraph <- function(spp, stats, dispersalApplied) {
+  getCellsGraph <- function(spp, stats, dispersalApplied, contig) {
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersalApplied == "TRUE") {
-      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells.pdf"))
+    if (dispersalApplied == TRUE) {
+      if(contig == TRUE) {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells_Contig.pdf"))
+      } else {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells.pdf"))
+      }
     } else {
       grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells.pdf"))
     }
@@ -120,11 +129,15 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   }
 
   #Creates multiple bar-graphs showing number of cells for each time period (one for each scenario)
-  getDiffScenariosGraph <- function(spp, stats, dispersalApplied) {
+  getDiffScenariosGraph <- function(spp, stats, dispersalApplied, contig) {
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells", numScenario, "Graphs.pdf"))
+      if(contig == TRUE) {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells_Contig_", numScenario, "Graphs.pdf"))
+      } else {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells", numScenario, "Graphs.pdf"))
+      }
     } else {
       grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/NumCells", numScenario, "Graphs.pdf"))
     }
@@ -149,7 +162,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   }
 
   #Creates a bar-graph of the change in cells (percent of original) from original
-  getpercentDiffGraphs <- function(spp, stats, dispersalApplied) {
+  getpercentDiffGraphs <- function(spp, stats, dispersalApplied, contig) {
     nstats <- nrow(stats)
     PercentChange <- c()
     origcells <- stats$NumberCells[1]
@@ -170,7 +183,12 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
     #If dispersal has been applied, prints out a new graph
     if (dispersalApplied == "TRUE") {
-      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange.pdf"))
+      if(contig == TRUE) {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange_Contig.pdf"))
+      } else {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange.pdf"))
+      }
+     
     } else {
       grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/CellChange.pdf"))
     }
@@ -186,7 +204,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     grDevices::dev.off()
   }
 
-  getMinMaxGraphs <- function(spp, stats, dispersalApplied) {
+  getMinMaxGraphs <- function(spp, stats, dispersalApplied, contig) {
     numlist <- c(stats$NumberCells[1])
 
     #Calculates average number of cells per time period across scenarios
@@ -224,8 +242,13 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     }
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersalApplied == "TRUE") {
-      grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells.pdf"))
+    if (dispersalApplied == TRUE) {
+      if(contig == TRUE) {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells_Contig.pdf"))
+      } else {
+        grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/AvgNumberCells.pdf"))
+      }
+      
     } else {
       grDevices::pdf(file = paste0(result_dir, "/", spp, "/Additional Stats/AvgNumberCells.pdf"))
     }
@@ -248,7 +271,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     grDevices::dev.off()
   }
 
-  DispersalCompare <- function(spp, stats) {
+  DispersalCompare <- function(spp, stats, contig) {
     spp.name <- spp
 
     #Reads in the results data frame (not dispersal-constrained)
@@ -270,8 +293,14 @@ additionalStats <- function(result_dir, time_periods, scenarios,
 
       #Name the output pdf
       rownames(DispComp) <- c("No Dispersal", "Dispersal")
-      grDevices::pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
-                        paste0(scenarios[scen], "_DispersalCompare.pdf")))
+      if(contig == TRUE) {
+        grDevices::pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
+                                        paste0(scenarios[scen], "_DispersalCompare_Contig.pdf")))
+      } else {
+        grDevices::pdf(file = file.path(result_dir, spp, "Dispersal Applied Additional Stats",
+                                        paste0(scenarios[scen], "_DispersalCompare.pdf")))
+      }
+      
 
       #graphical parameters and barplot
       graphics::par(mfrow = c(1, 1), mar = c(5, 5, 4, 8))
@@ -290,9 +319,13 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   run <- function(CurSpp) {
     spp.name <- CurSpp
 
-    if (dispersal == "TRUE") {
+    if (dispersal == TRUE) {
       dir.create(file.path(result_dir, spp.name, "Dispersal Applied Additional Stats"))
-      stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
+      if (contiguous == TRUE) {
+        stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
+      } else {
+        stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal_Contig.csv"))
+      }
       stats <- stats
       nstats <- nrow(stats)
     } else {
@@ -303,16 +336,16 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     }
 
     #construct graphs of area changes
-    getCellsGraph(spp.name, stats, dispersal)
-    getDiffScenariosGraph(spp.name, stats, dispersal)
-    getpercentDiffGraphs(spp.name, stats, dispersal)
+    getCellsGraph(spp.name, stats, dispersal, contiguous)
+    getDiffScenariosGraph(spp.name, stats, dispersal, contiguous)
+    getpercentDiffGraphs(spp.name, stats, dispersal, contiguous)
 
     if (numScenario > 0) {
-      getMinMaxGraphs(spp.name, stats, dispersal)
+      getMinMaxGraphs(spp.name, stats, dispersal, contiguous)
     }
 
     if (dispersal == "TRUE") {
-      DispersalCompare(spp.name, stats)
+      DispersalCompare(spp.name, stats, contiguous)
     }
     grDevices::graphics.off()
   }
@@ -327,7 +360,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
                                               "numYear", "numScenario", "dispersal",
                                               "dispersaldata", "DispersalCompare", "time_periods","scenarios",
                                               "getCellsGraph", "getDiffScenariosGraph", "getpercentDiffGraphs",
-                                              "getMinMaxGraphs", "run"), envir = environment())
+                                              "getMinMaxGraphs", "run", "contiguous"), envir = environment())
     
     parallel::clusterEvalQ(clus, library(graphics))
     

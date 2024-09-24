@@ -24,6 +24,11 @@
 #' to be run, this should be set to \code{FALSE} (the default).
 #'
 #' NOTE: if \code{dispersal = TRUE}, then \code{time_periods} have to be numeric.
+#' @param contiguous (logical \code{TRUE} or \code{FALSE}) If \code{dispersal = TRUE},
+#' do the rasters to be aggregated into the TimeMaps come from the analysis that 
+#' constrained the suitable habitat at the first time step to the existing occurrences? 
+#' See the \code{contiguous} argument in the \code{dispersalRate()} function.
+#' Default is \code{FALSE}
 #' @param dispersaldata either a dataframe or the complete path name of a .csv file with two columns:
 #'
 #'   Column 1: species name (same as the name used for modelling).
@@ -36,7 +41,7 @@
 #' of each species range across all time-steps for each climate scenario.
 
 createTimeMaps <- function(result_dir, time_periods, scenarios,
-                           dispersal, dispersaldata, ncores) {
+                           dispersal, contiguous, dispersaldata, ncores) {
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   if (length(spp.list) == 0) {
@@ -164,7 +169,13 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     #Lists current binary raster files
-    modernData <- list.files(path = file.path(result_dir, CurSpp), pattern = paste0("binary.grd$"), full.names = TRUE)
+    if(dispersal == TRUE & contiguous == TRUE) {
+      modernData <- list.files(path = file.path(result_dir, CurSpp), 
+                               pattern = paste0("binary_contig.grd$"), full.names = TRUE)
+    } else {
+      modernData <- list.files(path = file.path(result_dir, CurSpp), 
+                               pattern = paste0("binary.grd$"), full.names = TRUE)
+    }
     rasterCRS <- terra::crs(terra::rast(modernData[1]))
     directories <- list.dirs(path = file.path(result_dir, CurSpp))
     correctDirectories <- c()
@@ -180,7 +191,11 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     }
 
     if (dispersal == TRUE) {
-      filepattern <- "binary_dispersalRate.grd$"
+      if(contiguous == TRUE) {
+        filepattern <- "binary_dispersalRate_contig.grd$"
+      } else {
+        filepattern <- "binary_dispersalRate.grd$"
+      }
     } else {
       filepattern <- "binary.grd$"
     }
@@ -231,7 +246,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
         futfile <- files[grep(time_periods[j], files)]
         
         #If we don't have a dispersal rate raster, use the non-dispersal rate
-        #rater (this is useful in hindcasting, where dispersal rate analyses
+        #raster (this is useful in hindcasting, where dispersal rate analyses
         #start from a non-modern time period)
         if(length(futfile) == 0) {
           futfilelist <- list.files(correctDirectories[i], pattern = "binary.grd$",
@@ -373,9 +388,18 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
       #write the output raster
       if (dispersal == TRUE) {
-        terra::writeRaster(FinalPrintRast,
-                    filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], "_dispersal.grd")),
-                    overwrite = TRUE)
+        if (contiguous == TRUE) {
+          terra::writeRaster(FinalPrintRast,
+                             filename = file.path(result_dir, CurSpp, "TimeMapRasters", 
+                                                  paste0("binary", scenarios[i], "_dispersal_contig.grd")),
+                             overwrite = TRUE)
+        } else {
+          terra::writeRaster(FinalPrintRast,
+                             filename = file.path(result_dir, CurSpp, "TimeMapRasters", 
+                                                  paste0("binary", scenarios[i], "_dispersal.grd")),
+                             overwrite = TRUE)
+        }
+        
       } else {
         terra::writeRaster(FinalPrintRast,
                             filename = file.path(result_dir, CurSpp, "TimeMapRasters", paste0("binary", scenarios[i], ".grd")),
@@ -471,7 +495,12 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
 
       if (dispersal == TRUE) {
         #creates pdf of the Time Maps
-        grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
+        if(contiguous == TRUE) {
+          grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_contig_TimeMap.pdf")))
+        } else {
+          grDevices::pdf(file = file.path(result_dir, CurSpp, "TimeMaps", paste0(scenarios[i], "_dispersalRate_TimeMap.pdf")))
+        }
+        
         terra::plot(legend = FALSE,
              breaks = breakpoints,
              r,
@@ -513,7 +542,7 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
                                               "numScenario", "timeSort", "numYear", "largestNum",
                                               "result_dir", "time_periods", "scenarios",
                                               "dispersal", "dispersaldata", "ncores",
-                                              "ListSpp"), envir = environment())
+                                              "ListSpp", "contiguous"), envir = environment())
     
     parallel::clusterEvalQ(clus, library(gtools))
     parallel::clusterEvalQ(clus, library(terra))

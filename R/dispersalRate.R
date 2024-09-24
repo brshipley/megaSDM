@@ -205,15 +205,15 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
       if (!is.na(dispersal_rate)) {
         CurrentTime <- time_periods[1]
 
+        #Read in the binary and ensembled rasters for the species at the time period the model was trained on
+        OrigBinary <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_binary.grd")))
+        OrigEnsemble <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_ensembled.grd")))
+        
         #If desired, removes patches of the binary map at the first time step that do not border
         #the occurrence points used for the model. This is to avoid extrapolation errors.
         if (contiguous == TRUE) {
 
-          #Read in the binary and ensembled rasters for the species at the time period the model was trained on
-          CurrentBinary <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_binary.grd")))
-          CurrentEnsemble <- terra::rast(file.path(result_dir, CurSpp, paste0(CurrentTime, "_ensembled.grd")))
-
-          CurrentPatch <- terra::patches(CurrentBinary, zeroAsNA = TRUE)
+          CurrentPatch <- terra::patches(OrigBinary, zeroAsNA = TRUE)
 
           #Get a list of occurrences and convert to SpatVector
           occurrence <- read.csv(file.path(point_data, paste0(CurSpp, ".csv")))
@@ -229,33 +229,31 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           CurrentPatch <- terra::match(CurrentPatch, truepatches)
           CurrentPatch[!is.na(CurrentPatch)] <- 1
           CurrentPatch[is.na(CurrentPatch)] <- 0
-          CurrentPatch <- terra::mask(CurrentPatch, CurrentBinary)
+          CurrentPatch <- terra::mask(CurrentPatch, OrigBinary)
 
           #Clip ensembled raster to boundary of occupied patches
-          Ensemble2 <- terra::mask(CurrentEnsemble, CurrentPatch, maskvalue = 0)
+          Ensemble2 <- terra::mask(OrigEnsemble, CurrentPatch, maskvalue = 0)
           Ensemble2[is.na(Ensemble2)] <- 0
-          Ensemble2 <- terra::mask(Ensemble2, CurrentBinary)
-
+          Ensemble2 <- terra::mask(Ensemble2, OrigBinary)
+          
           #Write out rasters
-          terra::writeRaster(CurrentBinary, file.path(result_dir, CurSpp,
-                                                      paste0(CurrentTime, "_binary_original.grd")),
-                             overwrite = TRUE)
-          terra::writeRaster(CurrentEnsemble, file.path(result_dir, CurSpp,
-                                                        paste0(CurrentTime, "_ensembled_original.grd")),
-                             overwrite = TRUE)
-
           terra::writeRaster(CurrentPatch, file.path(result_dir, CurSpp,
-                                                     paste0(CurrentTime, "_binary.grd")), overwrite = TRUE)
+                                                     paste0(CurrentTime, "_binary_contig.grd")), overwrite = TRUE)
           terra::writeRaster(Ensemble2, file.path(result_dir, CurSpp,
-                                                     paste0(CurrentTime, "_ensembled.grd")), overwrite = TRUE)
+                                                  paste0(CurrentTime, "_ensembled_contig.grd")), overwrite = TRUE)
+          
+          CurrentBinary <- CurrentPatch
+          CurrentEnsemble <- Ensemble2
+        } else {
+          CurrentBinary <- OrigBinary
+          CurrentEnsemble <- OrigEnsemble
         }
         
-        if (hindcast == FALSE) {
-          CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", CurrentTime, "_binary.grd"))
-        } else {
-          CurrentBinary <- terra::rast(paste0(result_dir, "/", CurSpp, "/", 
-                                              startpoint[1], "/", startpoint[2], "_",
-                                              startpoint[1],"_binary.grd"))
+        #if hindcasting, 
+        if (hindcast == TRUE) {
+          CurrentBinary <- terra::rast(file.path(result_dir, CurSpp, 
+                                                 startpoint[1], paste0(startpoint[2], "_",
+                                                                       startpoint[1],"_binary.grd")))
         }
         
         if(is.na(terra::linearUnits(CurrentBinary))) {
@@ -355,12 +353,21 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
               terra::crs(Ensemble_Dispersal) <- terra::crs(EnsembleSD)
             }
 
-            #Writes the ensembled dispersal rate raster
-            terra::writeRaster(Ensemble_Dispersal,
-                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.grd")),
-                        overwrite = TRUE)
-
-            DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
+            if(contiguous == TRUE) {
+              #Writes the ensembled dispersal rate raster
+              terra::writeRaster(Ensemble_Dispersal,
+                                 filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate_contig.grd")),
+                                 overwrite = TRUE)
+              DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate_contig"))
+            } else {
+              #Writes the ensembled dispersal rate raster
+              terra::writeRaster(Ensemble_Dispersal,
+                                 filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate.grd")),
+                                 overwrite = TRUE)
+              DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_ensembled_dispersalRate"))
+            }
+            
+            
 
             #Creates a binary raster from the ensembled raster
             if(CurYear == TrueCurr) {
@@ -382,11 +389,18 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
             }
 
             #Writes the binary raster
-            terra::writeRaster(Binary_Dispersal,
-                        filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.grd")),
-                        overwrite = TRUE)
-            DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate"))
-
+            if(contiguous == TRUE) {
+              terra::writeRaster(Binary_Dispersal,
+                                 filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate_contig.grd")),
+                                 overwrite = TRUE)
+              DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate_contig"))
+            } else {
+              terra::writeRaster(Binary_Dispersal,
+                                 filename = file.path(curdir, paste0(CurYear, "_", CurScen, "_binary_dispersalRate.grd")),
+                                 overwrite = TRUE)
+              DispersalNames <- c(DispersalNames, paste0(CurYear, "_", CurScen, "_binary_dispersalRate"))
+            }
+           
             #Fills out the stats table
             Projection <- c(Projection, paste0(CurScen, "_", CurYear))
             FocusNCells <- getSize(Binary_Dispersal)
@@ -403,16 +417,28 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
           }
 
           #Writes PDFs
-          DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.grd$"), full.names = TRUE)
+          if(contiguous == TRUE) {
+            DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate_contig.grd$"), full.names = TRUE)
+          } else {
+            DispersalRasters <- list.files(path = curdir, pattern = paste0("dispersalRate.grd$"), full.names = TRUE)
+          }
+          
           if(hindcast == TRUE) {
             currentrastind <- grep(paste0("/\\", CurrentTime), DispersalRasters)
             if(length(currentrastind) > 0) {
               DispersalRasters <- DispersalRasters[-currentrastind]
             }
           }
+          
           DispersalRasters <- gtools::mixedsort(DispersalRasters)
           DispersalNames <- gtools::mixedsort(DispersalNames)
-          DispersalNames2 <- substr(DispersalNames, 1, nchar(DispersalNames)-9)
+          if(contiguous == TRUE) {
+            DispersalNames2 <- substr(DispersalNames, 1, nchar(DispersalNames)-16)
+            DispersalNames2 <- paste0(DispersalNames2, "_contig")
+          } else {
+            DispersalNames2 <- substr(DispersalNames, 1, nchar(DispersalNames)-9)
+          }
+
           dir.create(file.path(result_dir, CurSpp, "map_pdfs"))
           for (d in 1:length(DispersalRasters)) {
             if (grepl("binary", DispersalRasters[d])) {
@@ -439,8 +465,11 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
                             Overlap = Overlap,
                             CentroidX = CentroidX,
                             CentroidY = CentroidY)
-
-        utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
+        if(contiguous == TRUE) {
+          utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal_Contig.csv"))
+        } else {
+          utils::write.csv(stats, file = file.path(result_dir, CurSpp, "Results_Dispersal.csv"))
+        }
         rm(CurrentBinary)
         gc()
       } else {
