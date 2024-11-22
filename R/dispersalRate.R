@@ -311,6 +311,13 @@ dispersalRate <- function(result_dir, dispersaldata, time_periods,
               CurrentDistribution <- terra::crop(CurrentDistribution, terra::ext(TimeMap2))
               CurrentDistribution[which(terra::values(CurrentDistribution) == 0)] <- NA
 
+              #If there is no remaining available area, skip to the next scenario
+              if(all(is.na(terra::values(CurrentDistribution)))) {
+                message(paste0("Skipping scenario ", CurScen, " from time period", 
+                               y, ": No available habitat remaining"))
+                next()
+              }
+              
               #Creates new distance raster
               CurrentDistance <- terra::distance(CurrentDistribution) / 1000
               SppDistance <- terra::extend(CurrentDistance, terra::ext(Binary_Dispersal))
