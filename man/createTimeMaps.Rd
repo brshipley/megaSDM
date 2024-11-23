@@ -9,6 +9,7 @@ createTimeMaps(
   time_periods,
   scenarios,
   dispersal,
+  contiguous,
   dispersaldata,
   ncores
 )
@@ -35,6 +36,12 @@ analyses are not needed, or if the \code{megaSDM::dispersalRate} function has ye
 to be run, this should be set to \code{FALSE} (the default).
 
 NOTE: if \code{dispersal = TRUE}, then \code{time_periods} have to be numeric.}
+
+\item{contiguous}{(logical \code{TRUE} or \code{FALSE}) If \code{dispersal = TRUE},
+do the rasters to be aggregated into the TimeMaps come from the analysis that
+constrained the suitable habitat at the first time step to the existing occurrences?
+See the \code{contiguous} argument in the \code{dispersalRate()} function.
+Default is \code{FALSE}}
 
 \item{dispersaldata}{either a dataframe or the complete path name of a .csv file with two columns:
 

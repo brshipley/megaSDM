@@ -9,6 +9,7 @@ additionalStats(
   time_periods,
   scenarios,
   dispersal = FALSE,
+  contiguous = FALSE,
   dispersaldata = NA,
   ncores = 1
 )
@@ -31,6 +32,12 @@ needed, set to NA (defualt).}
 calculated for the dispersal-constrained distribution maps? If dispersal rate
 analysis are not needed, or if the \code{megaSDM::dispersalRate} function has yet
 to be run, this should be set to \code{FALSE} (the default).}
+
+\item{contiguous}{(logical \code{TRUE} or \code{FALSE}) If \code{dispersal == TRUE},
+do the statistics that need to be calculated come from the analysis that
+constrained the suitable habitat at the first time step to the existing occurrences?
+See the \code{contiguous} argument in the \code{dispersalRate()} function.
+Default is \code{FALSE}}
 
 \item{dispersaldata}{A dataframe or the full file path to a .csv file with two columns:
 \enumerate{

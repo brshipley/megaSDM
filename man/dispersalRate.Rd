@@ -4,13 +4,23 @@
 \alias{dispersalRate}
 \title{Constrain Modelled Species Distributions by Dispersal Ability}
 \usage{
-dispersalRate(result_dir, dispersaldata, time_periods, scenarios, ncores = 1)
+dispersalRate(
+  result_dir,
+  dispersaldata,
+  time_periods,
+  scenarios,
+  contiguous = FALSE,
+  point_data = NA,
+  hindcast = FALSE,
+  startpoint = c(NA, NA),
+  ncores = 1
+)
 }
 \arguments{
 \item{result_dir}{the directory where the ensembled and binary maps are placed.
 Each species should have its own sub-directory, and the forecasted/hindcasted
 binary maps should be placed into directories like so: Species/Scenario/Time.
-If \code{projectSuit} was used to make these maps, this is probably the same
+If \code{MaxEntProj} was used to make these maps, this is probably the same
 as the \code{output} argument in that function.}
 
 \item{dispersaldata}{either a dataframe or the complete path name of a
@@ -25,6 +35,25 @@ element should be the original year (the year in which the model was generated).
 
 \item{scenarios}{a vector of character strings detailing the different climate models
 used in the forecasted/hindcasted species distribution models.}
+
+\item{contiguous}{TRUE/FALSE: when constraining by dispersal rate, should only the contiguous
+areas around each occurrence point be used for the first time step? setting this argument to
+\code{TRUE} will mitigate the effects of overprediction in areas where a species has
+not been observed. Default is \code{FALSE}.}
+
+\item{point_data}{If contiguous = \code{TRUE}, a file path to the directory holding all
+occurrence data used for the model generation. If previous steps of megaSDM have been run
+(e.g., \code{MaxEntProj}, \code{MaxEntModel}, \code{OccurrenceManagement}), this will likely
+be equal to \code{occ_output} in the vignette. If not, the occurrence data should have
+coordinates in "x" and "y" columns.}
+
+\item{hindcast}{TRUE/FALSE: is this a hindcasted model? If TRUE, dispersal rate calculations
+will start at the first time period, not the current one.}
+
+\item{startpoint}{if hindcast is \code{TRUE} then startpoint is a vector of length 2
+describing a scenario/time combination, with the first argument as the scenario name
+and the second as the time period desired as a starting point for the dispersal
+simulations.}
 
 \item{ncores}{the number of computer cores to parallelize the background point generation on.
 Default is 1; Using one fewer core than the computer has is usually optimal.}
