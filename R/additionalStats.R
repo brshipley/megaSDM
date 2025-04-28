@@ -132,7 +132,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
   getDiffScenariosGraph <- function(spp, stats, dispersalApplied, contig) {
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersalApplied == "TRUE") {
+    if (dispersalApplied == TRUE) {
       if(contig == TRUE) {
         grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/NumCells_Contig_", numScenario, "Graphs.pdf"))
       } else {
@@ -182,7 +182,7 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     rownames(PercentChange) <- stats$Projection
 
     #If dispersal has been applied, prints out a new graph
-    if (dispersalApplied == "TRUE") {
+    if (dispersalApplied == TRUE) {
       if(contig == TRUE) {
         grDevices::pdf(file = paste0(result_dir, "/", spp, "/Dispersal Applied Additional Stats/CellChange_Contig.pdf"))
       } else {
@@ -322,9 +322,9 @@ additionalStats <- function(result_dir, time_periods, scenarios,
     if (dispersal == TRUE) {
       dir.create(file.path(result_dir, spp.name, "Dispersal Applied Additional Stats"))
       if (contiguous == TRUE) {
-        stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
-      } else {
         stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal_Contig.csv"))
+      } else {
+        stats <- utils::read.csv(file.path(result_dir, spp.name, "Results_Dispersal.csv"))
       }
       stats <- stats
       nstats <- nrow(stats)
