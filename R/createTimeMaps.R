@@ -41,7 +41,7 @@
 #' of each species range across all time-steps for each climate scenario.
 
 createTimeMaps <- function(result_dir, time_periods, scenarios,
-                           dispersal, contiguous, dispersaldata, ncores) {
+                           dispersal, contiguous = FALSE, dispersaldata, ncores) {
 
   spp.list <- list.dirs(result_dir, full.names = FALSE, recursive = FALSE)
   if (length(spp.list) == 0) {
@@ -554,3 +554,4 @@ createTimeMaps <- function(result_dir, time_periods, scenarios,
     parallel::stopCluster(clus)
   }
 }
+
