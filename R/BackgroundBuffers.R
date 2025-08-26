@@ -28,6 +28,8 @@
 #' 2*the 95% quantile of the minimum distance between each point is taken as the radius.
 #' @param ncores the number of computer cores to parallelize the background point generation on.
 #' Default is 1; Using one fewer core than the computer has is usually optimal.
+#' @param land character: "land", "ocean", NA. should the buffers for the backgrounds be constrained 
+#' to the land ("land"), ocean ("ocean"), or spread across both (NA)? 
 #' @export
 #' @return shapefiles (.shp) that are buffers around the occurrence points of each species
 #' are written out to the directory indicated by the \code{output} argument. Also prints a .csv file for each
@@ -38,6 +40,7 @@ BackgroundBuffers <- function(occlist,
                               envdata,
                               output,
                               buff_distance = NA,
+                              land = NA,
                               ncores = 1) {
 
   if(!dir.exists(output)) {
@@ -144,11 +147,16 @@ BackgroundBuffers <- function(occlist,
     #Reprojects the buffer into the desired CRS
     combinedPolygon <- terra::project(combinedPolygon, terra::crs(envstack))
 
-    #Write shapefile out of the buffer
-    terra::writeVector(combinedPolygon, filename = file.path(output, paste0(CurSpp, ".shp")), filetype = "ESRI Shapefile", overwrite = TRUE)
-    rm(combinedPolygon)
-    gc()
 
+    if(is.na(land)) {
+      #Write shapefile out of the buffer
+      terra::writeVector(combinedPolygon, filename = file.path(output, paste0(CurSpp, ".shp")), filetype = "ESRI Shapefile", overwrite = TRUE)
+      rm(combinedPolygon)
+      gc()
+    } else if(land == "land") {
+      Continents <- rnaturalearth::ne_countries(scale = 10, returncalss = "sv)
+    
+    }
     #Fill out background point stats table with information on the Buffer Width (m)
     BGPStats <- BufferWidth
     dir.create(file.path(output, CurSpp))
@@ -173,3 +181,4 @@ BackgroundBuffers <- function(occlist,
   }
 
 }
+
