@@ -154,8 +154,19 @@ BackgroundBuffers <- function(occlist,
       rm(combinedPolygon)
       gc()
     } else if(land == "land") {
-      Continents <- rnaturalearth::ne_countries(scale = 10, returncalss = "sv)
-    
+      Continents <- rnaturalearth::ne_countries(scale = 10, returncalss = "sv")
+      Continents <- terra::aggregate(Continents)
+      combinedPolygon <- terra::intersect(combinedPolygon, Continents)
+      terra::writeVector(combinedPolygon, filename = file.path(output, paste0(CurSpp, ".shp")), filetype = "ESRI Shapefile", overwrite = TRUE)
+      rm(combinedPolygon)
+      gc()
+    } else if (land == "ocean") {
+      Continents <- rnaturalearth::ne_countries(scale = 10, returncalss = "sv")
+      Continents <- terra::aggregate(Continents)
+      combinedPolygon <- terra::erase(combinedPolygon, Continents)
+      terra::writeVector(combinedPolygon, filename = file.path(output, paste0(CurSpp, ".shp")), filetype = "ESRI Shapefile", overwrite = TRUE)
+      rm(combinedPolygon)
+      gc()
     }
     #Fill out background point stats table with information on the Buffer Width (m)
     BGPStats <- BufferWidth
@@ -181,4 +192,5 @@ BackgroundBuffers <- function(occlist,
   }
 
 }
+
 
